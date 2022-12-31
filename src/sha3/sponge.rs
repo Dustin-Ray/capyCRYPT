@@ -2,24 +2,30 @@ pub mod sponge_mod {
 
     use crate::sha3::keccakf::in_place::keccakf_1600;
 
-    /// Absorb rate amount of data into state and permute. Continue absorbing and permuting until
-    /// No more data left in m. Pads to multiple of rate using multi-rate padding.
-    pub fn sponge_absorb(m: &[u8], capacity: i32) -> [u64; 25] {
-        let r = (1600 - capacity) / 8;
-        let rate_in_bytes = usize::try_from(r).unwrap(); //might not work on all architectures
-        let mut p = m.to_vec();
-        
-        if m.len() % rate_in_bytes != 0 {
-            p = pad_ten_one(&m, rate_in_bytes);
-        }
-        
-        let state_array = bytes_to_states(&p, rate_in_bytes);
+    // Absorbs 200 bytes of message into constant memory size.
+    fn bytes_to_state(in_val: &[u8], rate_in_bytes: usize) -> [u64; 25] {
+        let mut offset: u64 = 0;
         let mut s: [u64; 25] = [0; 25];
-        
-        for st in state_array {
-            s = xor_states(&s, &st);
+
+        for _ in 0..in_val.len() / rate_in_bytes {
+            let mut state = [0u64; 25];
+            for j in 0..((rate_in_bytes * 8) / 64) {
+                state[j] = bytes_to_lane(in_val, offset);
+                offset += 8;
+            }
+            s = xor_states(&s, &state);
             keccakf_1600(&mut s);
         }
+        return s;
+    }
+
+    /// Absorb rate amount of data into state and permute. Continue absorbing and permuting until
+    /// No more data left in m. Pads to multiple of rate using multi-rate padding.
+    pub fn sponge_absorb(m: &mut Vec<u8>, capacity: usize) -> [u64; 25] {
+        let r = (1600 - capacity) / 8;
+        let rate_in_bytes = usize::try_from(r).unwrap(); //might not work on all architectures
+        if m.len() % rate_in_bytes != 0 { pad_ten_one(m, rate_in_bytes); }
+        let s = bytes_to_state(&m, rate_in_bytes);
         return s;
     }
 
@@ -68,22 +74,7 @@ pub mod sponge_mod {
         result
     }
 
-    /// Converts bytes to state array. Each array shall contain the byte data
-    /// converted to u64s with each array containing 25 u64s representing the byte data.
-    /// Padding is added to any byte data before use of this function.
-    fn bytes_to_states(in_val: &[u8], rate_in_bytes: usize) -> Vec<[u64; 25]> {
-        let mut state_array = vec![[0u64; 25]; in_val.len() / rate_in_bytes];
-        let mut offset: u64 = 0;
-        for i in 0..state_array.len() {
-            let mut state = [0u64; 25];
-            for j in 0..((rate_in_bytes * 8) / 64) {
-                state[j] = bytes_to_lane(in_val, offset);
-                offset += 8;
-            }
-            state_array[i] = state;
-        }
-        return state_array;
-    }
+
 
     /// Converts bytes to u64 (aka a lane in keccak jargon)
     fn bytes_to_lane(in_val: &[u8], offset: u64) -> u64 {
@@ -95,12 +86,11 @@ pub mod sponge_mod {
     }
 
     /// Multi-rate padding scheme defined in FIPS 202 5.1
-    fn pad_ten_one(x: &[u8], rate_in_bytes: usize) -> Vec<u8> {
-        let q = rate_in_bytes - x.len() % rate_in_bytes;
-        let mut padded = vec![0; x.len() + q];
-        padded[..x.len()].copy_from_slice(x);
-        padded[x.len() + q - 1] = 0x80;
-        padded
+    fn pad_ten_one(m: &mut Vec<u8>, rate_in_bytes: usize) {
+        let q = rate_in_bytes - m.len() % rate_in_bytes;
+        let mut padded = vec![0; q];
+        padded[q - 1] = 0x80;
+        m.extend_from_slice(&mut padded);
     }
 
 }

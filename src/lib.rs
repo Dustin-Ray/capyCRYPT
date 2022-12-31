@@ -7,4 +7,5 @@ pub mod curve{
 pub mod sha3{
     pub mod keccakf;
     pub mod sponge;
+    pub mod c_shake;
 }
