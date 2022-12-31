@@ -11,3 +11,4 @@ num-bigint = { version = "0.4", features = ["rand"] }
 crypto-bigint = {version = "0.4.9"}
 num = {version = "0.4.0"}
 hex = {version = "0.4.3"}
+byteorder = {version = "1.4.3"}

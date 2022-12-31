@@ -1,4 +1,4 @@
-pub mod sponge_mod {
+pub mod sponge_function {
 
     use crate::sha3::keccakf::in_place::keccakf_1600;
 
@@ -17,17 +17,16 @@ pub mod sponge_mod {
     pub fn sponge_squeeze(s: &mut [u64; 25], bit_length: usize, rate: usize) -> Vec<u8> {
         let mut out: Vec<u8> = Vec::new(); //FIPS 202 Algorithm 8 Step 8
         let block_size: usize = rate / 64;
-    
         while out.len() * 8 < bit_length {
             out.extend_from_slice(&state_to_byte_array(&s[0..block_size]));
             keccakf_1600(s); //FIPS 202 Algorithm 8 Step 10
         }
+        out.truncate(bit_length /8);
         out
     }
 
     /// Converts state of 25 u64s to array of bytes
     fn state_to_byte_array(uint64s: &[u64]) -> Vec<u8> {
-        
         let mut result = vec![];
         for v in uint64s {
             let mut b = u64_to_little_endian_bytes(v);
@@ -44,7 +43,7 @@ pub mod sponge_mod {
         for _ in 0..in_val.len() / rate_in_bytes {
             let mut state = [0u64; 25];
             for j in 0..((rate_in_bytes * 8) / 64) {
-                state[j] = bytes_to_lane(in_val, offset);
+                state[j] = bytes_to_word(in_val, offset);
                 offset += 8;
             }
             s = xor_states(&s, &state);
@@ -72,7 +71,7 @@ pub mod sponge_mod {
     }
 
     /// Converts bytes to u64 (aka a lane in keccak jargon)
-    fn bytes_to_lane(in_val: &[u8], offset: u64) -> u64 {
+    fn bytes_to_word(in_val: &[u8], offset: u64) -> u64 {
         let mut lane: u64 = 0;
         for i in 0..8 {
             lane += (in_val[(i + offset) as usize] as u64 & 0xFF) << (8 * i);

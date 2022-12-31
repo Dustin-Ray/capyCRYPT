@@ -1,22 +1,111 @@
 #[cfg(test)]
 mod sponge_test {
 
-    use cryptotool::sha3::{sponge::sponge_mod::{sponge_absorb, sponge_squeeze}, c_shake::shake_functions::compute_sha3_hash};
-    use hex::ToHex;
+    use cryptotool::sha3::{sponge::sponge_function::{sponge_absorb, sponge_squeeze}}; 
+    use cryptotool::model::shake_functions::{compute_sha3_hash, cshake};
+    use cryptotool::sha3::{aux_functions::nist_800_185::{left_encode, byte_pad, right_encode}};
+    use hex::{ToHex};
     
+    #[test] 
+    fn test_kmac() {} 
+
+
+    #[test] 
+    fn test_cshake() {
+
+        let mut data = hex::decode("000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F202122232425262728292A2B2C2D2E2F303132333435363738393A3B3C3D3E3F404142434445464748494A4B4C4D4E4F505152535455565758595A5B5C5D5E5F606162636465666768696A6B6C6D6E6F707172737475767778797A7B7C7D7E7F808182838485868788898A8B8C8D8E8F909192939495969798999A9B9C9D9E9FA0A1A2A3A4A5A6A7A8A9AAABACADAEAFB0B1B2B3B4B5B6B7B8B9BABBBCBDBEBFC0C1C2C3C4C5C6C7").unwrap();
+        let n = "";
+        let s = "Email Signature";
+        let res = cshake(&mut data, 512, n, s);
+        let expected = hex::decode("07dc27b11e51fbac75bc7b3c1d983e8b4b85fb1defaf218912ac86430273091727f42b17ed1df63e8ec118f04b23633c1dfb1574c8fb55cb45da8e25afb092bb").unwrap();
+        assert_eq!(expected, res)
+    }
+
+    #[test]
+    fn test_bytepad() {
+
+        let mut val = "test".as_bytes().to_vec();
+        let val_len = val.len() as u32;
+        let expected = [1, 4, 116, 101, 115, 116, 0, 0];
+        assert_eq!(byte_pad(&mut val, val_len), expected);
+        
+        let expected = [1, 200, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let mut val = hex::decode("000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F202122232425262728292A2B2C2D2E2F303132333435363738393A3B3C3D3E3F404142434445464748494A4B4C4D4E4F505152535455565758595A5B5C5D5E5F606162636465666768696A6B6C6D6E6F707172737475767778797A7B7C7D7E7F808182838485868788898A8B8C8D8E8F909192939495969798999A9B9C9D9E9FA0A1A2A3A4A5A6A7A8A9AAABACADAEAFB0B1B2B3B4B5B6B7B8B9BABBBCBDBEBFC0C1C2C3C4C5C6C7").unwrap();
+        let val_len = val.len() as u32;
+        assert_eq!(byte_pad(&mut val, val_len), expected);
+
+    }
+
+    #[test]
+    fn test_right_encode() {
+
+        let val = 0;
+        let expected = [0, 1];
+        assert_eq!(right_encode(val), expected);
+
+        let val = 0xFFFFFFFFFFFFFF;
+        let expected = [8, 255, 255, 255, 255, 255, 255, 255];
+        assert_eq!(right_encode(val), expected);
+
+        let val = 10000000000;
+        let expected = [6, 0, 0, 2, 84, 11];
+        assert_eq!(right_encode(val), expected);
+        
+        let val = 10000000000000000000;
+        let expected = [8, 199, 35, 4, 137, 232, 0, 0];
+        assert_eq!(right_encode(val), expected);
+
+        let val = hex::decode("000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F202122232425262728292A2B2C2D2E2F303132333435363738393A3B3C3D3E3F404142434445464748494A4B4C4D4E4F505152535455565758595A5B5C5D5E5F606162636465666768696A6B6C6D6E6F707172737475767778797A7B7C7D7E7F808182838485868788898A8B8C8D8E8F909192939495969798999A9B9C9D9E9FA0A1A2A3A4A5A6A7A8A9AAABACADAEAFB0B1B2B3B4B5B6B7B8B9BABBBCBDBEBFC0C1C2C3C4C5C6C7").unwrap();
+        let val_len = val.len();
+        let expected = [2, 0];
+    
+        let res = right_encode(val_len as u64);
+        assert_eq!(res, expected);
+
+    }
+
+
+    #[test]
+    fn test_left_encode() {
+
+        let val = 0;
+        let expected = [1, 0];
+        assert_eq!(left_encode(val), expected);
+
+        let val = 0xFFFFFFFFFFFFFF;
+        let expected = [7, 255, 255, 255, 255, 255, 255, 255];
+        // println!("{:?}", left_encode(val));
+        assert_eq!(left_encode(val), expected);
+
+        let val = 10000000000;
+        let expected = [5, 2, 84, 11, 228, 0];
+        // println!("{:?}", left_encode(val));
+        assert_eq!(left_encode(val), expected);
+        
+        let val = 10000000000000000000;
+        let expected = [8, 138, 199, 35, 4, 137, 232, 0, 0];
+        assert_eq!(left_encode(val), expected);
+
+        let val = hex::decode("000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F202122232425262728292A2B2C2D2E2F303132333435363738393A3B3C3D3E3F404142434445464748494A4B4C4D4E4F505152535455565758595A5B5C5D5E5F606162636465666768696A6B6C6D6E6F707172737475767778797A7B7C7D7E7F808182838485868788898A8B8C8D8E8F909192939495969798999A9B9C9D9E9FA0A1A2A3A4A5A6A7A8A9AAABACADAEAFB0B1B2B3B4B5B6B7B8B9BABBBCBDBEBFC0C1C2C3C4C5C6C7").unwrap();
+        let val_len = val.len();
+        let expected = [1, 200];
+    
+        let res = left_encode(val_len as u64);
+        // println!("{:?}", res);
+        assert_eq!(res, expected);
+
+
+    }
+
     #[test]
     fn test_sponge() {
 
-        let mut test_bytes = ("test").as_bytes().to_vec();
-        
-        let res = sponge_squeeze(& mut sponge_absorb(&mut test_bytes, 256), 512, 136);
+        let res = sponge_squeeze(& mut sponge_absorb(&mut "test".as_bytes().to_vec(), 256), 512, 136);
         let s = res.encode_hex::<String>();
         
         let expected = "8ee1f95dfe959e1d5e8188df176516b25de2d1c5ebf8f3312a588fba9f0a23e7437379c2035a8208df6ab2b68a9327c7e42e13bdd7fc2222dd611f0f755d8808";
         assert!(s == expected)
-
     }
-
 
     #[test]
     fn test_shake() {
@@ -31,6 +120,7 @@ mod sponge_test {
         let res = compute_sha3_hash(&mut test_bytes).encode_hex::<String>();
         assert!(res == expected);
     }
+
 
 
 }
