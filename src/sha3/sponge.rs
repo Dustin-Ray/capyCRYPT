@@ -2,6 +2,40 @@ pub mod sponge_mod {
 
     use crate::sha3::keccakf::in_place::keccakf_1600;
 
+    /// Absorb rate amount of data into state and permute. Continue absorbing and permuting until
+    /// No more data left in m. Pads to multiple of rate using multi-rate padding.
+    pub fn sponge_absorb(m: &mut Vec<u8>, capacity: usize) -> [u64; 25] {
+        let r = (1600 - capacity) / 8;
+        let rate_in_bytes = usize::try_from(r).unwrap(); //might not work on all architectures
+        if m.len() % rate_in_bytes != 0 { pad_ten_one(m, rate_in_bytes); }
+        let s = bytes_to_state(&m, rate_in_bytes);
+        return s;
+    }
+
+    /// Accepts state of 25 u64s and permutes, appending each iteration to output until
+    /// Desired length is met.
+    pub fn sponge_squeeze(s: &mut [u64; 25], bit_length: usize, rate: usize) -> Vec<u8> {
+        let mut out: Vec<u8> = Vec::new(); //FIPS 202 Algorithm 8 Step 8
+        let block_size: usize = rate / 64;
+    
+        while out.len() * 8 < bit_length {
+            out.extend_from_slice(&state_to_byte_array(&s[0..block_size]));
+            keccakf_1600(s); //FIPS 202 Algorithm 8 Step 10
+        }
+        out
+    }
+
+    /// Converts state of 25 u64s to array of bytes
+    fn state_to_byte_array(uint64s: &[u64]) -> Vec<u8> {
+        
+        let mut result = vec![];
+        for v in uint64s {
+            let mut b = u64_to_little_endian_bytes(v);
+            result.append(&mut b);
+        }
+        result
+    }
+
     // Absorbs 200 bytes of message into constant memory size.
     fn bytes_to_state(in_val: &[u8], rate_in_bytes: usize) -> [u64; 25] {
         let mut offset: u64 = 0;
@@ -19,44 +53,7 @@ pub mod sponge_mod {
         return s;
     }
 
-    /// Absorb rate amount of data into state and permute. Continue absorbing and permuting until
-    /// No more data left in m. Pads to multiple of rate using multi-rate padding.
-    pub fn sponge_absorb(m: &mut Vec<u8>, capacity: usize) -> [u64; 25] {
-        let r = (1600 - capacity) / 8;
-        let rate_in_bytes = usize::try_from(r).unwrap(); //might not work on all architectures
-        if m.len() % rate_in_bytes != 0 { pad_ten_one(m, rate_in_bytes); }
-        let s = bytes_to_state(&m, rate_in_bytes);
-        return s;
-    }
-
-    /// Accepts state of 25 u64s and permutes, appending each iteration to output until
-    /// Desired length is met.
-    pub fn sponge_squeeze(s: &mut [u64; 25], bit_length: usize, rate: usize) -> Vec<u8> {
-        let mut out: Vec<u64> = Vec::new(); //FIPS 202 Algorithm 8 Step 8
-        let block_size: usize = rate / 64;
-    
-        while out.len() * 64 < bit_length {
-            out.extend_from_slice(&s[0..block_size]);
-            keccakf_1600(s); //FIPS 202 Algorithm 8 Step 10
-        }
-    
-        let byte_array = state_to_byte_array(&out);
-        
-        byte_array[..bit_length/8].to_vec() //FIPS 202 3.1
-    }
-
-    /// Converts state of 25 u64s to array of bytes
-    fn state_to_byte_array(uint64s: &[u64]) -> Vec<u8> {
-        
-        let mut result = vec![];
-        for v in uint64s {
-            let mut b = u64_to_little_endian_bytes(v);
-            result.append(&mut b);
-        }
-        result
-    }
-
-    /// COnverts a u64 to le vec of bytes
+    /// Converts a u64 to le vec of bytes
     pub fn u64_to_little_endian_bytes(n: &u64) -> Vec<u8> {
         let mut bytes = vec![0u8; 8];
         for i in 0..8 {
@@ -73,8 +70,6 @@ pub mod sponge_mod {
         }
         result
     }
-
-
 
     /// Converts bytes to u64 (aka a lane in keccak jargon)
     fn bytes_to_lane(in_val: &[u8], offset: u64) -> u64 {
