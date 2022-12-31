@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod sponge_test {
 
-    use cryptotool::sha3::sponge::sponge::{sponge_absorb, sponge_squeeze, bytes_to_hex_string};
+    use cryptotool::sha3::sponge::sponge_mod::{sponge_absorb, sponge_squeeze};
+    use hex::ToHex;
     
     #[test]
     fn test_sponge_absorb() {
@@ -10,9 +11,9 @@ mod sponge_test {
         let bytes = test_str.as_bytes();
         
         let res = sponge_squeeze(& mut sponge_absorb(bytes, 256), 512, 136);
-        let byte_str = bytes_to_hex_string(&res);
+        let s = res.encode_hex::<String>();
         
-        println!("{:?}", byte_str);
+        println!("{:?}", s);
         assert!(true)
 
     }
