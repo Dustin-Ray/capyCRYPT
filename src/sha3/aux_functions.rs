@@ -1,3 +1,4 @@
+/** NIST 800-185 compliant functions.  */
 pub mod nist_800_185{
 
     use byteorder::{BigEndian, WriteBytesExt};
@@ -79,4 +80,25 @@ pub mod nist_800_185{
         return b[0..(9 - i as usize)].to_vec();   
     }
 
+}
+
+pub mod byte_utils{
+/** Aux methods for byte operations.  */
+    use rand::prelude::*;
+
+    /** Gets 512 randomy bytes for model functions. */
+    pub fn get_random_bytes() -> Vec<u8> {
+        let mut rand_bytes = vec![0u8; 512];
+        thread_rng().fill(&mut rand_bytes[..]);
+        rand_bytes
+    }
+
+    /** XORs byte streams in place using iterators Will probably bottleneck unless impl with SIMD. */
+    pub fn xor_bytes(a: &mut Vec<u8>, b: &Vec<u8>) -> usize{
+        assert_eq!(a.len(), b.len());
+        a.iter_mut()
+        .zip(b.iter())
+        .for_each(|(x1, x2)| *x1 ^= *x2);
+        a.len()
+    }
 }

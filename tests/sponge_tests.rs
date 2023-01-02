@@ -5,7 +5,7 @@ mod sponge_test {
 
     use cryptotool::sha3::{sponge::sponge_function::{sponge_absorb, sponge_squeeze}}; 
     use cryptotool::model::shake_functions::{compute_sha3_hash, cshake, kmac_xof_256};
-    use cryptotool::sha3::{aux_functions::nist_800_185::{left_encode, byte_pad, right_encode}};
+    use cryptotool::sha3::{aux_functions::{nist_800_185::{left_encode, byte_pad, right_encode}}};
     use hex::{ToHex};
     
     #[test] 

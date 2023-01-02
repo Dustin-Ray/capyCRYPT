@@ -4,21 +4,14 @@ pub mod e521 {
     use num::Integer;
     use num::One;
     use num::Zero;
+    use crate::E521;
     
     /*
         𝐸₅₂₁ curve (a so-called Edwards curve), is defined by the following parameters:
         • 𝑝 ≔ 2⁵²¹−1, a Mersenne prime defining the finite field 𝔽𝑝 .
         • curve equation: 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦² with 𝑑 = −376014. 
     */
-    #[derive(Debug)]
-    pub struct E521 {
-        pub x: BigInt,
-        pub y: BigInt,
-        pub p: BigInt,
-        pub d: BigInt,
-        pub r: BigInt,
-        pub n: BigInt,
-    }
+
     /// Initializes r value for curve. 
     fn set_r() -> BigInt {
         let r = BigInt::from(2);
