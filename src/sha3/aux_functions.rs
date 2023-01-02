@@ -22,8 +22,10 @@ pub mod nist_800_185{
 
     /**
     NIST SP 800-185 2.3.2: String Encoding.
+        
     The encode_string function is used to encode bit strings in a way that may be parsed
     unambiguously from the beginning of the string.
+            
         return: left_encode(len(S)) + S.
     */
     pub fn encode_string(s: &mut Vec<u8>) -> Vec<u8>{
@@ -36,6 +38,7 @@ pub mod nist_800_185{
     leftEncode function is used to encode bit strings in a way that may be parsed
     unambiguously from the beginning of the string by prepending the encoding of
     the length of the string to the beginning of the string.
+        
         return: left_encode(len(S)) + S.
     */
     pub fn left_encode(value: u64) -> Vec<u8> {
@@ -59,6 +62,7 @@ pub mod nist_800_185{
     rightEncode function is used to encode bit strings in a way that may be parsed
     unambiguously from the beginning of the string by prepending the encoding of
     the length of the string to the beginning of the string.
+        
         return: left_encode(len(S)) + S.
     */
     pub fn right_encode(value: u64) -> Vec<u8> {

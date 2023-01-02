@@ -2,9 +2,11 @@ pub mod shake_functions {
     use crate::sha3::sponge::sponge_function::{sponge_squeeze, sponge_absorb};
     use crate::sha3::aux_functions::nist_800_185::{byte_pad, encode_string, right_encode};
 
-    /** SHA3-Keccak ref NIST FIPS 202.
-    N: pointer to message to be hashed.
-    d: requested output length */
+    /** 
+    SHA3-Keccak ref NIST FIPS 202.
+    
+        N: pointer to message to be hashed.
+        d: requested output length */
     fn shake(n: &mut Vec<u8>, d: usize) -> Vec<u8> {
 
         let bytes_to_pad = 136 - n.len() % 136; // SHA3-256 r = 1088 / 8 = 136
@@ -36,6 +38,7 @@ pub mod shake_functions {
 
     /**
     Generates keyed hash for given input as specified in NIST SP 800-185 section 4.
+        
         K: key
         X: byte-oriented message
         L: requested bit length
