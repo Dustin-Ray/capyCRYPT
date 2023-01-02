@@ -13,11 +13,6 @@ pub mod shake_functions {
         return  sponge_squeeze(&mut sponge_absorb(n, 2 * d), d, 1600-(2*d));
     }
 
-    /**Computes SHA3-512 hash of data */
-    pub fn compute_sha3_hash(data: &mut Vec<u8>) -> Vec<u8> {
-        shake(data, 512)
-    }
-
     /**
     FIPS 202 Section 3 cSHAKE function returns customizable and
     domain seperated length L SHA3XOF hash of input string.
@@ -56,5 +51,24 @@ pub mod shake_functions {
         let res = cshake(&mut bp, l, "KMAC", s);
         res
     }
+
+    /**Computes SHA3-512 hash of data */
+    pub fn compute_sha3_hash(data: &mut Vec<u8>) -> Vec<u8> {
+        shake(data, 512)
+    }
+
+    /**
+    Computes an authentication tag t of a byte array m under passphrase pw
+
+        pw: symmetric encryption key, can be blank
+        message: message to encrypt
+        S: customization string
+        return: t <- KMACXOF256(pw, m, 512, “T”)
+    */
+    pub fn compute_tagged_hash(pw: &mut Vec<u8>, message: &mut Vec<u8>, s: &mut str) -> Vec<u8> {
+        kmac_xof_256(pw, message, 512, s)
+    }
+
+
 
 }

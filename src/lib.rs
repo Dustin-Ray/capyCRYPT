@@ -10,3 +10,7 @@ pub mod sha3{
     pub mod aux_functions;
 }
 pub mod model;
+
+pub mod view{
+    pub mod window;
+}
