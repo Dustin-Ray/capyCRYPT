@@ -2,19 +2,19 @@ use num_bigint::{BigInt};
 
 #[derive(Debug)]
 pub struct E521 {
-    pub x: BigInt,
-    pub y: BigInt,
-    pub p: BigInt,
-    pub d: BigInt,
-    pub r: BigInt,
-    pub n: BigInt,
+    pub x: BigInt,  //x-coord
+    pub y: BigInt,  //y coord
+    pub p: BigInt,  //prime defining finite field
+    pub d: BigInt,  //d param for curve
+    pub r: BigInt,  //order of curve
+    pub n: BigInt,  //number of points
 }
 
 
 pub struct SymmetricCryptogram {
-    pub z: Vec<u8>,
-    pub c: Vec<u8>,
-    pub t: Vec<u8>
+    pub z: Vec<u8>,     //nonce
+    pub c: Vec<u8>,     //ciphertext
+    pub t: Vec<u8>      //authentication tag
 }
 
 pub struct ECCryptogram {
@@ -28,15 +28,14 @@ pub struct KeyObj {
 
     id: String,             //Represents the unique ID of the key
     owner: String,          //Represents the owner of the key, can be arbitrary
-    KeyType: String,     /*Acceptable values are PUBLIC or PRIVATE.
-	PUBLIC keys are used only for encryptions, while PRIVATE keys can
-	encrypt or decrypt.
-	*/
-    pub_key_x: String,        //big.Int value representing E521 X coordinate
-    pub_key_y: String,        //big.Int value representing E521 X coordinate
+    KeyType: String,        /*Acceptable values are PUBLIC or PRIVATE.
+	                         PUBLIC keys are used only for encryptions, while keys labeled PRIVATE
+	                         encrypt or decrypt.*/
+    pub_key_x: String,       //big.Int value representing E521 X coordinate
+    pub_key_y: String,       //big.Int value representing E521 X coordinate
     priv_key: String,        //big.Int value representing secret scalar, nil if KeyType is PUBLIC
     date_created: String,    //Date key was generated
-    signature: String,      //Nil unless PUBLIC. Signs 128 bit SHA3 hash of this KeyObj
+    signature: String,       //Nil unless PUBLIC. Signs 128 bit SHA3 hash of this KeyObj
 
 }
 
