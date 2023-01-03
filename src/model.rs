@@ -1,9 +1,12 @@
 pub mod shake_functions {
+    extern crate num_bigint;
+    use std::ops::Mul;
+    use crate::curve::e521::e521::{set_n, mod_formula, get_e521_gen_point, sec_mul};
     use crate::sha3::sponge::sponge_function::{sponge_squeeze, sponge_absorb};
     use crate::sha3::aux_functions::nist_800_185::{byte_pad, encode_string, right_encode};
-    use crate::sha3::aux_functions::byte_utils::{xor_bytes, get_random_bytes};
-    
-    use crate::SymmetricCryptogram;
+    use crate::sha3::aux_functions::byte_utils::{xor_bytes, get_random_bytes, get_date_and_time_as_string, bytes_to_big_int};
+    use crate::{SymmetricCryptogram, KeyObj, ECCryptogram, E521};
+    use num::BigInt;
 
     /** 
     SHA3-Keccak ref NIST FIPS 202.
@@ -89,7 +92,6 @@ pub mod shake_functions {
         return: symmetric cryptogram: (z, c, t)
     */
     pub fn encrypt_with_pw(pw: &mut Vec<u8>, msg: &mut Vec<u8>) -> SymmetricCryptogram{
-
         let z = get_random_bytes();
         let mut temp_ke_ka = z.clone();
         temp_ke_ka.append(pw);
@@ -114,18 +116,78 @@ pub mod shake_functions {
         t’ <- kmac_xof_256(ka, m, 512, “SKA”)
         return: m, if and only if t` = t
     */
-    pub fn decrypt_with_pw(pw: &mut Vec<u8>, msg: &mut SymmetricCryptogram) -> bool{
-
+    pub fn decrypt_with_pw(pw: &mut Vec<u8>, msg: &mut SymmetricCryptogram) -> bool {
         msg.z.append(pw);
         let ke_ka = kmac_xof_256(&mut msg.z, &mut vec![], 1024, "S");
         let ke = &mut ke_ka[0..ke_ka.len() / 2].to_vec();
         let ka = &mut ke_ka[ke_ka.len() / 2..ke_ka.len()].to_vec();
-        let mut c = kmac_xof_256(ke, &mut vec![], (msg.c.len() * 8) as u64, "SKE");
-        xor_bytes(&mut c, &msg.c);
-        let t_p = kmac_xof_256(ka, &mut c, 512, "SKA");
-        msg.c = c;
-        if t_p == msg.t { return true; } //timing issue here?
-        else { return false; }
+        let dec = kmac_xof_256(ke, &mut vec![], (msg.c.len() * 8) as u64, "SKE");
+        xor_bytes(&mut msg.c, &dec);
+        return msg.t == kmac_xof_256(ka, &mut msg.c.clone(), 512, "SKA") //timing issue here?
     }
+
+    /**
+    Generates a (Schnorr/ECDHIES) key pair from passphrase pw:
+
+        s <- KMACXOF256(pw, “”, 512, “K”); s <- 4s
+        V <- s*G
+        key pair: (s, V)
+        key: a pointer to an empty KeyObj to be populated with user data
+
+        Remark: in the most secure variants of this scheme, the
+        verification key 𝑉 is hashed together with the message 𝑚
+        and the nonce 𝑈: hash (𝑚, 𝑈, 𝑉) .
+    */
+    pub fn gen_keypair(key: &mut KeyObj, password: String, owner: String) {
+
+        let n = set_n();
+        let mut pw_bytes = password.as_bytes().to_vec();
+        let s = bytes_to_big_int(&kmac_xof_256(&mut pw_bytes, &mut vec![], 512, "K"));
+        s.checked_mul(&BigInt::from(4));
+        let s = mod_formula(&s, &n);
+
+        let v = get_e521_gen_point(false);
+        let v = sec_mul(s.clone(), v);
+        key.owner = owner;
+        key.priv_key = s.to_str_radix(10);
+        key.pub_key_x = v.x.to_str_radix(10);
+        key.pub_key_y = v.y.to_str_radix(10);
+        key.date_created = get_date_and_time_as_string();
+    }
+
+    /**
+    Encrypts a byte array m under the (Schnorr/ECDHIES) public key V.
+    Operates under Schnorr/ECDHIES principle in that shared symmetric key is
+    exchanged with recipient. SECURITY NOTE: ciphertext length == plaintext length
+
+        k <- Random(512); k <- 4k
+        W <- k*V; Z <- k*G
+        (ke || ka) <- KMACXOF256(W x , “”, 1024, “P”)
+        c <- KMACXOF256(ke, “”, |m|, “PKE”) xor m
+        t <- KMACXOF256(ka, m, 512, “PKA”)
+        pubKey: X coordinate of public static key V, accepted as string
+        message: message of any length or format to encrypt
+        return: cryptogram: (Z, c, t) = Z||c||t
+    */
+    pub fn encrypt_with_key(pub_key: E521, message: &Vec<u8>) -> ECCryptogram{
+
+        let mut k = bytes_to_big_int(&get_random_bytes()).mul(BigInt::from(4));
+        k = mod_formula(&k, &set_n());
+        
+        let w = sec_mul(k.clone(), pub_key);
+        let z = sec_mul(k.clone(), get_e521_gen_point(false));
+        let (_, mut temp) = w.x.to_bytes_be(); //change to le if this fails
+        let ke_ka = kmac_xof_256(&mut temp, &mut vec![], 1024, "P");
+        let ke = &mut ke_ka[0..ke_ka.len() / 2].to_vec();
+        let ka = &mut ke_ka[ke_ka.len() / 2..ke_ka.len()].to_vec();
+        xor_bytes(&mut kmac_xof_256(ke, &mut vec![], (message.len()*8) as u64, "PKE"), &message);
+        let cryptogram = ECCryptogram{
+            z_x: z.x, 
+            z_y: z.y, 
+            c: message.clone(), 
+            t: kmac_xof_256(&mut ka.clone(), &mut message.clone(), 512, "PKA")};
+        cryptogram
+    }
+
 
 }

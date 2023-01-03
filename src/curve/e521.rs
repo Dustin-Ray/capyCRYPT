@@ -30,7 +30,7 @@ pub mod e521 {
     }
 
     /// Initializes number of points on the curve. 
-    fn set_n() -> BigInt {
+    pub fn set_n() -> BigInt {
         let n = set_r();
         let n = n * &BigInt::from(4);
         return n;

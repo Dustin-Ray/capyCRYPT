@@ -83,6 +83,7 @@ pub mod nist_800_185{
 }
 
 pub mod byte_utils{
+use num::BigInt;
 /** Aux methods for byte operations.  */
     use rand::prelude::*;
 
@@ -94,11 +95,29 @@ pub mod byte_utils{
     }
 
     /** XORs byte streams in place using iterators Will probably bottleneck unless impl with SIMD. */
-    pub fn xor_bytes(a: &mut Vec<u8>, b: &Vec<u8>) -> usize{
+    pub fn xor_bytes(a: &mut Vec<u8>, b: &Vec<u8>) {
         assert_eq!(a.len(), b.len());
         a.iter_mut()
         .zip(b.iter())
         .for_each(|(x1, x2)| *x1 ^= *x2);
-        a.len()
+        
+    }
+
+
+    pub fn bytes_to_big_int(input: &[u8]) -> BigInt {
+        let mut bigint = BigInt::from(0 as u32);
+        let base: BigInt = BigInt::from(2u32).pow(8u32);
+    
+        for &byte in input.iter().rev() {
+            let b:BigInt = BigInt::from(byte);
+            bigint = &bigint * &base + &b;
+        }
+    
+        bigint
+    }
+
+    pub fn get_date_and_time_as_string() -> String {
+        let local = chrono::Local::now();
+        local.format("%Y-%m-%d %H:%M:%S").to_string()
     }
 }
