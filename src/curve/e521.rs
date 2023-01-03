@@ -1,17 +1,23 @@
-pub mod e521 {
-    use std::{str::FromStr, ops::{Sub, Mul}};
-    use num_bigint::{BigInt, Sign};
-    use num::Integer;
-    use num::One;
-    use num::Zero;
-    use crate::E521;
-    
-    /*
-        𝐸₅₂₁ curve (a so-called Edwards curve), is defined by the following parameters:
-        • 𝑝 ≔ 2⁵²¹−1, a Mersenne prime defining the finite field 𝔽𝑝 .
-        • curve equation: 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦² with 𝑑 = −376014. 
-    */
+use std::ops::{Mul, Sub};
+use num::{BigInt, Integer, Zero, One};
+use num_bigint::Sign;
+use crate::E521;
+use self::e521::{PointOps, get_e521_id_point};
 
+pub mod e521 {
+    use std::{str::FromStr, ops::{Sub}};
+    use num_bigint::{BigInt};
+    use crate::E521;
+    use super::solve_for_y;
+    
+    pub trait PointOps {
+        fn sec_mul(&mut self, s: BigInt) -> E521;
+        fn add_points(&mut self, other: &E521); }
+    
+    /// 𝐸₅₂₁ curve (a so-called Edwards curve), is defined by the following parameters:
+    /// • 𝑝 ≔ 2⁵²¹−1, a Mersenne prime defining the finite field 𝔽𝑝 .
+    /// • curve equation: 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦² with 𝑑 = −376014. 
+    
     /// Initializes r value for curve. 
     fn set_r() -> BigInt {
         let r = BigInt::from(2);
@@ -91,43 +97,64 @@ pub mod e521 {
 
     // Compare points for equality by coordinate values only.
     pub fn e521_equals(p1: &E521, p2: &E521) -> bool { p1.x == p2.x && p1.y == p2.y }
+ 
+}
 
-    ///Adds two E521 points and returns another E521 curve point. If a point is defined as
-    /// E521 = (x, y), then E521 addition is defined as:
+///Definitions for addition and multiplcation on the curve
+impl PointOps for E521{
 
-    /// (x₁, y₁) + (x₂, y₂)  = (x₁y₂ + y₁x₂) / (1 + dx₁x₂y₁y₂), (y₁y₂ − x₁x₂) / (1 − dx₁x₂y₁y₂)
+    /// Constant time multiplication NOTE not memory safe afaik.
+    /// * multiplication is defined to be P + P + P .... s times
+    fn sec_mul(&mut self, s: BigInt) -> E521{
+        let mut r0 = get_e521_id_point();
+        for i in (0..=s.bits()).rev()  {
+            if s.bit(i) {
+                r0.add_points(&self.clone());
+                self.add_points(&self.clone());
+            } else { 
+                self.add_points(&r0);
+                r0.add_points(&r0.clone());
+            }
+        } 
+        self.x = r0.x;
+        self.y = r0.y;
+        self.clone()
+    }
 
-    ///where "/" is defined to be multiplication by modular inverse.
-    pub fn add_points(p1  : &E521, p2: &E521) -> E521 {
+    /// Adds two E521 points and returns another E521 curve point. If a point is defined as
+    /// ```E521``` = (x, y), then ```E521``` addition is defined as:
+    /// * (x₁, y₁) + (x₂, y₂)  = (x₁y₂ + y₁x₂) / (1 + dx₁x₂y₁y₂), (y₁y₂ − x₁x₂) / (1 − dx₁x₂y₁y₂)
+    /// * where ```"/"``` is defined to be multiplication by modular inverse.
+    fn add_points(&mut self, p2: &E521) {
 
-        let p = p1.p.clone();
-        let d = p1.d.clone();
+        let p = self.p.clone();
+        let d = self.d.clone();
 
-        let x1 = p1.x.clone();
-        let y1 = p1.y.clone();
+        let x1 = self.x.clone();
+        let y1 = self.y.clone();
 
         // (x₁y₂ + y₁x₂)
         let x1y2 = (x1 * &p2.y).mod_floor(&p);
         let y1x2 = (y1 * &p2.x).mod_floor(&p);
         let x1y2y1x2_sum = (x1y2 + y1x2).mod_floor(&p);
 
-        let x1 = p1.x.clone();
+        let x1 = self.x.clone();
 
         // 1 / (1 + dx₁x₂y₁y₂)
-        let one_plus_dx1x2y1y2 = (BigInt::from(1) + (d * x1 * &p2.x * &p1.y * &p2.y)).mod_floor(&p);
+        let one_plus_dx1x2y1y2 = (BigInt::from(1) + (d * x1 * &p2.x * &self.y * &p2.y)).mod_floor(&p);
         let one_plus_dx1x2y1y2inv = mod_inv(&one_plus_dx1x2y1y2, &p);
 
-        let x1 = p1.x.clone();
-        let y1 = p1.y.clone();
+        let x1 = self.x.clone();
+        let y1 = self.y.clone();
 
         // (y₁y₂ − x₁x₂)
         let y1y2x1x2_difference = ((y1 * &p2.y) - (x1 * &p2.x)).mod_floor(&p);
 
-        let x1 = p1.x.clone();
-        let d = p1.d.clone();
+        let x1 = self.x.clone();
+        let d = self.d.clone();
 
         // 1 / (1 − dx₁x₂y₁y₂)
-        let one_minus_dx1x2y1y2 = (BigInt::from(1) - (d * x1 * &p2.x * &p1.y * &p2.y)).mod_floor(&p);
+        let one_minus_dx1x2y1y2 = (BigInt::from(1) - (d * x1 * &p2.x * &self.y * &p2.y)).mod_floor(&p);
         let one_minus_dx1x2y1y2inv = mod_inv(&one_minus_dx1x2y1y2, &p);
 
         // (x₁y₂ + y₁x₂) / (1 + dx₁x₂y₁y₂)
@@ -135,26 +162,11 @@ pub mod e521 {
 
         // (y₁y₂ − x₁x₂) / (1 − dx₁x₂y₁y₂)
         let new_y = (y1y2x1x2_difference * one_minus_dx1x2y1y2inv).mod_floor(&p);
-        get_e521_point(new_x, new_y)
+        self.x = new_x;
+        self.y = new_y;
 
     }
-
-
-    /// constant time multiplication NOTE not memory safe afaik.
-    /// multiplication is defined to be P + P + P .... s times
-    pub fn sec_mul(s: BigInt, point: E521) -> E521 {
-        let mut r1 = point;
-        let mut r0 = get_e521_id_point();
-        for i in (0..=s.bits()).rev()  {
-            if s.bit(i) {
-                r0 = add_points(&r0, &r1);
-                r1 = add_points(&r1, &r1);
-            } else { 
-                r1 = add_points(&r0, &r1);
-                r0 = add_points(&r0, &r0);
-            }
-        } r0
-    }
+}
 
     /// Solves for y in curve equation 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦²
     fn solve_for_y(x: &BigInt, p: BigInt, msb: bool) -> BigInt {
@@ -170,7 +182,10 @@ pub mod e521 {
 
     /// Compute a square root of v mod p with a specified
     /// least significant bit, if such a root exists.
-    fn sqrt(v: &BigInt, p: BigInt, lsb: bool) -> BigInt {
+    /// * `v`: BigInt value to compute square root for
+    /// * `p`: BigInt curve modulus
+    /// * `lsb`: each x has 2 `y` values on curve, lsb selects which `y` value to use
+    pub fn sqrt(v: &BigInt, p: BigInt, lsb: bool) -> BigInt {
         if v.sign() ==  Sign::NoSign{ return BigInt::from(0); }
         let r = v.modpow(&((p.clone() >> 2) + 1), &p);
         if !r.bit(0).eq(&lsb) {
@@ -181,15 +196,16 @@ pub mod e521 {
             if bi.sign() == Sign::NoSign {
                 return return_r;
             } else { return BigInt::from(0); }
-        } 
-        r
+        } r
     }
 
     /// Performs BigInt modular arithematic.
     pub fn mod_formula(a: &BigInt, b: &BigInt) -> BigInt { ((a % b) + b) % b }
 
-    /// Performs modular inverse via euclidian algorithm. 
-    fn mod_inv(n: &BigInt, p: &BigInt) -> BigInt {
+    /// Performs modular inverse via euclidian algorithm.
+    /// * `n`: BigInt value to mod
+    /// * `p`: modulus
+    pub fn mod_inv(n: &BigInt, p: &BigInt) -> BigInt {
         if p.is_one() { return BigInt::one() }
         let (mut a, mut m, mut x, mut inv) = (n.clone(), p.clone(), BigInt::zero(), BigInt::one());
         while a < BigInt::zero() { a += p }
@@ -204,4 +220,3 @@ pub mod e521 {
         inv
     }
 
-}

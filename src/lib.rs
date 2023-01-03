@@ -10,7 +10,18 @@ pub struct E521 {
     pub n: BigInt,  //number of points
 }
 
-
+impl Clone for E521 {
+    fn clone(&self) -> E521 {
+        E521 {
+            x: self.x.clone(),
+            y: self.y.clone(),
+            p: self.p.clone(),
+            d: self.d.clone(),
+            r: self.r.clone(),
+            n: self.n.clone(),
+        }
+    }
+}
 pub struct SymmetricCryptogram {
     pub z: Vec<u8>,     //nonce
     pub c: Vec<u8>,     //ciphertext
@@ -28,7 +39,7 @@ pub struct KeyObj {
 
     id: String,             //Represents the unique ID of the key
     owner: String,          //Represents the owner of the key, can be arbitrary
-    KeyType: String,        /*Acceptable values are PUBLIC or PRIVATE.
+    key_type: String,        /*Acceptable values are PUBLIC or PRIVATE.
 	                         PUBLIC keys are used only for encryptions, while keys labeled PRIVATE
 	                         encrypt or decrypt.*/
     pub_key_x: String,       //big.Int value representing E521 X coordinate

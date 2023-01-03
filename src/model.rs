@@ -1,14 +1,18 @@
 pub mod shake_functions {
     extern crate num_bigint;
     use std::ops::Mul;
-    use crate::curve::e521::e521::{set_n, mod_formula, get_e521_gen_point, sec_mul};
-    use crate::sha3::sponge::sponge_function::{sponge_squeeze, sponge_absorb};
-    use crate::sha3::aux_functions::nist_800_185::{byte_pad, encode_string, right_encode};
-    use crate::sha3::aux_functions::byte_utils::{xor_bytes, get_random_bytes, get_date_and_time_as_string, bytes_to_big_int};
+    use crate::curve::e521::mod_formula;
     use crate::{SymmetricCryptogram, KeyObj, ECCryptogram, E521};
     use num::BigInt;
-
-     
+    use crate::curve::e521::e521::{set_n, get_e521_gen_point, PointOps};
+    use crate::sha3::sponge::sponge_function::{sponge_squeeze, sponge_absorb};
+    use crate::sha3::aux_functions::nist_800_185::{byte_pad, encode_string, right_encode};
+    use crate::sha3::aux_functions::byte_utils::{
+        xor_bytes, 
+        get_random_bytes, 
+        get_date_and_time_as_string, 
+        bytes_to_big_int};
+    
     /// SHA3-Keccak ref NIST FIPS 202.
     /// * `n`: pointer to message to be hashed.
     /// * `d`: requested output length
@@ -18,8 +22,7 @@ pub mod shake_functions {
         else { n.extend_from_slice(&[0x06]);} //delim suffix
         return  sponge_squeeze(&mut sponge_absorb(n, 2 * d), d, 1600-(2*d));
     }
-
-    
+ 
     /// FIPS 202 Section 3 cSHAKE function returns customizable and
     /// domain seperated length L SHA3XOF hash of input string.
     /// * `x`: input message as ```Vec<u8>```
@@ -47,7 +50,7 @@ pub mod shake_functions {
     pub fn kmac_xof_256(k: &mut Vec<u8>, x: &mut Vec<u8>, l: u64, s: &str) -> Vec<u8>{
         let mut encode_s = encode_string(k);
         let mut bp = byte_pad(&mut encode_s, 136);
-        bp.append(x);
+        bp.append(x); //x is dropped here? 
         let mut right_enc = right_encode(0);
         bp.append(&mut right_enc);
         let res = cshake(&mut bp, l, "KMAC", s);
@@ -128,8 +131,7 @@ pub mod shake_functions {
         s.checked_mul(&BigInt::from(4));
         let s = mod_formula(&s, &n);
 
-        let v = get_e521_gen_point(false);
-        let v = sec_mul(s.clone(), v);
+        let v = get_e521_gen_point(false).sec_mul(s.clone());
         key.owner = owner;
         key.priv_key = s.to_str_radix(10);
         key.pub_key_x = v.x.to_str_radix(10);
@@ -149,12 +151,13 @@ pub mod shake_functions {
     /// * `pub_key` : X coordinate of public static key V, accepted as ```E521```
     /// * `message`: message of any length or format to encrypt
     /// * `return` : cryptogram: (Z, c, t) = Z||c||t
-    pub fn encrypt_with_key(pub_key: E521, message: &Vec<u8>) -> ECCryptogram{
+    pub fn encrypt_with_key(pub_key: &mut E521, message: &Vec<u8>) -> ECCryptogram{
         let mut k = bytes_to_big_int(&get_random_bytes()).mul(BigInt::from(4));
         k = mod_formula(&k, &set_n());
     
-        let w = sec_mul(k.clone(), pub_key);
-        let z = sec_mul(k.clone(), get_e521_gen_point(false));
+        let w= pub_key.sec_mul(k.clone());
+        let z = get_e521_gen_point(false).sec_mul(k.clone());
+        
         let (_, mut temp) = w.x.to_bytes_be(); //change to le if this fails
         let ke_ka = kmac_xof_256(&mut temp, &mut vec![], 1024, "P");
         let ke = &mut ke_ka[0..ke_ka.len() / 2].to_vec();
