@@ -47,7 +47,7 @@ pub mod shake_functions {
     /// * `l`: requested bit length
     /// * `s`: customization string
     /// * `return`: kmac_xof_256 of `x` under `k`
-    pub fn kmac_xof_256(k: &mut Vec<u8>, x: &mut Vec<u8>, l: u64, s: &str) -> Vec<u8>{
+    pub fn kmac_xof_256<'a>(k: &mut Vec<u8>, x: &'a mut Vec<u8>, l: u64, s: &str) -> Vec<u8>{
         let mut encode_s = encode_string(k);
         let mut bp = byte_pad(&mut encode_s, 136);
         bp.append(x); //x is dropped here? 
@@ -103,14 +103,15 @@ pub mod shake_functions {
     /// * `msg`: cryptogram to decrypt as```SymmetricCryptogram```, assumes valid format.
     /// * `pw`: decryption password, can be blank
     /// * `return`: t` == t
-    pub fn decrypt_with_pw(pw: &mut Vec<u8>, msg: &mut SymmetricCryptogram) -> bool {
+    pub fn decrypt_with_pw<'a>(pw: &mut Vec<u8>, msg: & 'a mut SymmetricCryptogram) -> &'a Vec<u8> {
         msg.z.append(pw);
         let ke_ka = kmac_xof_256(&mut msg.z, &mut vec![], 1024, "S");
         let ke = &mut ke_ka[0..ke_ka.len() / 2].to_vec();
         let ka = &mut ke_ka[ke_ka.len() / 2..ke_ka.len()].to_vec();
-        let dec = kmac_xof_256(ke, &mut vec![], (msg.c.len() * 8) as u64, "SKE");
-        xor_bytes(&mut msg.c, &dec);
-        return msg.t == kmac_xof_256(ka, &mut msg.c.clone(), 512, "SKA") //timing issue here?
+        let mut dec = kmac_xof_256(ke, &mut vec![], (msg.c.len() * 8) as u64, "SKE");
+        let temp = xor_bytes(&mut msg.c, &dec);
+        let res = msg.t == kmac_xof_256(ka, &mut dec, 512, "SKA"); //timing issue here?
+        temp
     }
 
     /// Generates a (Schnorr/ECDHIES) key pair from passphrase pw:
