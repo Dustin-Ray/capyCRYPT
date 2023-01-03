@@ -10,11 +10,9 @@ pub mod shake_functions {
 
      
     /// SHA3-Keccak ref NIST FIPS 202.
-    ///
     /// * `n`: pointer to message to be hashed.
     /// * `d`: requested output length
     fn shake(n: &mut Vec<u8>, d: usize) -> Vec<u8> {
-
         let bytes_to_pad = 136 - n.len() % 136; // SHA3-256 r = 1088 / 8 = 136
         if bytes_to_pad == 1 { n.extend_from_slice(&[0x86]);} //delim suffix
         else { n.extend_from_slice(&[0x06]);} //delim suffix
@@ -29,7 +27,6 @@ pub mod shake_functions {
     /// * `n`: optional function name string
     /// * `s`: option customization string
     /// * `return`: SHA3XOF hash of length `l` of input message `x`
-    
     pub fn cshake(x: &mut Vec<u8>, l: u64, n: &str, s: &str) -> Vec<u8> {
         if n == "" && s == "" { return shake(x, l as usize) }
         let mut encoded_n = encode_string(&mut n.as_bytes().to_vec());
@@ -41,7 +38,6 @@ pub mod shake_functions {
         return sponge_squeeze(&mut sponge_absorb(&mut out, 512), l as usize, 1600-512);
     }
 
-    
     /// Generates keyed hash for given input as specified in NIST SP 800-185 section 4. 
     /// * `k`: key
     /// * `x`: byte-oriented message
@@ -65,7 +61,6 @@ pub mod shake_functions {
         shake(data, 512)
     }
 
-    
     /// Computes an authentication tag t of a byte array m under passphrase pw
     /// * `pw`: symmetric encryption key, can be blank but shouldnt be
     /// * `message`: message to encrypt
@@ -75,7 +70,6 @@ pub mod shake_functions {
         kmac_xof_256(pw, message, 512, s)
     }
 
-    
     /// Encrypts a byte array m symmetrically under passphrase pw:
 	/// SECURITY NOTE: ciphertext length == plaintext length
     /// * z <- Random(512)
@@ -97,7 +91,6 @@ pub mod shake_functions {
         cg
     }
 
-    
     /// Decrypts a symmetric cryptogram (z, c, t) under passphrase pw.
     /// Assumes that decryption is well-formed. Parsing and error checking
     /// should occur in controller which handles user input.
@@ -117,7 +110,6 @@ pub mod shake_functions {
         return msg.t == kmac_xof_256(ka, &mut msg.c.clone(), 512, "SKA") //timing issue here?
     }
 
-
     /// Generates a (Schnorr/ECDHIES) key pair from passphrase pw:
     /// 
     /// * s <- kmac_xof_256(pw, “”, 512, “K”); s <- 4s
@@ -130,7 +122,6 @@ pub mod shake_functions {
     /// verification key 𝑉 is hashed together with the message 𝑚
     /// and the nonce 𝑈: hash (𝑚, 𝑈, 𝑉) .
     pub fn gen_keypair(key: &mut KeyObj, password: String, owner: String) {
-
         let n = set_n();
         let mut pw_bytes = password.as_bytes().to_vec();
         let s = bytes_to_big_int(&kmac_xof_256(&mut pw_bytes, &mut vec![], 512, "K"));
@@ -159,10 +150,9 @@ pub mod shake_functions {
     /// * `message`: message of any length or format to encrypt
     /// * `return` : cryptogram: (Z, c, t) = Z||c||t
     pub fn encrypt_with_key(pub_key: E521, message: &Vec<u8>) -> ECCryptogram{
-
         let mut k = bytes_to_big_int(&get_random_bytes()).mul(BigInt::from(4));
         k = mod_formula(&k, &set_n());
-        
+    
         let w = sec_mul(k.clone(), pub_key);
         let z = sec_mul(k.clone(), get_e521_gen_point(false));
         let (_, mut temp) = w.x.to_bytes_be(); //change to le if this fails
