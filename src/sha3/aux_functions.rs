@@ -66,14 +66,14 @@ pub mod nist_800_185{
 }
 
 pub mod byte_utils{
-use num::BigInt;
+    use rug::{Integer as big, Assign, integer::Order};
     /// Aux methods for byte operations.
     use rand::prelude::*;
 
     /// Gets 512 randomy bytes for model functions.
     /// * `return`: Vec<u8> of 512 random u8s
-    pub fn get_random_bytes() -> Vec<u8> {
-        let mut rand_bytes = vec![0u8; 512];
+    pub fn get_random_bytes(size: u64) -> Vec<u8> {
+        let mut rand_bytes = vec![0u8; size as usize];
         thread_rng().fill(&mut rand_bytes[..]);
         rand_bytes
     }
@@ -82,7 +82,7 @@ use num::BigInt;
     /// * `a`: mut references to Vec<u8>, will be replaced with result of XOR
     /// * `b`: immut ref to Vec<u8>, dropped after function returns
     /// * `Remark`: Will probably bottleneck unless impl with SIMD.
-    pub fn xor_bytes<'a>(a: &'a mut Vec<u8>, b: &Vec<u8>) -> &'a Vec<u8> {
+    pub fn xor_bytes<'a>(a: &'a mut Vec<u8>, b: &Vec<u8>) -> &'a mut Vec<u8> {
         assert_eq!(a.len(), b.len());
         a.iter_mut()
         .zip(b.iter())
@@ -90,16 +90,29 @@ use num::BigInt;
         a
     }
 
-    /// Converts u8s to BigInt
-    /// Change sign or endian if model ops fail
-    pub fn bytes_to_big_int(input: &[u8]) -> BigInt {
-        BigInt::from_bytes_le(num_bigint::Sign::NoSign, input)
-    }
-
     ///`return` A string timestamp of current time and date
     /// corresponding to locale on local machine
     pub fn get_date_and_time_as_string() -> String {
         let local = chrono::Local::now();
         local.format("%Y-%m-%d %H:%M:%S").to_string()
+    }
+
+    ///Encodes bytes to a hex string and then converts to GMP Integer.
+    pub fn bytes_to_big(in_bytes: Vec<u8>) -> big {
+        let r = hex::encode(in_bytes);
+        big::from_str_radix(&r, 16).unwrap()
+    }
+
+    pub fn big_to_bytes(in_val: big) -> Vec<u8> {
+        in_val.to_digits(Order::Msf) as Vec<u8>
+    }
+
+}
+
+pub mod arith{
+    use rug::Integer as big;
+    pub fn mod_formula(a: big, b: big) -> big{
+        let c = big::pow_mod(a, &big::from(1), &b).unwrap();
+        c
     }
 }

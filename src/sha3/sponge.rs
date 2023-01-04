@@ -10,6 +10,7 @@ pub mod sponge_function {
         capacity: security parameter which determines rate = bit_width - minus capacity
         return: a state consisting of 25 words of 64 bits each. */ 
     pub fn sponge_absorb(m: &mut Vec<u8>, capacity: usize) -> [u64; 25] {
+        
         let r = (1600 - capacity) / 8;
         let rate_in_bytes = usize::try_from(r).unwrap(); //might not work on all architectures
         if m.len() % rate_in_bytes != 0 { pad_ten_one(m, rate_in_bytes); }
@@ -44,8 +45,8 @@ pub mod sponge_function {
     }
 
     /** Absorbs 200 bytes of message into constant memory size. */
-    fn bytes_to_state(in_val: &[u8], rate_in_bytes: usize) -> [u64; 25] {
-        let mut offset: u64 = 0;
+    fn bytes_to_state(in_val: &Vec<u8>, rate_in_bytes: usize) -> [u64; 25] {
+        let mut offset: usize = 0;
         let mut s: [u64; 25] = [0; 25];
 
         for _ in 0..in_val.len() / rate_in_bytes {
@@ -54,13 +55,22 @@ pub mod sponge_function {
                 state[j] = bytes_to_word(in_val, offset);
                 offset += 8;
             }
-            s = xor_states(&s, &state);
+            xor_states(&mut s, &state);
             keccakf_1600(&mut s);
         }
         return s;
     }
 
-    /** Converts a u64 to le vec of bytes */ 
+    /** Converts bytes to u64 (aka a lane in keccak jargon) */
+    fn bytes_to_word(in_val: &Vec<u8>, offset: usize) -> u64 {
+        let mut lane: u64 = 0;
+        for i in 0..8 {
+            lane += (in_val[(i + offset)] as u64 & 0xFF) << (8 * i);
+        }
+        lane
+    }
+
+    /// Consumes u64 into Vec<u8> 
     pub fn u64_to_little_endian_bytes(n: &u64) -> Vec<u8> {
         let mut bytes = vec![0u8; 8];
         for i in 0..8 {
@@ -70,21 +80,10 @@ pub mod sponge_function {
     }
     
     /** xors 2 states of 26 u64s, assumes equal length. */
-    fn xor_states(a: &[u64; 25], b: &[u64; 25]) -> [u64; 25] {
-        let mut result: [u64; 25] = [0; 25];
+    fn xor_states(a: &mut [u64; 25], b: &[u64; 25]) {
         for i in 0..b.len() {
-            result[i] ^= a[i] ^ b[i];
+            a[i] ^= b[i];
         }
-        result
-    }
-
-    /** Converts bytes to u64 (aka a lane in keccak jargon) */
-    fn bytes_to_word(in_val: &[u8], offset: u64) -> u64 {
-        let mut lane: u64 = 0;
-        for i in 0..8 {
-            lane += (in_val[(i + offset) as usize] as u64 & 0xFF) << (8 * i);
-        }
-        lane
     }
 
     /** Multi-rate padding scheme defined in FIPS 202 5.1 */
