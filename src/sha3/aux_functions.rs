@@ -66,9 +66,11 @@ pub mod nist_800_185{
 }
 
 pub mod byte_utils{
-    use rug::{Integer as big, Assign, integer::Order};
+    use rug::{Integer as big};
     /// Aux methods for byte operations.
     use rand::prelude::*;
+    use rug::integer::Order::{MsfBe, LsfBe};
+    
 
     /// Gets 512 randomy bytes for model functions.
     /// * `return`: Vec<u8> of 512 random u8s
@@ -76,6 +78,14 @@ pub mod byte_utils{
         let mut rand_bytes = vec![0u8; size as usize];
         thread_rng().fill(&mut rand_bytes[..]);
         rand_bytes
+    }
+
+    pub fn get_random_big(size: u32) -> big{
+        use rug::rand::RandState;
+        use rug::{Integer};
+        let mut rand = RandState::new();
+        let i = Integer::random_bits(size, &mut rand);
+        i.into()
     }
 
     /// XORs byte streams in place using iterators
@@ -99,12 +109,13 @@ pub mod byte_utils{
 
     ///Encodes bytes to a hex string and then converts to GMP Integer.
     pub fn bytes_to_big(in_bytes: Vec<u8>) -> big {
-        let r = hex::encode(in_bytes);
-        big::from_str_radix(&r, 16).unwrap()
+        let res = big::from_digits(&in_bytes, LsfBe);
+        res
     }
 
     pub fn big_to_bytes(in_val: big) -> Vec<u8> {
-        in_val.to_digits(Order::Msf) as Vec<u8>
+        let res = big::to_digits(&in_val, LsfBe);
+        res
     }
 
 }

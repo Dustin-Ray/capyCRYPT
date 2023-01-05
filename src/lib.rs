@@ -43,8 +43,8 @@ pub struct KeyObj {
     // key_type: String,        /*Acceptable values are PUBLIC or PRIVATE.
 	                        //  PUBLIC keys are used only for encryptions, while keys labeled PRIVATE
 	                        //  encrypt or decrypt.*/
-    pub pub_key_x: String,       //big.Int value representing E521 X coordinate
-    pub pub_key_y: String,       //big.Int value representing E521 X coordinate
+    pub pub_key_x: big,       //big.Int value representing E521 X coordinate
+    pub pub_key_y: big,       //big.Int value representing E521 X coordinate
     pub priv_key: Vec<u8>,        //big.Int value representing secret scalar, nil if KeyType is PUBLIC
     pub date_created: String,    //Date key was generated
     // signature: String,       //Nil unless PUBLIC. Signs 128 bit SHA3 hash of this KeyObj

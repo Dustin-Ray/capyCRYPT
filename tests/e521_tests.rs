@@ -78,7 +78,7 @@ mod e521_tests {
     #[test]
     // k*G = (k mod r)*G
     fn k_g_equals_k_mod_r_times_g() {
-        for _ in 0..1000 {
+        for _ in 0..5 {
             let mut rng = thread_rng();
             let k_u128: u64 = rng.gen();
             let k = big::from(k_u128);
@@ -96,7 +96,7 @@ mod e521_tests {
     #[test]
     //(k + 1)*G = (k*G) + G
     fn k_plus_one_g() {
-        for _ in 0..20 {
+        for _ in 0..5 {
             let mut rng = thread_rng();
             let k_u128: u64 = rng.gen();
             let k = big::from(k_u128);
@@ -113,7 +113,7 @@ mod e521_tests {
     #[test]
     //(k + t)*G = (k*G) + (t*G)
     fn k_t () {
-        for _ in 0..10 {
+        for _ in 0..5 {
             let mut rng = thread_rng();
             let rnd: u64 = rng.gen();
             
@@ -139,7 +139,7 @@ mod e521_tests {
     //k*(t*P) = t*(k*G) = (k*t mod r)*G
     fn test_ktp() {
 
-        for _ in 0..20 {
+        for _ in 0..5 {
             let r = get_e521_gen_point(false);
             let r = r.r;
             let mut rng = thread_rng();

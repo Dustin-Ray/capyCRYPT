@@ -19,7 +19,7 @@ pub mod e521_module {
         fn add_points(&mut self, other: &E521);}
     
     /// Initializes r value for curve. 
-    fn set_r() -> big {
+    pub fn set_r() -> big {
         let mut r = rug::Integer::from(2);
         r.pow_assign(519);
         let s = big::from_str_radix("337554763258501705789107630418782636071904961214051226618635150085779108655765", 10).unwrap();
