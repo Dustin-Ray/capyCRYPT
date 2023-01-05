@@ -24,7 +24,7 @@ pub mod e521_module {
         r.pow_assign(519);
         let s = big::from_str_radix("337554763258501705789107630418782636071904961214051226618635150085779108655765", 10).unwrap();
         r -= s;
-        return r;
+        r
     }
 
     /// Initializes curve modulus 𝑝 := 2⁵²¹−1, a Mersenne prime defining the finite field 𝔽𝑝.
@@ -39,51 +39,49 @@ pub mod e521_module {
     pub fn set_n() -> big {
         let mut n = set_r();
         n *= 4;
-        return n;
+        n
     }
 
     /// Sets the curve d parameter. 
-    fn set_d() -> big { return big::from(-376014);}
+    fn set_d() -> big { big::from(-376014)}
 
     /// Generates the neutral point 𝒪 = (0, 1)
     pub fn get_e521_id_point() -> E521 {
-        let point = E521{
+        E521{
             x: rug::Integer::from(0),
             y: rug::Integer::from(1),
             p: set_p(),
             d: set_d(),
             r: set_r(), 
             n: set_n()
-        };
-        point
+        }
+        
     }
 
     /// Gets point for arbitrary (x, y) TODO verify point is on curve
     pub fn get_e521_point(x: rug::Integer, y: rug::Integer) -> E521 {
-        let point = E521{
+        E521{
             x,
             y,
             p: set_p(),
             d: set_d(),
             r: set_r(), 
             n: set_n()
-        };
-        point
+        }
     }
 
     /// Gets point for arbitrary (x, y) TODO verify point is on curve
     pub fn get_e521_gen_point(msb: bool) -> E521 {
         let x = rug::Integer::from(4);
         let new_x = x.clone();
-        let point = E521{
+        E521{
             x,
             y: solve_for_y(&new_x, set_p(), msb),
             p: set_p(),
             d: set_d(),
             r: set_r(), 
             n: set_n()
-        };
-        point
+        }
     }
 
     /// If a point is defined as (x, y) then its negation is (-x, y)
@@ -91,8 +89,8 @@ pub mod e521_module {
         let x = p.x.clone();
         let y = p.y.clone();
         let x = x * -1;
-        let point = get_e521_point(x, y);
-        point
+        get_e521_point(x, y)
+        
     }
 
     // Compare points for equality by coordinate values only.
@@ -146,7 +144,7 @@ impl PointOps for E521{
         // 1 / (1 + dx₁x₂y₁y₂)
         let one_plus_dx1x2y1y2 = big::from(1) + (d.clone() * x1.clone() * x2.clone() * y1.clone() * y2.clone());
         let one_plus_dx1x2y1y2 = mod_formula(one_plus_dx1x2y1y2, p.clone());
-        let one_plus_dx1x2y1y2inv = mod_inv(&one_plus_dx1x2y1y2, &p.clone());
+        let one_plus_dx1x2y1y2inv = mod_inv(&one_plus_dx1x2y1y2, &p);
 
         // (y₁y₂ − x₁x₂)
         let y1y2x1x2_difference = (y1.clone() * y2.clone()) - (x1.clone() * x2.clone());
@@ -181,8 +179,8 @@ impl PointOps for E521{
         let denom = mod_formula(denom, p.clone());
         let denom = mod_inv(&denom, &p);
         let radicand = num * denom;
-        let y = sqrt(&radicand, p, msb);
-        y
+        sqrt(&radicand, p, msb)
+        
     }
 
     /// Compute a square root of v mod p with a specified
@@ -204,9 +202,6 @@ impl PointOps for E521{
         } r
     }
 
-
-
-
     /// Performs modular inverse via euclidian algorithm.
     /// * `n`: big value to mod
     /// * `p`: modulus
@@ -214,7 +209,7 @@ impl PointOps for E521{
         if p.eq(&big::ZERO) { return big::ZERO }
         let (mut a, mut m, mut x, mut inv) = (n.clone(), p.clone(), big::ZERO, big::from(1));
         while a < big::ZERO { a += p }
-        while a > big::from(1) {
+        while a > 1 {
             let (div, rem) = a.div_rem(m.clone());
             inv -= div * &x;
             a = rem;

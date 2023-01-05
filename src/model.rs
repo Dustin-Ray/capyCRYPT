@@ -19,7 +19,7 @@ pub mod shake_functions {
         let bytes_to_pad = 136 - n.len() % 136; // SHA3-256 r = 1088 / 8 = 136
         if bytes_to_pad == 1 { n.extend_from_slice(&[0x86]);} //delim suffix
         else { n.extend_from_slice(&[0x06]);} //delim suffix
-        return  sponge_squeeze(&mut sponge_absorb(n, 2 * d), d, 1600-(2*d));
+        sponge_squeeze(&mut sponge_absorb(n, 2 * d), d, 1600-(2*d))
     }
  
     /// FIPS 202 Section 3 cSHAKE function returns customizable and
@@ -30,14 +30,14 @@ pub mod shake_functions {
     /// * `s`: option customization string
     /// * `return`: SHA3XOF hash of length `l` of input message `x`
     pub fn cshake(x: &mut Vec<u8>, l: u64, n: &str, s: &str) -> Vec<u8> {
-        if n == "" && s == "" { return shake(x, l as usize) }
+        if n.is_empty() && s.is_empty() { return shake(x, l as usize) }
         let mut encoded_n = encode_string(&mut n.as_bytes().to_vec());
-        let mut encoded_s = encode_string(&mut s.as_bytes().to_vec());
-        encoded_n.extend_from_slice(& mut encoded_s);
+        let encoded_s = encode_string(&mut s.as_bytes().to_vec());
+        encoded_n.extend_from_slice(&encoded_s);
         let mut out = byte_pad(&mut encoded_n, 136);
         out.append(x);
         out.push(0x04);
-        return sponge_squeeze(&mut sponge_absorb(&mut out, 512), l as usize, 1600-512);
+        sponge_squeeze(&mut sponge_absorb(&mut out, 512), l as usize, 1600-512)
     }
 
     /// Generates keyed hash for given input as specified in NIST SP 800-185 section 4. 
@@ -52,8 +52,7 @@ pub mod shake_functions {
         bp.append(x); //x is dropped here? 
         let mut right_enc = right_encode(0);
         bp.append(&mut right_enc);
-        let res = cshake(&mut bp, l, "KMAC", s);
-        res
+        cshake(&mut bp, l, "KMAC", s)
     }
 
     /// Computes SHA3-512 hash of data
@@ -87,10 +86,10 @@ pub mod shake_functions {
         temp_ke_ka.append(pw);
         let ke_ka = kmac_xof_256(&mut temp_ke_ka, &mut vec![], 1024, "S");
         let mut c = kmac_xof_256(&mut ke_ka[..64].to_vec(), &mut vec![], (msg.len() * 8) as u64, "SKE");
-        xor_bytes(&mut c, &msg);
+        xor_bytes(&mut c, msg);
         let t = kmac_xof_256(&mut ke_ka[64..].to_vec(), msg, 512, "SKA");
-        let cg = SymmetricCryptogram{z,c,t};
-        cg
+        SymmetricCryptogram{z,c,t}
+
     }
 
     /// Decrypts a symmetric cryptogram (z, c, t) under passphrase pw.
@@ -123,19 +122,18 @@ pub mod shake_functions {
     /// Remark: in the most secure variants of this scheme, the
     /// verification key 𝑉 is hashed together with the message 𝑚
     /// and the nonce 𝑈: hash (𝑚, 𝑈, 𝑉) .
-    pub fn gen_keypair(pw: &mut Vec<u8>, owner: String) -> KeyObj {
-        let mut s = bytes_to_big(kmac_xof_256(&mut pw.clone(), &mut vec![], 512, "K")) * 4;
+    pub fn gen_keypair(pw: &mut [u8], owner: String) -> KeyObj {
+        let mut s = bytes_to_big(kmac_xof_256(&mut pw.to_owned(), &mut vec![], 512, "K")) * 4;
         s = mod_formula(s, set_r());
         
         let v = get_e521_gen_point(false).sec_mul(s);
-        let key = KeyObj{
-            owner: owner.to_string(),
+        KeyObj{
+            owner,
             priv_key: pw.to_vec(),
             pub_key_x: v.x,
             pub_key_y: v.y,
             date_created: get_date_and_time_as_string(),
-        };
-        key
+        }
     }
 
     /// Encrypts a byte array m under the (Schnorr/ECDHIES) public key V.
@@ -154,21 +152,19 @@ pub mod shake_functions {
         
         let k = mod_formula(get_random_big(512) * 4, set_r());
         let w= pub_key.sec_mul(k.clone());
-        let z = get_e521_gen_point(false).sec_mul(k.clone());
+        let z = get_e521_gen_point(false).sec_mul(k);
         
         let mut temp = big_to_bytes(w.x); 
         let ke_ka = kmac_xof_256(&mut temp, &mut vec![], 1024, "P");
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
         let t = kmac_xof_256(&mut ka.clone(), &mut message.clone(), 512, "PKA");
-        xor_bytes(message, &mut kmac_xof_256(ke, &mut vec![], (message.len()*8) as u64, "PKE"));
-        let cryptogram = ECCryptogram{
+        xor_bytes(message, &kmac_xof_256(ke, &mut vec![], (message.len()*8) as u64, "PKE"));
+        ECCryptogram{
             z_x: z.x.clone(), 
-            z_y: z.y.clone(), 
+            z_y: z.y, 
             c: mem::take(message), 
-            t};
-        
-        cryptogram
+            t}
     }
 
     /// Decrypts a cryptogram under password. Assumes cryptogram is well-formed.
@@ -182,11 +178,11 @@ pub mod shake_functions {
     /// * `pw`: password used to generate ```E521``` encryption key.
     /// * `message`: cryptogram of format Z||c||t
     /// * `return`: Decryption of cryptogram Z||c||t iff t` = t
-    pub fn decrypt_with_key(pw: &mut Vec<u8>, message: &mut ECCryptogram) -> bool {
+    pub fn decrypt_with_key(pw: &mut [u8], message: &mut ECCryptogram) -> bool {
 
         let mut z = get_e521_point(message.z_x.clone(), message.z_y.clone());
 
-        let mut s = bytes_to_big(kmac_xof_256(&mut pw.clone(), &mut vec![], 512, "K")) * 4;
+        let mut s = bytes_to_big(kmac_xof_256(&mut pw.to_owned(), &mut vec![], 512, "K")) * 4;
         s = mod_formula(s, set_r());
         let w = z.sec_mul(s);
         let mut temp = big_to_bytes(w.x); //change to le if this fails
@@ -194,9 +190,9 @@ pub mod shake_functions {
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
         let len = message.c.len() * 8;
-        xor_bytes(&mut message.c, &mut kmac_xof_256(ke, &mut vec![], (len) as u64, "PKE"));
+        xor_bytes(&mut message.c, &kmac_xof_256(ke, &mut vec![], (len) as u64, "PKE"));
         let t_p = kmac_xof_256(&mut ka.clone(), &mut message.c.clone(), 512, "PKA");
-       return t_p == message.t
+        t_p == message.t
     }
 
 

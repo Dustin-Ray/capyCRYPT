@@ -11,7 +11,7 @@ pub mod nist_800_185{
     pub fn byte_pad(input: &mut Vec<u8>, w: u32) -> Vec<u8> {
         let mut z = left_encode(w as u64);
         z.append(input);
-        let padlen = w - ((z.len() as u32 % w) as u32);
+        let padlen = w - (z.len() as u32 % w);
         let mut padded = vec![0; padlen as usize];
         z.append(&mut padded);
         z
@@ -60,7 +60,7 @@ pub mod nist_800_185{
         }
         // Prepend number of encoded bytes
         b[0] = 9 - i;
-        return b[0..(9 - i as usize)].to_vec();   
+        b[0..(9 - i as usize)].to_vec()
     }
 
 }
@@ -69,7 +69,7 @@ pub mod byte_utils{
     use rug::{Integer as big};
     /// Aux methods for byte operations.
     use rand::prelude::*;
-    use rug::integer::Order::{MsfBe, LsfBe};
+    use rug::integer::Order::{LsfBe};
     
 
     /// Gets 512 randomy bytes for model functions.
@@ -109,13 +109,11 @@ pub mod byte_utils{
 
     ///Encodes bytes to a hex string and then converts to GMP Integer.
     pub fn bytes_to_big(in_bytes: Vec<u8>) -> big {
-        let res = big::from_digits(&in_bytes, LsfBe);
-        res
+        big::from_digits(&in_bytes, LsfBe)
     }
 
     pub fn big_to_bytes(in_val: big) -> Vec<u8> {
-        let res = big::to_digits(&in_val, LsfBe);
-        res
+        big::to_digits(&in_val, LsfBe)
     }
 
 }
@@ -123,7 +121,6 @@ pub mod byte_utils{
 pub mod arith{
     use rug::Integer as big;
     pub fn mod_formula(a: big, b: big) -> big{
-        let c = big::pow_mod(a, &big::from(1), &b).unwrap();
-        c
+        big::pow_mod(a, &big::from(1), &b).unwrap()
     }
 }

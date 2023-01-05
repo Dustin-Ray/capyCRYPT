@@ -1,12 +1,12 @@
 #[cfg(test)]
 pub mod model_test {
 
-    use std::{time::Instant, str::FromStr};
+    use std::{time::Instant};
     use cryptotool::{
         model::shake_functions::{encrypt_with_pw, decrypt_with_pw, gen_keypair, encrypt_with_key, decrypt_with_key}, 
-        curve::e521::e521_module::{get_e521_gen_point, PointOps, get_e521_point}, KeyObj, sha3::aux_functions::byte_utils::{bytes_to_big, big_to_bytes}};
+        curve::e521::e521_module::{get_e521_point}};
     use cryptotool::sha3::aux_functions::byte_utils::get_random_bytes;
-    use rug::{Integer as big};
+    
 
 
     #[test]

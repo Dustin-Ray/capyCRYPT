@@ -10,12 +10,9 @@ pub mod sponge_function {
         capacity: security parameter which determines rate = bit_width - minus capacity
         return: a state consisting of 25 words of 64 bits each. */ 
     pub fn sponge_absorb(m: &mut Vec<u8>, capacity: usize) -> [u64; 25] {
-        
         let r = (1600 - capacity) / 8;
-        let rate_in_bytes = usize::try_from(r).unwrap(); //might not work on all architectures
-        if m.len() % rate_in_bytes != 0 { pad_ten_one(m, rate_in_bytes); }
-        let s = bytes_to_state(&m, rate_in_bytes);
-        return s;
+        if m.len() % r != 0 { pad_ten_one(m, r); }
+        bytes_to_state(m, r)
     }
 
     /** 
@@ -51,18 +48,18 @@ pub mod sponge_function {
 
         for _ in 0..in_val.len() / rate_in_bytes {
             let mut state = [0u64; 25];
-            for j in 0..((rate_in_bytes * 8) / 64) {
-                state[j] = bytes_to_word(in_val, offset);
+            for el in state.iter_mut().take((rate_in_bytes * 8) / 64) {
+                *el = bytes_to_word(in_val, offset);
                 offset += 8;
             }
             xor_states(&mut s, &state);
             keccakf_1600(&mut s);
         }
-        return s;
+        s
     }
 
     /** Converts bytes to u64 (aka a lane in keccak jargon) */
-    fn bytes_to_word(in_val: &Vec<u8>, offset: usize) -> u64 {
+    fn bytes_to_word(in_val: &[u8], offset: usize) -> u64 {
         let mut lane: u64 = 0;
         for i in 0..8 {
             lane += (in_val[(i + offset)] as u64 & 0xFF) << (8 * i);
@@ -73,8 +70,8 @@ pub mod sponge_function {
     /// Consumes u64 into Vec<u8> 
     pub fn u64_to_little_endian_bytes(n: &u64) -> Vec<u8> {
         let mut bytes = vec![0u8; 8];
-        for i in 0..8 {
-            bytes[i] = (n >> (i * 8)) as u8;
+        for (i, el) in bytes.iter_mut().enumerate().take(8) {
+            *el = (n >> (i * 8)) as u8;
         }
         bytes
     }
@@ -91,7 +88,7 @@ pub mod sponge_function {
         let q = rate_in_bytes - m.len() % rate_in_bytes;
         let mut padded = vec![0; q];
         padded[q - 1] = 0x80;
-        m.extend_from_slice(&mut padded);
+        m.extend_from_slice(&padded);
     }
 
 }
