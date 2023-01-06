@@ -23,6 +23,7 @@ impl Clone for E521 {
     }
 }
 
+
 #[derive(Debug)]
 pub struct SymmetricCryptogram {
     pub z: Vec<u8>,     //nonce

@@ -15,7 +15,7 @@ pub mod e521_module {
     
     pub trait PointOps {
         fn sec_mul(&mut self, s: big) -> E521;
-        fn add(&mut self, other: &E521) -> E521;
+        fn add(&self, other: &E521) -> E521;
         fn negate_point(&self) -> E521;
         fn is_curve_point(&self) -> bool;}
     
@@ -127,7 +127,7 @@ impl PointOps for E521{
     /// ```E521``` = (x, y), then ```E521``` addition is defined as:
     /// * (x₁, y₁) + (x₂, y₂)  = (x₁y₂ + y₁x₂) / (1 + dx₁x₂y₁y₂), (y₁y₂ − x₁x₂) / (1 − dx₁x₂y₁y₂)
     /// * where ```"/"``` is defined to be multiplication by modular inverse.
-    fn add(&mut self, p2: &E521) -> E521{
+    fn add(&self, p2: &E521) -> E521{
 
         let x1 = self.x.clone();
         let y1 = self.y.clone();
@@ -141,22 +141,18 @@ impl PointOps for E521{
         let x1y2 = (x1.clone() * y2.clone()) % p.clone();
         let y1x2 = (y1.clone() * x2.clone()) % p.clone();
         let x1y2y1x2_sum = (x1y2 + y1x2) % p.clone();
-
         // 1 / (1 + dx₁x₂y₁y₂)
         let one_plus_dx1x2y1y2 = (big::from(1) + (d.clone() * x1.clone() * x2.clone() * y1.clone() * y2.clone())) % p.clone();
         let one_plus_dx1x2y1y2inv = mod_inv(&one_plus_dx1x2y1y2, &p);
-
         // (y₁y₂ − x₁x₂)
         let y1y2x1x2_difference = ((y1.clone() * y2.clone()) - (x1.clone() * x2.clone())) % p.clone();
-
         // 1 / (1 − dx₁x₂y₁y₂)
         let one_minus_dx1x2y1y2 = (big::from(1) - (d * x1 * x2 * y1 * y2)) % p.clone();
         let one_minus_dx1x2y1y2inv = mod_inv(&one_minus_dx1x2y1y2, &p);
-
         // (x₁y₂ + y₁x₂) / (1 + dx₁x₂y₁y₂)
         let new_x = ((x1y2y1x2_sum * one_plus_dx1x2y1y2inv) % p.clone() + p.clone()) % p.clone();
         // (y₁y₂ − x₁x₂) / (1 − dx₁x₂y₁y₂)
-        let new_y = ((y1y2x1x2_difference * one_minus_dx1x2y1y2inv) % p.clone() + p.clone()) % p.clone();
+        let new_y = ((y1y2x1x2_difference * one_minus_dx1x2y1y2inv) % p.clone() + p.clone()) % p;
         get_e521_point(new_x, new_y)
 
     }
