@@ -71,21 +71,22 @@ pub mod byte_utils{
     use rand::prelude::*;
     use rug::integer::Order::{LsfBe};
     
-
-    /// Gets 512 randomy bytes for model functions.
-    /// * `return`: Vec<u8> of 512 random u8s
+    /// Gets size number of random bytes.
+    /// * `size`: number of bytes requested
+    /// * `return`: Vec<u8> of size number of random u8s
     pub fn get_random_bytes(size: u64) -> Vec<u8> {
         let mut rand_bytes = vec![0u8; size as usize];
         thread_rng().fill(&mut rand_bytes[..]);
         rand_bytes
     }
 
-    pub fn get_random_big(size: u32) -> big{
+    /// Get a random big with size number of bits
+    pub fn get_random_big(size: u64) -> big{
         use rug::rand::RandState;
         use rug::{Integer};
         let mut rand = RandState::new();
-        let i = Integer::random_bits(size, &mut rand);
-        i.into()
+        let i = Integer::random_bits(size.try_into().unwrap(), &mut rand).into();
+        i
     }
 
     /// XORs byte streams in place using iterators
@@ -116,11 +117,4 @@ pub mod byte_utils{
         big::to_digits(&in_val, LsfBe)
     }
 
-}
-
-pub mod arith{
-    use rug::Integer as big;
-    pub fn mod_formula(a: big, b: big) -> big{
-        big::pow_mod(a, &big::from(1), &b).unwrap()
-    }
 }

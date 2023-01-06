@@ -1,6 +1,6 @@
 use rug::Integer as big;
 
-#[derive(Debug)]
+#[derive(Default, Debug)]
 pub struct E521 {
     pub x: big,  //x-coord
     pub y: big,  //y coord
@@ -22,12 +22,14 @@ impl Clone for E521 {
         }
     }
 }
+
 #[derive(Debug)]
 pub struct SymmetricCryptogram {
     pub z: Vec<u8>,     //nonce
     pub c: Vec<u8>,     //ciphertext
     pub t: Vec<u8>      //authentication tag
 }
+
 #[derive(Debug)]
 pub struct ECCryptogram {
     pub z_x: big,    // Z_x is the x coordinate of the public nonce
@@ -35,22 +37,35 @@ pub struct ECCryptogram {
     pub c: Vec<u8>,     // c represents the ciphertext of an encryption
     pub t: Vec<u8>      // t is the authentication tag for the message
 }
+
 #[derive(Debug)]
-pub struct KeyObj {
-
-    // id: String,             //Represents the unique ID of the key
-    pub owner: String,          //Represents the owner of the key, can be arbitrary
-    // key_type: String,        /*Acceptable values are PUBLIC or PRIVATE.
-	                        //  PUBLIC keys are used only for encryptions, while keys labeled PRIVATE
-	                        //  encrypt or decrypt.*/
-    pub pub_key_x: big,       //big.Int value representing E521 X coordinate
-    pub pub_key_y: big,       //big.Int value representing E521 X coordinate
-    pub priv_key: Vec<u8>,        //big.Int value representing secret scalar, nil if KeyType is PUBLIC
-    pub date_created: String,    //Date key was generated
-    // signature: String,       //Nil unless PUBLIC. Signs 128 bit SHA3 hash of this KeyObj
-
+pub struct Signature {
+    h: Vec<u8>,         // keyed hash of signed message
+    z: big          // public nonce
 }
 
+impl Clone for Signature {
+    fn clone(&self) -> Signature {
+        Signature {
+            h: self.h.clone(),
+            z: self.z.clone(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct KeyObj {
+    // id: String,              // Represents the unique ID of the key
+    pub owner: String,          // Represents the owner of the key, can be arbitrary
+    // key_type: String,        // Acceptable values are PUBLIC or PRIVATE.
+                                // PUBLIC keys are used only for encryptions, while keys labeled PRIVATE
+                                // encrypt or decrypt.
+    pub pub_x: big,             // E521 X coordinate
+    pub pub_y: big,             // E521 Y coordinate
+    pub priv_key: Vec<u8>,      // value representing secret scalar, nil if KeyType is PUBLIC
+    pub date_created: String,   // Date key was generated
+    // signature: String,       // Nil unless PUBLIC. Signs 128 bit SHA3 hash of this KeyObj
+}
 
 ///module for curve and e521 functionality
 pub mod curve{
