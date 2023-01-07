@@ -1,7 +1,7 @@
 pub mod shake_functions {
-    use std::mem;
+
     use crate::{SymmetricCryptogram, KeyObj, ECCryptogram, E521, Signature};
-    use crate::curve::e521::e521_module::{get_e521_gen_point, PointOps, get_e521_point, set_n};
+    use crate::curve::e521::e521_module::{get_e521_gen_point, PointOps, get_e521_point, get_n};
     use crate::sha3::sponge::sponge_function::{sponge_squeeze, sponge_absorb};
     use crate::sha3::aux_functions::nist_800_185::{byte_pad, encode_string, right_encode};
     use crate::sha3::aux_functions::byte_utils::{
@@ -10,7 +10,7 @@ pub mod shake_functions {
         get_date_and_time_as_string, 
         bytes_to_big, big_to_bytes};
     use rug::Integer as big;
-    use std::cell::RefCell;
+    use std::borrow::{BorrowMut, Borrow};
 
     /// SHA3-Keccak ref NIST FIPS 202.
     /// * `n`: pointer to message to be hashed.
@@ -80,16 +80,16 @@ pub mod shake_functions {
     /// * `pw`: symmetric encryption key, can be blank but shouldnt be
     /// * `message`: message to encrypt
     /// * `return`: ```SymmetricCryptogram``` (z, c, t)
-    pub fn encrypt_with_pw(pw: &mut Vec<u8>, msg: &RefCell<Vec<u8>>) -> SymmetricCryptogram{
+    pub fn encrypt_with_pw(pw: &mut Vec<u8>, msg: &mut Box<Vec<u8>>) -> SymmetricCryptogram{
         let z = get_random_bytes(512);
         let mut ke_ka = z.clone();
         ke_ka.append(pw);
         let ke_ka = kmac_xof_256(&mut ke_ka, &mut vec![], 1024, "S");
-        let mut c = kmac_xof_256(&mut ke_ka[..64].to_vec(), &mut vec![], (&msg.borrow_mut().len() * 8) as u64, "SKE");
-        xor_bytes(&mut c, &msg.borrow_mut());
-        let t = kmac_xof_256(&mut ke_ka[64..].to_vec(), &mut msg.borrow_mut(), 512, "SKA");
+        let mut ke = ke_ka[..64].to_vec();
+        let mut c = kmac_xof_256(&mut ke, &mut vec![], (&msg.len() * 8) as u64, "SKE");
+        xor_bytes(&mut c, msg.borrow_mut());
+        let t = kmac_xof_256(&mut ke_ka[64..].to_vec(), msg.borrow_mut(), 512, "SKA");
         SymmetricCryptogram{z,c,t}
-
     }
 
     /// Decrypts a symmetric cryptogram (z, c, t) under passphrase pw.
@@ -101,14 +101,14 @@ pub mod shake_functions {
     /// * `msg`: cryptogram to decrypt as```SymmetricCryptogram```, assumes valid format.
     /// * `pw`: decryption password, can be blank
     /// * `return`: t` == t
-    pub fn decrypt_with_pw(pw: &mut Vec<u8>, msg: &mut SymmetricCryptogram) -> bool {
+    pub fn decrypt_with_pw(pw: &mut Vec<u8>, msg: &mut Box<SymmetricCryptogram>) -> bool {
         msg.z.append(pw);
         let ke_ka = kmac_xof_256(&mut msg.z, &mut vec![], 1024, "S");
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
         let m = kmac_xof_256(ke, &mut vec![], (msg.c.len() * 8) as u64, "SKE");
         xor_bytes(&mut msg.c, &m);
-        msg.t == kmac_xof_256(ka, &mut msg.c, 512, "SKA")
+        msg.t == kmac_xof_256(ka, msg.c.borrow_mut(), 512, "SKA")
     }
 
     /// Generates a (Schnorr/ECDHIES) key pair from passphrase pw:
@@ -124,7 +124,7 @@ pub mod shake_functions {
     /// and the nonce 𝑈: hash (𝑚, 𝑈, 𝑉) .
     pub fn gen_keypair(pw: &mut Vec<u8>, owner: String) -> KeyObj {
         let s = (bytes_to_big(
-                        kmac_xof_256(pw, &mut vec![], 512, "K")) * 4) % set_n();
+                        kmac_xof_256(pw, &mut vec![], 512, "K")) * 4) % get_n();
         let v = get_e521_gen_point(false).sec_mul(s);
         KeyObj{
             owner,
@@ -147,20 +147,24 @@ pub mod shake_functions {
     /// * `pub_key` : X coordinate of public static key 𝑉, accepted as ```E521```
     /// * `message`: message of any length or format to encrypt
     /// * `return` : cryptogram: (𝑍, c, t) = 𝑍||c||t
-    pub fn encrypt_with_key(pub_key: &mut E521, message: &mut Vec<u8>) -> ECCryptogram{
-        let k: big = (bytes_to_big(get_random_bytes(64)) * 4)  % set_n();
+    pub fn encrypt_with_key(pub_key: &mut E521, message: &mut Box<Vec<u8>>) -> ECCryptogram{
+        let k: big = (bytes_to_big(get_random_bytes(64)) * 4)  % get_n();
         let w= pub_key.sec_mul(k.clone());
         let z = get_e521_gen_point(false).sec_mul(k);
         let ke_ka = kmac_xof_256(&mut big_to_bytes(w.x), &mut vec![], 1024, "P");
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
-        let t = kmac_xof_256(&mut ka.clone(), &mut message.clone(), 512, "PKA");
-        xor_bytes(message, &kmac_xof_256(ke, &mut vec![], (message.len()*8) as u64, "PKE"));
+        
+        let len = (message.len()*8) as u64;
+        let mut c = kmac_xof_256(ke, &mut vec![], len, "PKE");
+        xor_bytes(&mut c, message);
+        let t = kmac_xof_256(&mut ka.clone(), message.borrow_mut(), 512, "PKA");
+        
         ECCryptogram{
         z_x: z.x, 
         z_y: z.y, 
-        c: mem::take(message), 
-        t}    
+        c,
+        t}
     }
 
     /// Decrypts a cryptogram under password. Assumes cryptogram is well-formed.
@@ -174,17 +178,23 @@ pub mod shake_functions {
     /// * `pw`: password used to generate ```E521``` encryption key.
     /// * `message`: cryptogram of format 𝑍||c||t
     /// * `return`: Decryption of cryptogram 𝑍||c||t iff t` = t
-    pub fn decrypt_with_key(pw: &mut [u8], message: ECCryptogram) -> bool {
-        let mut z = get_e521_point(message.z_x, message.z_y);
-        let s: big = (bytes_to_big(kmac_xof_256(&mut pw.to_owned(), &mut vec![], 512, "K")) * 4)  % set_n();
+    pub fn decrypt_with_key(pw: &mut [u8], message: &mut ECCryptogram) -> bool {
+        let mut z = get_e521_point(message.z_x.clone(), message.z_y.clone());
+        let s: big = (bytes_to_big(
+            kmac_xof_256(
+                &mut pw.to_owned(), 
+                &mut vec![], 
+                512,
+                 "K")) * 4)  % get_n();
+        
         let w = z.sec_mul(s);
         let ke_ka = kmac_xof_256(&mut big_to_bytes(w.x), &mut vec![], 1024, "P");
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();            
         let len = message.c.len() * 8;
-        let mut m = kmac_xof_256(ke, &mut vec![], (len) as u64, "PKE");
-        xor_bytes(&mut m, &message.c);
-        let t_p = kmac_xof_256(&mut ka.clone(), &mut m, 512, "PKA");
+        let m = Box::new(kmac_xof_256(ke, &mut vec![], (len) as u64, "PKE"));
+        xor_bytes(&mut message.c, &m.borrow());
+        let t_p = kmac_xof_256(&mut ka.clone(), &mut message.c, 512, "PKA");
         t_p == message.t
     }
 
@@ -194,19 +204,19 @@ pub mod shake_functions {
     /// * `𝑈` ← kG;
     /// * `h` ← kmac_xof_256(𝑈ₓ , m, 512, “T”); z ← (𝑘 – ℎ𝑠) mod r
     /// * `return`: signature: (`h`, `z`)
-    pub fn sign_with_key(pw: &mut Vec<u8>, message: &RefCell<Vec<u8>>) -> Signature{
+    pub fn sign_with_key(pw: &mut Vec<u8>, message: &mut Box<Vec<u8>>) -> Signature{
         let s:big = bytes_to_big(kmac_xof_256(pw, &mut vec![], 512, "K")) * 4;
         let mut s_bytes = big_to_bytes(s.clone());
 
         let k:big = bytes_to_big(
-                    kmac_xof_256(&mut s_bytes, &mut message.borrow_mut(), 512, "N")) * 4;
+                    kmac_xof_256(&mut s_bytes, message.borrow_mut(), 512, "N")) * 4;
         
         let u = get_e521_gen_point(false).sec_mul(k.clone());
         let mut ux_bytes = big_to_bytes(u.x);
-        let h = kmac_xof_256(&mut ux_bytes, &mut message.borrow_mut(), 512, "T");
+        let h = kmac_xof_256(&mut ux_bytes, message.borrow_mut(), 512, "T");
         let h_big = bytes_to_big(h.clone());
         //(a % b + b) % b
-        let z = ((k - (h_big*s)) % u.r.clone() + u.r.clone()) % u.r.clone();
+        let z = ((k - (h_big*s)) % u.r.clone() + u.r.clone()) % u.r;
         Signature {h, z}
     }
 
@@ -217,12 +227,12 @@ pub mod shake_functions {
     /// * `pubKey`: E521 key 𝑉 used to sign message m
     /// * `message`: Vec<u8> of message to verify
     /// * `return`: true if, and only if, kmac_xof_256(𝑈ₓ , m, 512, “T”) = h
-    pub fn verify_signature(sig: &Signature, pub_key: &mut E521, message: &RefCell<Vec<u8>>) -> bool {
+    pub fn verify_signature(sig: &Signature, pub_key: &mut E521, message: &mut Box<Vec<u8>>) -> bool {
         let mut u = get_e521_gen_point(false).sec_mul(sig.z.clone());
         let hv = pub_key.sec_mul(bytes_to_big(sig.h.clone()));
         u = u.add(&hv);
         let mut ux_bytes = big_to_bytes(u.x);
-        let h_p = kmac_xof_256(&mut ux_bytes, &mut message.borrow_mut(), 512, "T");
+        let h_p = kmac_xof_256(&mut ux_bytes, message.borrow_mut(), 512, "T");
         h_p == sig.h
     }
 

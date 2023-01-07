@@ -37,7 +37,7 @@ pub mod e521_module {
     }
 
     /// Initializes number of points on the curve. 
-    pub fn set_n() -> big {
+    pub fn get_n() -> big {
         let mut n = set_r();
         n *= 4;
         n
@@ -54,7 +54,7 @@ pub mod e521_module {
             p: set_p(),
             d: set_d(),
             r: set_r(), 
-            n: set_n()
+            n: get_n()
         }
         
     }
@@ -67,7 +67,7 @@ pub mod e521_module {
             p: set_p(),
             d: set_d(),
             r: set_r(), 
-            n: set_n()
+            n: get_n()
         }
     }
 
@@ -81,7 +81,7 @@ pub mod e521_module {
             p: set_p(),
             d: set_d(),
             r: set_r(), 
-            n: set_n()
+            n: get_n()
         }
     }
 
