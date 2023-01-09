@@ -1,42 +1,37 @@
-// use gtk4::prelude::*;
-// use gtk4::{Application, ApplicationWindow, Button};
-// const APP_ID: &str = "org.gtk_rs.cryptotool";
+use cryptotool::AppCtx;
+use cryptotool::controller::buttons::create_buttons;
+use gtk4::prelude::*;
+use gtk4::{Application, ApplicationWindow};
 
-// struct WindowCtx<'a> {
-//     win: &'a gtk4::Window,
-//     fixed: &'a gtk4::Fixed,
-//     notepad: &'a gtk4::TextBuffer,
-//     init: bool,
-//     status: &'a gtk4::Label,
-//     progress_bar: &'a gtk4::ProgressBar,
-//     buttons: &'a [gtk4::Button]
-// }
+const APP_ID: &str = "org.gtk_rs.CryptoTool";
 
-// //en
-// fn main() {
-//     // Create a new application
-//     let app = Application::builder().application_id(APP_ID).build();
-//     app.connect_activate(setup_window);
+fn main() {
+    // Create a new application
+    let app = Application::builder().application_id(APP_ID).build();
+    // Connect to "activate" signal of `app`
+    app.connect_activate(build_ui);
+    // Run the application
+    app.run();
+}
+
+fn build_ui(app: &Application) {
     
-//     app.run();
-// }
+    let ctx = AppCtx{fixed: gtk4::Fixed::new()};
 
-// fn setup_window(app: &Application) {    
-//     // Create a window
-//     let window = ApplicationWindow::builder()
-//         .application(app)
-//         .title("CryptoTool v0.1")
-//         .build();
-//     window.set_default_size(1050, 590);
-//     // Present window
-//     window.present();
-// }
+    setup_buttons(&ctx);
+   // Create a window and set the title
+    let window = ApplicationWindow::builder()
+        .application(app)
+        .title("CryptoTool v0.2")
+        .child(&ctx.fixed)
+        .build();
+    window.set_default_size(1050, 590);
+    
+    // Present window
+    window.present();
+}
 
 
-// fn new_fixed() -> gtk4::Fixed {
-//     let fixed = gtk4::Fixed::new();
-//     fixed.set_size_request(1050, 590);
-//     fixed
-// }
-
-fn main() {}
+pub fn setup_buttons(ctx: &AppCtx) {
+    create_buttons(ctx);
+}

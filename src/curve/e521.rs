@@ -6,8 +6,8 @@ use rug::Integer as big;
 use rug::ops::{PowAssign, Pow};
 
 /// 𝐸₅₂₁ curve (a so-called Edwards curve), is defined by the following parameters:
-/// • 𝑝 ≔ 2⁵²¹−1, a Mersenne prime defining the finite field 𝔽𝑝 .
-/// • curve equation: 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦² with 𝑑 = −376014. 
+/// * 𝑝 ≔ 2⁵²¹−1, a Mersenne prime defining the finite field 𝔽𝑝 .
+/// * curve equation: 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦² with 𝑑 = −376014. 
 pub mod e521_module {
     use crate::E521;
     use super::solve_for_y;
@@ -56,7 +56,6 @@ pub mod e521_module {
             r: set_r(), 
             n: get_n()
         }
-        
     }
 
     /// Gets point for arbitrary (x, y) TODO verify point is on curve
@@ -85,8 +84,6 @@ pub mod e521_module {
         }
     }
 
-
-
     // Compare points for equality by coordinate values only.
     pub fn e521_equals(p1: &E521, p2: &E521) -> bool { p1.x.eq(&p2.x) && p1.y.eq(&p2.y) }
  
@@ -94,8 +91,7 @@ pub mod e521_module {
 
 ///Definitions for addition and multiplcation on the curve
 impl PointOps for E521{
-
-    
+ 
     /// * Solves curve equation: 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦² with 𝑑 = −376014
     /// * `v`: key to check
     /// * `return` true if rhs == lhs, false otherwise
@@ -167,54 +163,53 @@ impl PointOps for E521{
     }
 }
 
-    /// Solves for y in curve equation 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦²
-    fn solve_for_y(x: &big, p: big, msb: bool) -> big {
-        let mut sq = x.clone();
-        sq.pow_assign(2);
-        let num = big::from(1) - sq.clone();
-        let num = num % p.clone();
-        let denom = big::from(376014) * sq + big::from(1);
-        let denom = denom % p.clone();
-        let denom = mod_inv(&denom, &p);
-        let radicand = num * denom;
-        sqrt(&radicand, p, msb)
-        
-    }
+/// Solves for y in curve equation 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦²
+fn solve_for_y(x: &big, p: big, msb: bool) -> big {
+    let mut sq = x.clone();
+    sq.pow_assign(2);
+    let num = big::from(1) - sq.clone();
+    let num = num % p.clone();
+    let denom = big::from(376014) * sq + big::from(1);
+    let denom = denom % p.clone();
+    let denom = mod_inv(&denom, &p);
+    let radicand = num * denom;
+    sqrt(&radicand, p, msb)
+    
+}
 
-    /// Compute a square root of v mod p with a specified
-    /// least significant bit, if such a root exists.
-    /// * `v`: big value to compute square root for
-    /// * `p`: big curve modulus
-    /// * `lsb`: each x has 2 `y` values on curve, lsb selects which `y` value to use
-    pub fn sqrt(v: &big, p: big, lsb: bool) -> big {
-        if v.clone().signum() == 0 { return big::from(0); }
-        let r = v.clone().secure_pow_mod(&((p.clone() >> 2) + 1), &p);
-        if !r.get_bit(0).eq(&lsb) {
-            let new_r = &p - r; // correct the lsb
-            let borrowed_r = new_r.clone();
-            let return_r = new_r.clone();
-            let bi = (new_r * borrowed_r - v) % p;
-            if bi.signum() == 0 {
-                return return_r;
-            } else { return big::from(0); }
-        } r
-    }
+/// Compute a square root of v mod p with a specified
+/// least significant bit, if such a root exists.
+/// * `v`: big value to compute square root for
+/// * `p`: big curve modulus
+/// * `lsb`: each x has 2 `y` values on curve, lsb selects which `y` value to use
+pub fn sqrt(v: &big, p: big, lsb: bool) -> big {
+    if v.clone().signum() == 0 { return big::from(0); }
+    let r = v.clone().secure_pow_mod(&((p.clone() >> 2) + 1), &p);
+    if !r.get_bit(0).eq(&lsb) {
+        let new_r = &p - r; // correct the lsb
+        let borrowed_r = new_r.clone();
+        let return_r = new_r.clone();
+        let bi = (new_r * borrowed_r - v) % p;
+        if bi.signum() == 0 {
+            return return_r;
+        } else { return big::from(0); }
+    } r
+}
 
-    /// Performs modular inverse via euclidian algorithm.
-    /// * `n`: big value to mod
-    /// * `p`: modulus
-    pub fn mod_inv(n: &big, p: &big) -> big {
-        if p.eq(&big::ZERO) { return big::ZERO }
-        let (mut a, mut m, mut x, mut inv) = (n.clone(), p.clone(), big::ZERO, big::from(1));
-        while a < big::ZERO { a += p }
-        while a > 1 {
-            let (div, rem) = a.div_rem(m.clone());
-            inv -= div * &x;
-            a = rem;
-            std::mem::swap(&mut a, &mut m);
-            std::mem::swap(&mut x, &mut inv);
-        }
-        if inv < big::ZERO { inv += p }
-        inv
+/// Performs modular inverse via euclidian algorithm.
+/// * `n`: big value to mod
+/// * `p`: modulus
+pub fn mod_inv(n: &big, p: &big) -> big {
+    if p.eq(&big::ZERO) { return big::ZERO }
+    let (mut a, mut m, mut x, mut inv) = (n.clone(), p.clone(), big::ZERO, big::from(1));
+    while a < big::ZERO { a += p }
+    while a > 1 {
+        let (div, rem) = a.div_rem(m.clone());
+        inv -= div * &x;
+        a = rem;
+        std::mem::swap(&mut a, &mut m);
+        std::mem::swap(&mut x, &mut inv);
     }
-
+    if inv < big::ZERO { inv += p }
+    inv
+}

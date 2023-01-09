@@ -1,5 +1,12 @@
 use rug::Integer as big;
 
+
+pub struct AppCtx {
+    pub fixed: gtk4::Fixed
+
+}
+
+
 #[derive(Default, Debug)]
 pub struct E521 {
     pub x: big,  //x-coord
@@ -87,3 +94,5 @@ pub mod model;
 pub mod view{
     pub mod window;
 }
+
+pub mod controller;

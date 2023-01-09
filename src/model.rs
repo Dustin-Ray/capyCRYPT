@@ -193,7 +193,7 @@ pub mod shake_functions {
         let ka = &mut ke_ka[64..].to_vec();            
         let len = message.c.len() * 8;
         let m = Box::new(kmac_xof_256(ke, &mut vec![], (len) as u64, "PKE"));
-        xor_bytes(&mut message.c, &m.borrow());
+        xor_bytes(&mut message.c, m.borrow());
         let t_p = kmac_xof_256(&mut ka.clone(), &mut message.c, 512, "PKA");
         t_p == message.t
     }
