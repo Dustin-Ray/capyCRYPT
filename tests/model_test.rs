@@ -29,7 +29,7 @@ pub mod model_test {
     fn test_key_gen_enc_dec() { //check conversion to and from bytes.
 
         let mut total = 0.0;
-        let rounds = 1.0;
+        let rounds = 10.0;
         for _ in 0..rounds as i32 {
             let pw = get_random_bytes(16);
             let owner = "test key".to_string();

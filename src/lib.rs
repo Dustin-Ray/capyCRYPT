@@ -1,12 +1,14 @@
 use rug::Integer as big;
 
-
+///Application context contains widgets and backing stores
 pub struct AppCtx {
-    pub fixed: gtk4::Fixed
+    pub fixed: gtk4::Fixed,
+    pub buttons: Vec<gtk4::Button>,
+    pub notepad: gtk4::TextBuffer
 
 }
 
-
+/// Edwards 521 curve
 #[derive(Default, Debug)]
 pub struct E521 {
     pub x: big,  //x-coord
@@ -26,9 +28,7 @@ impl Clone for E521 {
             d: self.d.clone(),
             r: self.r.clone(),
             n: self.n.clone(),
-        }
-    }
-}
+        }}}
 
 
 #[derive(Debug)]
@@ -42,13 +42,13 @@ pub struct SymmetricCryptogram {
 pub struct ECCryptogram {
     pub z_x: big,    // Z_x is the x coordinate of the public nonce
     pub z_y: big,    // Z_y is the y coordinate of the public nonce
-    pub c: Vec<u8>,     // c represents the ciphertext of an encryption
-    pub t: Vec<u8>      // t is the authentication tag for the message
+    pub c: Vec<u8>,  // c represents the ciphertext of an encryption
+    pub t: Vec<u8>   // t is the authentication tag for the message
 }
 
 #[derive(Debug)]
 pub struct Signature {
-    h: Vec<u8>,         // keyed hash of signed message
+    h: Vec<u8>,     // keyed hash of signed message
     z: big          // public nonce
 }
 
@@ -80,19 +80,20 @@ pub mod curve{
     pub mod e521;
 }
 
-// module for sha3 primitives
+/// module for sha3 primitives
 pub mod sha3{
     pub mod keccakf;
     pub mod sponge;
     pub mod aux_functions;
 }
 
-//module for model functions
+/// module for model functions
 pub mod model;
 
-//module for gui-related functions
+/// module for gui-related functions
 pub mod view{
     pub mod window;
 }
 
+/// Module for button functionality
 pub mod controller;
