@@ -1,12 +1,6 @@
 use rug::Integer as big;
 
-///Application context contains widgets and backing stores
-pub struct AppCtx {
-    pub fixed: gtk4::Fixed,
-    pub buttons: Vec<gtk4::Button>,
-    pub notepad: gtk4::TextBuffer
-
-}
+// ///Application context contains widgets and backing stores
 
 /// Edwards 521 curve
 #[derive(Default, Debug)]
