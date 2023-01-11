@@ -1,6 +1,15 @@
 use rug::Integer as big;
+#[macro_export]
+macro_rules! notepad_data {
+    ($tv: ident) => {
+        &mut $tv.buffer().text(
+            &$tv.buffer().start_iter(), 
+            &$tv.buffer().end_iter(), 
+            false
+        ).to_string().as_bytes().to_vec()
+    };
+}
 
-// ///Application context contains widgets and backing stores
 
 /// Edwards 521 curve
 #[derive(Default, Debug)]
@@ -27,9 +36,9 @@ impl Clone for E521 {
 
 #[derive(Debug)]
 pub struct SymmetricCryptogram {
-    pub z: Vec<u8>,     //nonce
-    pub c: Vec<u8>,     //ciphertext
-    pub t: Vec<u8>      //authentication tag
+    pub z: Vec<u8>,     // nonce
+    pub c: Vec<u8>,     // ciphertext
+    pub t: Vec<u8>      // authentication tag
 }
 
 #[derive(Debug)]

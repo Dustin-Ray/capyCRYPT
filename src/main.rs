@@ -1,14 +1,16 @@
+use std::rc::Rc;
 use cryptotool::model::shake_functions::compute_sha3_hash;
+use cryptotool::notepad_data;
 use gio::SimpleAction;
 use glib::clone;
 use gtk4::prelude::*;
-use gtk4::{gio, glib, Application, ApplicationWindow, Button};
+use gtk4::{gio, glib, Application, ApplicationWindow};
 
 const APP_ID: &str = "org.cryptoool";
 
-pub struct AppCtx {
-    pub fixed: gtk4::Fixed,
-    pub notepad: gtk4::TextBuffer,
+pub struct AppCtx<'a> {
+    pub fixed: &'a gtk4::Fixed,
+    pub notepad: &'a gtk4::TextBuffer,
 }
 
 fn main() {
@@ -19,47 +21,58 @@ fn main() {
 }
 
 fn build_ui(app: &Application) {
+    
     let ctx = AppCtx{
-        fixed: gtk4::Fixed::new(),
-        notepad: gtk4::TextBuffer::new(None),
+        fixed: &gtk4::Fixed::new(),
+        notepad: &gtk4::TextBuffer::new(None),
     };
     
-    let text_view = gtk4::TextView::new();
-    text_view.set_buffer(Some(&ctx.notepad));
-    text_view.set_wrap_mode(gtk4::WrapMode::Char);
+    let tv = Rc::new(gtk4::TextView::new());
+    tv.set_buffer(Some(ctx.notepad));
+    tv.set_wrap_mode(gtk4::WrapMode::Char);
 
     let scrollable_textarea = gtk4::ScrolledWindow::new();
-    scrollable_textarea.set_child(Some(&text_view));
+    scrollable_textarea.set_child(Some(&*tv));
     scrollable_textarea.set_size_request(440, 450);
 
-    // Create a button with label
-    let button = Button::builder().label("Compute SHA3 Hash").build();
+    let buttons = setup_buttons(&ctx);
 
-    // Connect to "clicked" signal of `button`
-    button.connect_clicked(move |button| {
- 
-        let notepad_text = hex::encode(
-            compute_sha3_hash(
-                &mut text_view.buffer().text(
-                    &text_view.buffer().start_iter(), 
-                    &text_view.buffer().end_iter(), 
-                    false
-                ).to_string().as_bytes().to_vec()));
-        
-        button
-            .activate_action("win.permute", Some(&notepad_text.to_variant()))
+    // Compute SHA3 Digest
+    let tv2 = tv.clone();
+    buttons[0].connect_clicked(move |sha_3_button| {
+
+        let notepad = notepad_data!(tv2);
+        let result = hex::encode(compute_sha3_hash(notepad));
+        sha_3_button
+            .activate_action("win.permute", Some(&result.to_variant()))
             .expect("The action does not exist.");
     });
 
-    // let fixed = gtk4::Fixed::new();
-    ctx.fixed.put(&button, 40.0, 80.0);
+    // Compute keyed message hash
+    let tv3 = tv.clone();
+    buttons[1].connect_clicked(move |msg_tag_button| {
+        
+        let notepad_data = 
+            &mut tv3.buffer().text(
+                &tv3.buffer().start_iter(), 
+                &tv3.buffer().end_iter(), 
+                false
+            ).to_string().as_bytes().to_vec();
+            
+        let result = hex::encode(compute_sha3_hash(notepad_data));
+        
+        msg_tag_button
+            .activate_action("win.permute", Some(&result.to_variant()))
+            .expect("The action does not exist.");
+    });
+
+
     ctx.fixed.put(&scrollable_textarea, 245.0, 80.0);
 
-    // Create a window, set the title and add `gtk_box` to it
     let window = ApplicationWindow::builder()
         .application(app)
         .title("CryptoTool v0.2")
-        .child(&ctx.fixed)
+        .child(ctx.fixed)
         .default_height(590)
         .default_width(1050)
         .build();
@@ -67,19 +80,39 @@ fn build_ui(app: &Application) {
     let action_permute = SimpleAction::new_stateful(
         "permute",
         Some(&str::static_variant_type()),
-        &"".to_variant(), //copy added here :(
+        &"".to_variant(),
     );
 
-    action_permute.connect_activate(clone!(@weak ctx.notepad as notepad => move |action, parameter| {
-        // Get parameter
-        let parameter = parameter
-            .expect("Could not get parameter.")
+    action_permute.connect_activate(clone!(@weak ctx.notepad as notepad => move |action, in_data| {
+        let np_text = in_data
+            .expect("Could not get notepad text.")
             .get::<String>()
             .expect("The variant needs to be of type `string`.");
-        action.set_state(&parameter.to_variant());
-        notepad.set_text(&parameter);
+        action.set_state(&np_text.to_variant());
+        notepad.set_text(&np_text);
     }));
-
     window.add_action(&action_permute);
     window.present();
+
+
+
+
+
+
+}
+
+pub fn setup_buttons(ctx: &AppCtx) -> Vec<gtk4::Button>{
+
+    let labels = ["Compute Hash", "Compute Tag", "Encrypt With Password", "Decrypt With Password",
+    "Generate Keypair", "Encrypt With Key", "Decrypt With Key", "Sign With Key", "Verify Signature"];
+
+    let mut buttons = Vec::new();
+
+    for i in 0..labels.len(){
+        let button = gtk4::Button::new();
+        button.set_label(labels[i]);
+        buttons.push(button); //add buttons to list so they can be turned on/off later
+        ctx.fixed.put(&buttons[i], 40.0, 80.0 + i as f64 *45.0);
+    }
+    buttons
 }

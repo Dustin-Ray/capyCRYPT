@@ -63,7 +63,7 @@ pub mod sponge_function {
         lane
     }
 
-    /// Consumes u64 into Vec<u8> 
+    /// Shifts u64 into Vec<u8> 
     pub fn u64_to_little_endian_bytes(n: &u64) -> Vec<u8> {
         let mut bytes = vec![0u8; 8];
         for (i, el) in bytes.iter_mut().enumerate().take(8) {

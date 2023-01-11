@@ -1,4 +1,6 @@
 extern crate rug;
+use std::rc::Rc;
+
 use crate::E521;
 use self::e521_module::{PointOps, get_e521_id_point, get_e521_point};
 
@@ -125,8 +127,8 @@ impl PointOps for E521{
     /// * where ```"/"``` is defined to be multiplication by modular inverse.
     fn add(&self, p2: &E521) -> E521{
 
-        let x1 = self.x.clone();
-        let y1 = self.y.clone();
+        let x1 = Rc::new(&self.x);
+        let y1 = Rc::new(&self.y);
         let x2 = p2.x.clone();
         let y2 = p2.y.clone();
 
@@ -134,16 +136,16 @@ impl PointOps for E521{
         let d = self.d.clone();
         
         // (x₁y₂ + y₁x₂)
-        let x1y2 = (x1.clone() * y2.clone()) % p.clone();
-        let y1x2 = (y1.clone() * x2.clone()) % p.clone();
+        let x1y2 = (*x1.clone() * y2.clone()) % p.clone();
+        let y1x2 = (*y1.clone() * x2.clone()) % p.clone();
         let x1y2y1x2_sum = (x1y2 + y1x2) % p.clone();
         // 1 / (1 + dx₁x₂y₁y₂)
-        let one_plus_dx1x2y1y2 = (big::from(1) + (d.clone() * x1.clone() * x2.clone() * y1.clone() * y2.clone())) % p.clone();
+        let one_plus_dx1x2y1y2 = (big::from(1) + (d.clone() * *x1.clone() * x2.clone() * *y1.clone() * y2.clone())) % p.clone();
         let one_plus_dx1x2y1y2inv = mod_inv(&one_plus_dx1x2y1y2, &p);
         // (y₁y₂ − x₁x₂)
-        let y1y2x1x2_difference = ((y1.clone() * y2.clone()) - (x1.clone() * x2.clone())) % p.clone();
+        let y1y2x1x2_difference = ((*y1.clone() * y2.clone()) - (*x1.clone() * x2.clone())) % p.clone();
         // 1 / (1 − dx₁x₂y₁y₂)
-        let one_minus_dx1x2y1y2 = (big::from(1) - (d * x1 * x2 * y1 * y2)) % p.clone();
+        let one_minus_dx1x2y1y2 = (big::from(1) - (d * *x1 * x2 * *y1 * y2)) % p.clone();
         let one_minus_dx1x2y1y2inv = mod_inv(&one_minus_dx1x2y1y2, &p);
         // (x₁y₂ + y₁x₂) / (1 + dx₁x₂y₁y₂)
         let new_x = ((x1y2y1x2_sum * one_plus_dx1x2y1y2inv) % p.clone() + p.clone()) % p.clone();
