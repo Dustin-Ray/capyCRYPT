@@ -2,9 +2,7 @@
 "exptected" in cshake and kmac tests are official test vectors supplied by NIST. */
 #[cfg(test)]
 mod sponge_test {
-
     use std::time::Instant;
-
     use cryptotool::sha3::{sponge::sponge_function::{sponge_absorb, sponge_squeeze}, aux_functions::byte_utils::get_random_bytes}; 
     use cryptotool::model::shake_functions::{compute_sha3_hash, cshake, kmac_xof_256};
     use cryptotool::sha3::{aux_functions::{nist_800_185::{left_encode, byte_pad, right_encode}}};
@@ -12,7 +10,6 @@ mod sponge_test {
     
     #[test] 
     fn test_kmac() {
-
         let key_str = "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f";
         let s_str = "My Tagged Application";
         
@@ -26,7 +23,6 @@ mod sponge_test {
 
     #[test] 
     fn test_cshake() {
-
         let mut data = hex::decode("000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F202122232425262728292A2B2C2D2E2F303132333435363738393A3B3C3D3E3F404142434445464748494A4B4C4D4E4F505152535455565758595A5B5C5D5E5F606162636465666768696A6B6C6D6E6F707172737475767778797A7B7C7D7E7F808182838485868788898A8B8C8D8E8F909192939495969798999A9B9C9D9E9FA0A1A2A3A4A5A6A7A8A9AAABACADAEAFB0B1B2B3B4B5B6B7B8B9BABBBCBDBEBFC0C1C2C3C4C5C6C7").unwrap();
         let n = "";
         let s = "Email Signature";
@@ -47,12 +43,10 @@ mod sponge_test {
         let mut val = hex::decode("000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F202122232425262728292A2B2C2D2E2F303132333435363738393A3B3C3D3E3F404142434445464748494A4B4C4D4E4F505152535455565758595A5B5C5D5E5F606162636465666768696A6B6C6D6E6F707172737475767778797A7B7C7D7E7F808182838485868788898A8B8C8D8E8F909192939495969798999A9B9C9D9E9FA0A1A2A3A4A5A6A7A8A9AAABACADAEAFB0B1B2B3B4B5B6B7B8B9BABBBCBDBEBFC0C1C2C3C4C5C6C7").unwrap();
         let val_len = val.len() as u32;
         assert_eq!(byte_pad(&mut val, val_len), expected);
-
     }
 
     #[test]
     fn test_right_encode() {
-
         let val = 0;
         let expected = [0, 1];
         assert_eq!(right_encode(val), expected);
@@ -75,13 +69,10 @@ mod sponge_test {
     
         let res = right_encode(val_len as u64);
         assert_eq!(res, expected);
-
     }
-
 
     #[test]
     fn test_left_encode() {
-
         let val = 0;
         let expected = [1, 0];
         assert_eq!(left_encode(val), expected);
@@ -107,13 +98,10 @@ mod sponge_test {
         let res = left_encode(val_len as u64);
         // println!("{:?}", res);
         assert_eq!(res, expected);
-
-
     }
 
     #[test]
     fn test_sponge() {
-
         let res = sponge_squeeze(& mut sponge_absorb(&mut "test".as_bytes().to_vec(), 256), 512, 136);
         let s = res.encode_hex::<String>();
         

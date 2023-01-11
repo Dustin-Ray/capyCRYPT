@@ -28,7 +28,6 @@ mod e521_tests {
         assert!(e521_equals(&g, &point), "points are not equal, check mul and add functions")
     }
 
-
     // G + (-G) = 0
     #[test]
     fn test_g_plus_neg_g() {
@@ -37,8 +36,8 @@ mod e521_tests {
         let id = get_e521_id_point();
         g = g.add(&neg_g);
         assert!(e521_equals(&g, &id), "points are not equal, check mul and add functions")
-    
     }
+
     #[test]
     // 2 * G = G + G
     fn test_two_times_g() {
@@ -47,7 +46,6 @@ mod e521_tests {
         let mut sum_g = get_e521_gen_point(false);
         sum_g = sum_g.add(&sum_g.clone());
         assert!(e521_equals(&sum_g, &two_g), "points are not equal, check mul and add functions")
-    
     }
 
     #[test]

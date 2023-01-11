@@ -23,8 +23,8 @@ pub mod model_test {
             assert!(res);
         }
         println!("Code took: {} seconds", total / rounds);
-    
 }
+
     #[test]
     fn test_key_gen_enc_dec() { //check conversion to and from bytes.
 

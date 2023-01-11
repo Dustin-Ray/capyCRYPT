@@ -1,15 +1,10 @@
 use rug::Integer as big;
-#[macro_export]
-macro_rules! notepad_data {
-    ($tv: ident) => {
-        &mut $tv.buffer().text(
-            &$tv.buffer().start_iter(), 
-            &$tv.buffer().end_iter(), 
-            false
-        ).to_string().as_bytes().to_vec()
-    };
-}
 
+/// A context to hold widgets for the main window
+pub struct AppCtx<'a> {
+    pub fixed: &'a gtk4::Fixed,
+    pub notepad: &'a gtk4::TextBuffer,
+}
 
 /// Edwards 521 curve
 #[derive(Default, Debug)]
@@ -30,9 +25,7 @@ impl Clone for E521 {
             p: self.p.clone(),
             d: self.d.clone(),
             r: self.r.clone(),
-            n: self.n.clone(),
-        }}}
-
+            n: self.n.clone(),}}}
 
 #[derive(Debug)]
 pub struct SymmetricCryptogram {
@@ -59,10 +52,7 @@ impl Clone for Signature {
     fn clone(&self) -> Signature {
         Signature {
             h: self.h.clone(),
-            z: self.z.clone(),
-        }
-    }
-}
+            z: self.z.clone(),}}}
 
 #[derive(Debug)]
 pub struct KeyObj {
@@ -92,11 +82,7 @@ pub mod sha3{
 
 /// module for model functions
 pub mod model;
-
-/// module for gui-related functions
-pub mod view{
-    pub mod window;
-}
+mod macros;
 
 /// Module for button functionality
 pub mod controller;
