@@ -1,6 +1,3 @@
-/* The Keccak permutation, happily adapated to rust from the Go authors. 
-keccak[f] = 24 rounds, keccak[p] = 12 rounds. */
-
 pub mod in_place{
 
     /** rol64 func rotates x by y */

@@ -4,9 +4,9 @@ pub mod sponge_function {
     /// Absorbs rate amount of data into state and permute. Continue absorbing and permuting until
     /// No more data left in m. Pads to multiple of rate using multi-rate padding. 
     /// 
-    /// *`m`: message to be absorbed
-    /// *`capacity`: security parameter which determines rate = ```bit_width``` - ```capacity```
-    /// *`return`: a ```state``` consisting of 25 words of 64 bits each. 
+    /// * `m`: message to be absorbed
+    /// * `capacity`: security parameter which determines rate = ```bit_width``` - ```capacity```
+    /// * `return`: a ```state``` consisting of 25 words of 64 bits each. 
     pub fn sponge_absorb(m: &mut Vec<u8>, capacity: usize) -> [u64; 25] {
         let r = (1600 - capacity) / 8;
         if m.len() % r != 0 { pad_ten_one(m, r); }
@@ -16,7 +16,7 @@ pub mod sponge_function {
     /// Accepts state of 25 ```u64```s and permutes, appending each iteration to output until
     /// desired length is met.
     ///
-    /// *`return`: Vec<u8> consisting of absorbed and permuted states of length bit_length. 
+    /// * `return`: Vec<u8> consisting of absorbed and permuted states of length bit_length. 
     pub fn sponge_squeeze(s: &mut [u64; 25], bit_length: usize, rate: usize) -> Vec<u8> {
         let mut out: Vec<u8> = Vec::new(); //FIPS 202 Algorithm 8 Step 8
         let block_size: usize = rate / 64;

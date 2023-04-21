@@ -92,7 +92,7 @@ pub mod byte_utils{
     /// XORs byte streams in place using iterators
     /// * `a`: mut references to Vec<u8>, will be replaced with result of XOR
     /// * `b`: immut ref to Vec<u8>, dropped after function returns
-    /// * `Remark`: Will probably bottleneck unless impl with SIMD.
+    /// * `Remark`: Probable bottleneck unless impl with SIMD.
     pub fn xor_bytes<'a>(a: &'a mut Vec<u8>, b: &Vec<u8>) -> &'a mut Vec<u8> {
         assert_eq!(a.len(), b.len());
         a.iter_mut()

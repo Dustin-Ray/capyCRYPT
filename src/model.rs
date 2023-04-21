@@ -46,7 +46,7 @@ pub mod shake_functions {
     /// * `l`: requested bit length
     /// * `s`: customization string
     /// * `return`: kmac_xof_256 of `x` under `k`
-    pub fn kmac_xof_256<'a>(k: &mut Vec<u8>, x: &'a mut Vec<u8>, l: u64, s: &str) -> Vec<u8>{
+    pub fn kmac_xof_256(k: &mut Vec<u8>, x: &mut Vec<u8>, l: u64, s: &str) -> Vec<u8>{
         let mut encode_s = encode_string(k);
         let mut bp = byte_pad(&mut encode_s, 136);
         bp.append(x); //x is dropped here? 

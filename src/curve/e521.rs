@@ -109,7 +109,7 @@ impl PointOps for E521{
     fn sec_mul(&mut self, s: big) -> E521{
         let mut r0 = get_e521_id_point();
         let mut r1 = self.clone();
-        for i in (0..=s.significant_bits()).rev()  {
+        for i in (0..= s.significant_bits()).rev()  {
             if s.get_bit(i) {
                 r0 = r0.add(&r1);
                 r1 = r1.add(&r1.clone());

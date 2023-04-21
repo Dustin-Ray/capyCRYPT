@@ -25,10 +25,11 @@ mod e521_tests {
         let s = big::from(1);
         let g = get_e521_gen_point(false);
         point = point.sec_mul(s);
+        println!("{}", point.y);
         assert!(e521_equals(&g, &point), "points are not equal, check mul and add functions")
     }
 
-    // G + (-G) = 0
+    // G + (-G) = 𝒪
     #[test]
     fn test_g_plus_neg_g() {
         let mut g = get_e521_gen_point(false);
