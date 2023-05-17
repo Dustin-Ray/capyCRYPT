@@ -58,7 +58,7 @@ pub mod sponge_function {
     fn bytes_to_word(in_val: &[u8], offset: usize) -> u64 {
         let mut lane: u64 = 0;
         for i in 0..8 {
-            lane += (in_val[(i + offset)] as u64 & 0xFF) << (8 * i);
+            lane += (in_val[i + offset] as u64 & 0xFF) << (8 * i);
         }
         lane
     }
