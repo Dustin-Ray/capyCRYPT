@@ -1,6 +1,6 @@
 # Rust Cryptography Library
 
-[![Build Status](https://img.shields.io/github/workflow/status/drcapybara/capyCRYPT-Rust/Rust%20CI?label=Build&logo=github&style=flat-square)](https://github.com/drcapybara/capyCRYPT-Rust/actions)
+[![Build Status](https://github.com/drcapybara/capyCRYPT-Rust/actions/workflows/rust.yml/badge.svg)](https://github.com/drcapybara/capyCRYPT-Rust/actions/workflows/rust.yml)
 [![Crates.io](https://img.shields.io/crates/v/cryptolib?style=flat-square)](https://crates.io/crates/cryptolib)
 [![License](https://img.shields.io/crates/l/cryptolib?style=flat-square)](LICENSE)
 

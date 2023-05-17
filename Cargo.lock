@@ -53,6 +53,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
+name = "capyCRYPT"
+version = "0.1.0"
+dependencies = [
+ "byteorder",
+ "chrono",
+ "criterion",
+ "gmp-mpfr-sys",
+ "hex",
+ "num",
+ "rand",
+ "rug",
+]
+
+[[package]]
 name = "cast"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -189,20 +203,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c063cd8cc95f5c377ed0d4b49a4b21f632396ff690e8470c29b3359b346984b"
 dependencies = [
  "cfg-if",
-]
-
-[[package]]
-name = "cryptotool"
-version = "0.1.0"
-dependencies = [
- "byteorder",
- "chrono",
- "criterion",
- "gmp-mpfr-sys",
- "hex",
- "num",
- "rand",
- "rug",
 ]
 
 [[package]]

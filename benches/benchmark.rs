@@ -1,9 +1,9 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use cryptotool::{
+use capyCRYPT::{
     model::shake_functions::{encrypt_with_pw, decrypt_with_pw, gen_keypair, encrypt_with_key, decrypt_with_key, sign_with_key, verify_signature}, 
     curve::e521::e521_module::get_e521_point};
     use std::borrow::BorrowMut;
-    use cryptotool::sha3::aux_functions::byte_utils::get_random_bytes;
+    use capyCRYPT::sha3::aux_functions::byte_utils::get_random_bytes;
 
 /// Symmetric encrypt and decrypt roundtrip
 fn sym_enc(pw: &mut Vec<u8>, mut message: Box<Vec<u8>>) {

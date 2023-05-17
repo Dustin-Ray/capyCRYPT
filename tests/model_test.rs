@@ -1,10 +1,10 @@
 #[cfg(test)]
 pub mod model_test {
     use std::borrow::BorrowMut;
-    use cryptotool::{
+    use capyCRYPT::{
         model::shake_functions::{encrypt_with_pw, decrypt_with_pw, gen_keypair, encrypt_with_key, decrypt_with_key, sign_with_key, verify_signature}, 
         curve::e521::e521_module::get_e521_point};
-    use cryptotool::sha3::aux_functions::byte_utils::get_random_bytes;
+    use capyCRYPT::sha3::aux_functions::byte_utils::get_random_bytes;
 
     #[test]
     pub fn test_sym_enc() {
