@@ -1,11 +1,5 @@
 use rug::Integer as big;
 
-/// A context to hold widgets for the main window
-pub struct AppCtx<'a> {
-    pub fixed: &'a gtk4::Fixed,
-    pub notepad: &'a gtk4::TextBuffer,
-}
-
 /// Edwards 521 curve
 #[derive(Default, Debug)]
 pub struct E521 {
@@ -82,7 +76,3 @@ pub mod sha3{
 
 /// module for model functions
 pub mod model;
-mod macros;
-
-/// Module for button functionality
-pub mod controller;

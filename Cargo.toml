@@ -10,7 +10,6 @@ rand = "0.8"
 num = {version = "0.4.0"}
 hex = {version = "0.4.3"}
 byteorder = {version = "1.4.3"}
-gtk4 = {version = "0.5.4"}
 chrono = {version = "0.4.23"}
 rug = {version = "1.18.0"}
 gmp-mpfr-sys = "1.4.12"
