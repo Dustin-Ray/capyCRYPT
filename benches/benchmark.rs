@@ -22,7 +22,7 @@ fn key_gen_enc_dec(pw: &mut Vec<u8>, mut message: Box<Vec<u8>>) {
     decrypt_with_key(&mut pw.clone(), enc.borrow_mut());
 }
 
-/// Signature generation plus verification roundtrip
+/// Signature generation + verification roundtrip
 pub fn sign_verify(pw: &mut Vec<u8>, mut message: Box<Vec<u8>>) {
     let key_obj = gen_keypair(&mut pw.clone(), "test".to_string());
     let x = key_obj.pub_x;

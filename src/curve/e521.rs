@@ -72,6 +72,7 @@ pub mod e521_module {
         }
     }
 
+
     /// Gets point for arbitrary (x, y) TODO verify point is on curve
     pub fn get_e521_gen_point(msb: bool) -> E521 {
         let x = big::from(4);
