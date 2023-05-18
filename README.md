@@ -1,7 +1,7 @@
 # capyCRYPT - A Complete Rust Cryptosystem
 
 [![Build Status](https://github.com/drcapybara/capyCRYPT-Rust/actions/workflows/rust.yml/badge.svg)](https://github.com/drcapybara/capyCRYPT-Rust/actions/workflows/rust.yml)
-[![Crates.io](https://img.shields.io/crates/v/cryptolib?style=flat-square)](https://crates.io/crates/cryptolib)
+[![Crates.io](https://img.shields.io/crates/v/capycrypt?style=flat-square)](https://crates.io/crates/capycrypt)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/auditless/cairo-template/blob/main/LICENSE) 
 
 A Rust library implementing FIPS 202 paired with a non-standard Edwards-521 curve. Engineered for performance; supports arbitrary message size.
