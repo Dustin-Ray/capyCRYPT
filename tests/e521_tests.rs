@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod e521_tests {
-    use cryptotool::{curve::e521::e521_module::{
+    use capycrypt::{curve::e521::e521_module::{
         get_e521_gen_point, 
         get_e521_id_point, 
         e521_equals, PointOps}, sha3::aux_functions::byte_utils::get_random_big};
