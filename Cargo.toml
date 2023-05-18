@@ -3,6 +3,13 @@ name = "capycrypt"
 version = "0.1.0"
 edition = "2021"
 
+license = "MIT"
+keywords = ["cryptography", "fips202", "kmacxof256", "cshake"]
+readme = "README.md"
+authors = ["Dustin Ray (Dr. Capybara) <dustinray313@gmail.com>"]
+description = "A high performance cryptosystem. Pairs FIPS202 with non-standard Edwards curve."
+repository = "https://github.com/drcapybara/capyCRYPT"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
