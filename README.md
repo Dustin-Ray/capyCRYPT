@@ -8,7 +8,7 @@ A Rust library implementing FIPS 202 paired with a non-standard Edwards-521 curv
 
 ## Features
 - **SHA-3:** Secure Hash Algorithm 3 (SHA-3) implementation for generating cryptographic hash values.
-- **Edwards Elliptic Curve:** Edwards elliptic curve implementation for elliptic curve cryptography (ECC) operations.
+- **Edwards Elliptic Curve:** Edwards 521 curve implementation for elliptic curve cryptography (ECC) operations.
 
 ## Supported Operations
 - **Message Digest:** Computes 512 bit hash of a given message.
