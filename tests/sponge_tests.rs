@@ -3,9 +3,9 @@
 #[cfg(test)]
 mod sponge_test {
     use std::time::Instant;
-    use capyCRYPT::sha3::{sponge::sponge_function::{sponge_absorb, sponge_squeeze}, aux_functions::byte_utils::get_random_bytes}; 
-    use capyCRYPT::model::shake_functions::{compute_sha3_hash, cshake, kmac_xof_256};
-    use capyCRYPT::sha3::{aux_functions::{nist_800_185::{left_encode, byte_pad, right_encode}}};
+    use capycrypt::sha3::{sponge::sponge_function::{sponge_absorb, sponge_squeeze}, aux_functions::byte_utils::get_random_bytes}; 
+    use capycrypt::model::shake_functions::{compute_sha3_hash, cshake, kmac_xof_256};
+    use capycrypt::sha3::{aux_functions::{nist_800_185::{left_encode, byte_pad, right_encode}}};
     use hex::{ToHex};
     
     #[test] 
