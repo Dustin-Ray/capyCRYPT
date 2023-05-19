@@ -1,68 +1,72 @@
-pub mod in_place{
+pub mod in_place {
 
     /** rol64 func rotates x by y */
     fn rotate_left64(x: u64, y: u64) -> u64 {
         ((x) << (y)) | ((x) >> (64 - (y)))
-     }
+    }
 
     /** keccakF1600 applies the Keccak permutation to a 1600b-wide
-    state represented as a slice of 25 uint64s.*/ 
+    state represented as a slice of 25 uint64s.*/
     pub fn keccakf_1600(a: &mut [u64; 25]) {
-    
-    // Implementation translated from Keccak-inplace.c
-    // in the keccak reference code.
+        // Implementation translated from Keccak-inplace.c
+        // in the keccak reference code.
 
         let rc = [
-        0x0000000000000001,
-        0x0000000000008082,
-        0x800000000000808A,
-        0x8000000080008000,
-        0x000000000000808B,
-        0x0000000080000001,
-        0x8000000080008081,
-        0x8000000000008009,
-        0x000000000000008A,
-        0x0000000000000088,
-        0x0000000080008009,
-        0x000000008000000A,
-        0x000000008000808B,
-        0x800000000000008B,
-        0x8000000000008089,
-        0x8000000000008003,
-        0x8000000000008002,
-        0x8000000000000080,
-        0x000000000000800A,
-        0x800000008000000A,
-        0x8000000080008081,
-        0x8000000000008080,
-        0x0000000080000001,
-        0x8000000080008008];
-
+            0x0000000000000001,
+            0x0000000000008082,
+            0x800000000000808A,
+            0x8000000080008000,
+            0x000000000000808B,
+            0x0000000080000001,
+            0x8000000080008081,
+            0x8000000000008009,
+            0x000000000000008A,
+            0x0000000000000088,
+            0x0000000080008009,
+            0x000000008000000A,
+            0x000000008000808B,
+            0x800000000000008B,
+            0x8000000000008089,
+            0x8000000000008003,
+            0x8000000000008002,
+            0x8000000000000080,
+            0x000000000000800A,
+            0x800000008000000A,
+            0x8000000080008081,
+            0x8000000000008080,
+            0x0000000080000001,
+            0x8000000080008008,
+        ];
 
         let (
-            mut t, mut bc0, mut bc1, 
-            mut bc2, mut bc3, mut bc4, 
-            mut d0, mut d1, mut d2, 
-            mut d3, mut d4
+            mut t,
+            mut bc0,
+            mut bc1,
+            mut bc2,
+            mut bc3,
+            mut bc4,
+            mut d0,
+            mut d1,
+            mut d2,
+            mut d3,
+            mut d4,
         );
 
         // Combines the 5 steps in each round into 2 steps.
         // Unrolls 4 rounds per loop and spreads some steps across rounds.
         let mut i = 0;
         while i < 24 {
-            
-
             // Round 1
             bc0 = a[0] ^ a[5] ^ a[10] ^ a[15] ^ a[20];
             bc1 = a[1] ^ a[6] ^ a[11] ^ a[16] ^ a[21];
             bc2 = a[2] ^ a[7] ^ a[12] ^ a[17] ^ a[22];
             bc3 = a[3] ^ a[8] ^ a[13] ^ a[18] ^ a[23];
             bc4 = a[4] ^ a[9] ^ a[14] ^ a[19] ^ a[24];
-            d0 = bc4 ^ (bc1<<1 | bc1>>63);
-            d1 = bc0 ^ (bc2<<1 | bc2>>63);
-            d2 = bc1 ^ (bc3<<1 | bc3>>63);
-            d3 = bc2 ^ (bc4<<1 | bc4>>63);
-            d4 = bc3 ^ (bc0<<1 | bc0>>63);
+            d0 = bc4 ^ (bc1 << 1 | bc1 >> 63);
+            d1 = bc0 ^ (bc2 << 1 | bc2 >> 63);
+            d2 = bc1 ^ (bc3 << 1 | bc3 >> 63);
+            d3 = bc2 ^ (bc4 << 1 | bc4 >> 63);
+            d4 = bc3 ^ (bc0 << 1 | bc0 >> 63);
 
             bc0 = a[0] ^ d0;
             t = a[6] ^ d1;
@@ -142,20 +146,19 @@ pub mod in_place{
             a[2] = bc2 ^ (bc4 & !bc3);
             a[8] = bc3 ^ (bc0 & !bc4);
             a[14] = bc4 ^ (bc1 & !bc0);
-        
-        
+
             // Round 2
             bc0 = a[0] ^ a[5] ^ a[10] ^ a[15] ^ a[20];
             bc1 = a[1] ^ a[6] ^ a[11] ^ a[16] ^ a[21];
             bc2 = a[2] ^ a[7] ^ a[12] ^ a[17] ^ a[22];
             bc3 = a[3] ^ a[8] ^ a[13] ^ a[18] ^ a[23];
             bc4 = a[4] ^ a[9] ^ a[14] ^ a[19] ^ a[24];
-            d0 = bc4 ^ (bc1<<1 | bc1>>63);
-            d1 = bc0 ^ (bc2<<1 | bc2>>63);
-            d2 = bc1 ^ (bc3<<1 | bc3>>63);
-            d3 = bc2 ^ (bc4<<1 | bc4>>63);
-            d4 = bc3 ^ (bc0<<1 | bc0>>63);
-    
+            d0 = bc4 ^ (bc1 << 1 | bc1 >> 63);
+            d1 = bc0 ^ (bc2 << 1 | bc2 >> 63);
+            d2 = bc1 ^ (bc3 << 1 | bc3 >> 63);
+            d3 = bc2 ^ (bc4 << 1 | bc4 >> 63);
+            d4 = bc3 ^ (bc0 << 1 | bc0 >> 63);
+
             bc0 = a[0] ^ d0;
             t = a[16] ^ d1;
             bc1 = rotate_left64(t, 44);
@@ -165,12 +168,12 @@ pub mod in_place{
             bc3 = rotate_left64(t, 21);
             t = a[14] ^ d4;
             bc4 = rotate_left64(t, 14);
-            a[0] = bc0 ^ (bc2 & !bc1) ^ rc[i+1];
-            a[16] = bc1 ^ (bc3 &  !bc2);
+            a[0] = bc0 ^ (bc2 & !bc1) ^ rc[i + 1];
+            a[16] = bc1 ^ (bc3 & !bc2);
             a[7] = bc2 ^ (bc4 & !bc3);
             a[23] = bc3 ^ (bc0 & !bc4);
             a[14] = bc4 ^ (bc1 & !bc0);
-    
+
             t = a[20] ^ d0;
             bc2 = rotate_left64(t, 3);
             t = a[11] ^ d1;
@@ -186,7 +189,7 @@ pub mod in_place{
             a[2] = bc2 ^ (bc4 & !bc3);
             a[18] = bc3 ^ (bc0 & !bc4);
             a[9] = bc4 ^ (bc1 & !bc0);
-    
+
             t = a[15] ^ d0;
             bc4 = rotate_left64(t, 18);
             t = a[6] ^ d1;
@@ -202,7 +205,7 @@ pub mod in_place{
             a[22] = bc2 ^ (bc4 & !bc3);
             a[13] = bc3 ^ (bc0 & !bc4);
             a[4] = bc4 ^ (bc1 & !bc0);
-    
+
             t = a[10] ^ d0;
             bc1 = rotate_left64(t, 36);
             t = a[1] ^ d1;
@@ -218,7 +221,7 @@ pub mod in_place{
             a[17] = bc2 ^ (bc4 & !bc3);
             a[8] = bc3 ^ (bc0 & !bc4);
             a[24] = bc4 ^ (bc1 & !bc0);
-    
+
             t = a[5] ^ d0;
             bc3 = rotate_left64(t, 41);
             t = a[21] ^ d1;
@@ -234,18 +237,18 @@ pub mod in_place{
             a[12] = bc2 ^ (bc4 & !bc3);
             a[3] = bc3 ^ (bc0 & !bc4);
             a[19] = bc4 ^ (bc1 & !bc0);
-    
+
             // Round 3
             bc0 = a[0] ^ a[5] ^ a[10] ^ a[15] ^ a[20];
             bc1 = a[1] ^ a[6] ^ a[11] ^ a[16] ^ a[21];
             bc2 = a[2] ^ a[7] ^ a[12] ^ a[17] ^ a[22];
             bc3 = a[3] ^ a[8] ^ a[13] ^ a[18] ^ a[23];
             bc4 = a[4] ^ a[9] ^ a[14] ^ a[19] ^ a[24];
-            d0 = bc4 ^ (bc1<<1 | bc1>>63);
-            d1 = bc0 ^ (bc2<<1 | bc2>>63);
-            d2 = bc1 ^ (bc3<<1 | bc3>>63);
-            d3 = bc2 ^ (bc4<<1 | bc4>>63);
-            d4 = bc3 ^ (bc0<<1 | bc0>>63);
+            d0 = bc4 ^ (bc1 << 1 | bc1 >> 63);
+            d1 = bc0 ^ (bc2 << 1 | bc2 >> 63);
+            d2 = bc1 ^ (bc3 << 1 | bc3 >> 63);
+            d3 = bc2 ^ (bc4 << 1 | bc4 >> 63);
+            d4 = bc3 ^ (bc0 << 1 | bc0 >> 63);
 
             bc0 = a[0] ^ d0;
             t = a[11] ^ d1;
@@ -256,7 +259,7 @@ pub mod in_place{
             bc3 = rotate_left64(t, 21);
             t = a[19] ^ d4;
             bc4 = rotate_left64(t, 14);
-            a[0] = bc0 ^ (bc2 & !bc1) ^ rc[i+2];
+            a[0] = bc0 ^ (bc2 & !bc1) ^ rc[i + 2];
             a[11] = bc1 ^ (bc3 & !bc2);
             a[22] = bc2 ^ (bc4 & !bc3);
             a[8] = bc3 ^ (bc0 & !bc4);
@@ -325,19 +328,18 @@ pub mod in_place{
             a[7] = bc2 ^ (bc4 & !bc3);
             a[18] = bc3 ^ (bc0 & !bc4);
             a[4] = bc4 ^ (bc1 & !bc0);
-        
-        
+
             // Round 4
             bc0 = a[0] ^ a[5] ^ a[10] ^ a[15] ^ a[20];
             bc1 = a[1] ^ a[6] ^ a[11] ^ a[16] ^ a[21];
             bc2 = a[2] ^ a[7] ^ a[12] ^ a[17] ^ a[22];
             bc3 = a[3] ^ a[8] ^ a[13] ^ a[18] ^ a[23];
             bc4 = a[4] ^ a[9] ^ a[14] ^ a[19] ^ a[24];
-            d0 = bc4 ^ (bc1<<1 | bc1>>63);
-            d1 = bc0 ^ (bc2<<1 | bc2>>63);
-            d2 = bc1 ^ (bc3<<1 | bc3>>63);
-            d3 = bc2 ^ (bc4<<1 | bc4>>63);
-            d4 = bc3 ^ (bc0<<1 | bc0>>63);
+            d0 = bc4 ^ (bc1 << 1 | bc1 >> 63);
+            d1 = bc0 ^ (bc2 << 1 | bc2 >> 63);
+            d2 = bc1 ^ (bc3 << 1 | bc3 >> 63);
+            d3 = bc2 ^ (bc4 << 1 | bc4 >> 63);
+            d4 = bc3 ^ (bc0 << 1 | bc0 >> 63);
 
             bc0 = a[0] ^ d0;
             t = a[1] ^ d1;
@@ -348,7 +350,7 @@ pub mod in_place{
             bc3 = rotate_left64(t, 21);
             t = a[4] ^ d4;
             bc4 = rotate_left64(t, 14);
-            a[0] = bc0 ^ (bc2 & !bc1) ^ rc[i+3];
+            a[0] = bc0 ^ (bc2 & !bc1) ^ rc[i + 3];
             a[1] = bc1 ^ (bc3 & !bc2);
             a[2] = bc2 ^ (bc4 & !bc3);
             a[3] = bc3 ^ (bc0 & !bc4);
@@ -417,7 +419,7 @@ pub mod in_place{
             a[22] = bc2 ^ (bc4 & !bc3);
             a[23] = bc3 ^ (bc0 & !bc4);
             a[24] = bc4 ^ (bc1 & !bc0);
-        
+
             i += 4;
         }
     }

@@ -1,14 +1,14 @@
-use rug::Integer as big;
+use rug::Integer;
 
 /// Edwards 521 curve
 #[derive(Default, Debug)]
 pub struct E521 {
-    pub x: big,  //x-coord
-    pub y: big,  //y coord
-    pub p: big,  //prime defining finite field
-    pub d: big,  //d param for curve
-    pub r: big,  //order of curve
-    pub n: big,  //number of points
+    pub x: Integer, //x-coord
+    pub y: Integer, //y coord
+    pub p: Integer, //prime defining finite field
+    pub d: Integer, //d param for curve
+    pub r: Integer, //order of curve
+    pub n: Integer, //number of points
 }
 
 impl Clone for E521 {
@@ -19,59 +19,65 @@ impl Clone for E521 {
             p: self.p.clone(),
             d: self.d.clone(),
             r: self.r.clone(),
-            n: self.n.clone(),}}}
+            n: self.n.clone(),
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct SymmetricCryptogram {
-    pub z: Vec<u8>,     // nonce
-    pub c: Vec<u8>,     // ciphertext
-    pub t: Vec<u8>      // authentication tag
+    pub z: Vec<u8>, // nonce
+    pub c: Vec<u8>, // ciphertext
+    pub t: Vec<u8>, // authentication tag
 }
 
 #[derive(Debug)]
 pub struct ECCryptogram {
-    pub z_x: big,    // Z_x is the x coordinate of the public nonce
-    pub z_y: big,    // Z_y is the y coordinate of the public nonce
-    pub c: Vec<u8>,  // c represents the ciphertext of an encryption
-    pub t: Vec<u8>   // t is the authentication tag for the message
+    pub z_x: Integer, // Z_x is the x coordinate of the public nonce
+    pub z_y: Integer, // Z_y is the y coordinate of the public nonce
+    pub c: Vec<u8>,   // c represents the ciphertext of an encryption
+    pub t: Vec<u8>,   // t is the authentication tag for the message
 }
 
 #[derive(Debug)]
 pub struct Signature {
-    h: Vec<u8>,     // keyed hash of signed message
-    z: big          // public nonce
+    h: Vec<u8>, // keyed hash of signed message
+    z: Integer, // public nonce
 }
 
 impl Clone for Signature {
     fn clone(&self) -> Signature {
         Signature {
             h: self.h.clone(),
-            z: self.z.clone(),}}}
+            z: self.z.clone(),
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct KeyObj {
     // id: String,              // Represents the unique ID of the key
-    pub owner: String,          // Represents the owner of the key, can be arbitrary
+    pub owner: String, // Represents the owner of the key, can be arbitrary
     // key_type: String,        // Acceptable values are PUBLIC or PRIVATE.
-                                // PUBLIC keys are used only for encryptions, while keys labeled PRIVATE
-                                // encrypt or decrypt.
-    pub pub_x: big,             // E521 X coordinate
-    pub pub_y: big,             // E521 Y coordinate
-    pub priv_key: Vec<u8>,      // value representing secret scalar, nil if KeyType is PUBLIC
-    pub date_created: String,   // Date key was generated
-    // signature: String,       // Nil unless PUBLIC. Signs 128 bit SHA3 hash of this KeyObj
+    // PUBLIC keys are used only for encryptions, while keys labeled PRIVATE
+    // encrypt or decrypt.
+    pub pub_x: Integer,    // E521 X coordinate
+    pub pub_y: Integer,    // E521 Y coordinate
+    pub priv_key: Vec<u8>, // value representing secret scalar, nil if KeyType is PUBLIC
+    pub date_created: String, // Date key was generated
+                           // signature: String,       // Nil unless PUBLIC. Signs 128 bit SHA3 hash of this KeyObj
 }
 
 ///module for curve and e521 functionality
-pub mod curve{
+pub mod curve {
     pub mod e521;
 }
 
 /// module for sha3 primitives
-pub mod sha3{
+pub mod sha3 {
+    pub mod aux_functions;
     pub mod keccakf;
     pub mod sponge;
-    pub mod aux_functions;
 }
 
 /// module for model functions
