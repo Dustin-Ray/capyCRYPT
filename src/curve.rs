@@ -194,7 +194,7 @@ impl Point for E521 {
     ///
     /// ```
     /// use rug::Integer;
-    /// use capycrypt::curve::e521::{Point, E521, IdPoint,};
+    /// use capycrypt::curve::{Point, E521, IdPoint,};
     /// let point = E521::point(Integer::from(0), Integer::from(1));
     /// assert_eq!(point == E521::id_point(), true);
     /// ```
