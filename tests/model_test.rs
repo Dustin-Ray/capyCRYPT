@@ -1,13 +1,11 @@
 #[cfg(test)]
 pub mod model_test {
-    use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-    use capycrypt::{
-        curve::e521::e521_module::get_e521_point,
-        model::shake_functions::{
-            decrypt_with_key, decrypt_with_pw, encrypt_with_key, encrypt_with_pw, gen_keypair,
-            sign_with_key, verify_signature,
-        },
+    use capycrypt::curve::{Point, E521};
+    use capycrypt::model::shake_functions::{
+        decrypt_with_key, decrypt_with_pw, encrypt_with_key, encrypt_with_pw, gen_keypair,
+        sign_with_key, verify_signature,
     };
+    use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
     use std::borrow::BorrowMut;
 
     #[test]
@@ -29,7 +27,7 @@ pub mod model_test {
         let key_obj = gen_keypair(&mut pw.clone(), owner);
         let x = key_obj.pub_x;
         let y = key_obj.pub_y;
-        let pub_key = get_e521_point(x, y);
+        let pub_key = E521::point(x, y);
         let mut enc = encrypt_with_key(pub_key, &mut message);
         let res = decrypt_with_key(&mut pw.clone(), enc.borrow_mut());
         assert!(res);
@@ -42,7 +40,7 @@ pub mod model_test {
         let key_obj = gen_keypair(&mut pw.clone(), "test".to_string());
         let x = key_obj.pub_x;
         let y = key_obj.pub_y;
-        let key = get_e521_point(x, y);
+        let key = E521::point(x, y);
         let sig = sign_with_key(&mut pw.clone(), &mut message);
         let res = verify_signature(&sig, key, &mut message);
         assert!(res);

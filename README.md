@@ -16,7 +16,7 @@ A Rust library implementing FIPS 202 paired with a non-standard Edwards-521 curv
 - **MACs:** Computes 512 bit message authentication code of a given message.
 - **Passkey:** Symmetric message encryption and decryption.
 - **Public Key Cryptography:** Asymmetric message encryption under public key, decryption with secret key.
-- **Zero-Knowledge:** Prove knowledge of secret information with ECDH Schnorr signatures.
+- **Zero-Knowledge:** Prove knowledge of secret information with Schnorr/ECDHIES signatures.
 
 
 ## Installation
