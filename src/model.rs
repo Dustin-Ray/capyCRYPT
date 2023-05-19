@@ -1,12 +1,11 @@
 pub mod shake_functions {
-
-    use crate::curve::e521::e521_module::{get_e521_gen_point, get_e521_point, get_n};
+    use crate::curve::{get_n, Generator, Point, E521};
     use crate::sha3::aux_functions::byte_utils::{
         big_to_bytes, bytes_to_big, get_date_and_time_as_string, get_random_bytes, xor_bytes,
     };
     use crate::sha3::aux_functions::nist_800_185::{byte_pad, encode_string, right_encode};
     use crate::sha3::sponge::sponge_function::{sponge_absorb, sponge_squeeze};
-    use crate::{ECCryptogram, KeyObj, Signature, SymmetricCryptogram, E521};
+    use crate::{ECCryptogram, KeyObj, Signature, SymmetricCryptogram};
     use rug::Integer;
     use std::borrow::{Borrow, BorrowMut};
 
@@ -129,7 +128,7 @@ pub mod shake_functions {
     /// and the nonce 𝑈: hash (𝑚, 𝑈, 𝑉) .
     pub fn gen_keypair(pw: &mut Vec<u8>, owner: String) -> KeyObj {
         let s: Integer = (bytes_to_big(kmac_xof_256(pw, &mut vec![], 512, "K")) * 4) % get_n();
-        let v = get_e521_gen_point(false) * (s);
+        let v = E521::generator(false) * (s);
         KeyObj {
             owner,
             priv_key: pw.to_vec(),
@@ -154,7 +153,7 @@ pub mod shake_functions {
     pub fn encrypt_with_key(pub_key: E521, message: &mut Box<Vec<u8>>) -> ECCryptogram {
         let k: Integer = (bytes_to_big(get_random_bytes(64)) * 4) % get_n();
         let w = pub_key * k.clone();
-        let z = get_e521_gen_point(false) * k;
+        let z = E521::generator(false) * k;
         let ke_ka = kmac_xof_256(&mut big_to_bytes(w.x), &mut vec![], 1024, "P");
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
@@ -184,7 +183,7 @@ pub mod shake_functions {
     /// * `message`: cryptogram of format 𝑍||c||t
     /// * `return`: Decryption of cryptogram 𝑍||c||t iff t` = t
     pub fn decrypt_with_key(pw: &mut [u8], message: &mut ECCryptogram) -> bool {
-        let z = get_e521_point(message.z_x.clone(), message.z_y.clone());
+        let z = E521::point(message.z_x.clone(), message.z_y.clone());
         let s: Integer =
             (bytes_to_big(kmac_xof_256(&mut pw.to_owned(), &mut vec![], 512, "K")) * 4) % get_n();
 
@@ -212,7 +211,7 @@ pub mod shake_functions {
         let k: Integer =
             bytes_to_big(kmac_xof_256(&mut s_bytes, message.borrow_mut(), 512, "N")) * 4;
 
-        let u = get_e521_gen_point(false) * k.clone();
+        let u = E521::generator(false) * k.clone();
         let mut ux_bytes = big_to_bytes(u.x);
         let h = kmac_xof_256(&mut ux_bytes, message.borrow_mut(), 512, "T");
         let h_big = bytes_to_big(h.clone());
@@ -229,7 +228,7 @@ pub mod shake_functions {
     /// * `message`: Vec<u8> of message to verify
     /// * `return`: true if, and only if, kmac_xof_256(𝑈ₓ , m, 512, “T”) = h
     pub fn verify_signature(sig: &Signature, pub_key: E521, message: &mut Box<Vec<u8>>) -> bool {
-        let mut u = get_e521_gen_point(false) * sig.z.clone();
+        let mut u = E521::generator(false) * sig.z.clone();
         let hv = pub_key * (bytes_to_big(sig.h.clone()));
         u = u + hv;
         let mut ux_bytes = big_to_bytes(u.x);

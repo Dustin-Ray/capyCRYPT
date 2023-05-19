@@ -1,28 +1,16 @@
 use rug::Integer;
 
-/// Edwards 521 curve
-#[derive(Default, Debug)]
-pub struct E521 {
-    pub x: Integer, //x-coord
-    pub y: Integer, //y coord
-    pub p: Integer, //prime defining finite field
-    pub d: Integer, //d param for curve
-    pub r: Integer, //order of curve
-    pub n: Integer, //number of points
+///module for curve and e521 functionality
+pub mod curve;
+/// module for sha3 primitives
+pub mod sha3 {
+    pub mod aux_functions;
+    pub mod keccakf;
+    pub mod sponge;
 }
 
-impl Clone for E521 {
-    fn clone(&self) -> E521 {
-        E521 {
-            x: self.x.clone(),
-            y: self.y.clone(),
-            p: self.p.clone(),
-            d: self.d.clone(),
-            r: self.r.clone(),
-            n: self.n.clone(),
-        }
-    }
-}
+/// module for model functions
+pub mod model;
 
 #[derive(Debug)]
 pub struct SymmetricCryptogram {
@@ -56,29 +44,9 @@ impl Clone for Signature {
 
 #[derive(Debug)]
 pub struct KeyObj {
-    // id: String,              // Represents the unique ID of the key
-    pub owner: String, // Represents the owner of the key, can be arbitrary
-    // key_type: String,        // Acceptable values are PUBLIC or PRIVATE.
-    // PUBLIC keys are used only for encryptions, while keys labeled PRIVATE
-    // encrypt or decrypt.
-    pub pub_x: Integer,    // E521 X coordinate
-    pub pub_y: Integer,    // E521 Y coordinate
-    pub priv_key: Vec<u8>, // value representing secret scalar, nil if KeyType is PUBLIC
+    pub owner: String,        // Represents the owner of the key, can be arbitrary
+    pub pub_x: Integer,       // E521 X coordinate
+    pub pub_y: Integer,       // E521 Y coordinate
+    pub priv_key: Vec<u8>,    // value representing secret scalar, nil if KeyType is PUBLIC
     pub date_created: String, // Date key was generated
-                           // signature: String,       // Nil unless PUBLIC. Signs 128 bit SHA3 hash of this KeyObj
 }
-
-///module for curve and e521 functionality
-pub mod curve {
-    pub mod e521;
-}
-
-/// module for sha3 primitives
-pub mod sha3 {
-    pub mod aux_functions;
-    pub mod keccakf;
-    pub mod sponge;
-}
-
-/// module for model functions
-pub mod model;

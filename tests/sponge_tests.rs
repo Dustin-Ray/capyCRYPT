@@ -9,7 +9,6 @@ mod sponge_test {
         sponge::sponge_function::{sponge_absorb, sponge_squeeze},
     };
     use hex::ToHex;
-    use std::time::Instant;
 
     #[test]
     fn test_kmac() {
@@ -152,12 +151,6 @@ mod sponge_test {
     fn test_shake_run_time() {
         //test runtime of different input sizes
         let mut message = get_random_bytes(5242880).to_vec();
-        let mut total = 0.0;
-        let now = Instant::now();
         let _ = hex::encode(compute_sha3_hash(&mut message));
-        let elapsed = now.elapsed();
-        let sec = (elapsed.as_secs() as f64) + (elapsed.subsec_nanos() as f64 / 1000_000_000.0);
-        total += sec;
-        println!("Code took: {} seconds", total);
     }
 }
