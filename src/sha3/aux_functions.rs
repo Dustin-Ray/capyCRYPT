@@ -1,5 +1,5 @@
 /// NIST 800-185 compliant functions.
-pub mod nist_800_185{
+pub mod nist_800_185 {
     use byteorder::{BigEndian, WriteBytesExt};
 
     ///NIST SP 800-185 2.3.3
@@ -21,8 +21,8 @@ pub mod nist_800_185{
     /// The encode_string function is used to encode bit strings in a way that may be parsed
     /// unambiguously from the beginning of the string.
     /// * `return`: left_encode(len(`s`)) + `s`
-    pub fn encode_string(s: &mut Vec<u8>) -> Vec<u8>{
-        let mut encoded = left_encode((s.len()*8) as u64);
+    pub fn encode_string(s: &mut Vec<u8>) -> Vec<u8> {
+        let mut encoded = left_encode((s.len() * 8) as u64);
         encoded.append(s);
         encoded
     }
@@ -32,7 +32,9 @@ pub mod nist_800_185{
     /// the length of the string to the beginning of the string.
     /// * `return`: left_encode(len(`s`)) + `s`
     pub fn left_encode(value: u64) -> Vec<u8> {
-        if value == 0 {return vec![1, 0];}
+        if value == 0 {
+            return vec![1, 0];
+        }
         let mut vec = Vec::new();
         vec.write_u64::<BigEndian>(value).unwrap();
         let index = 0;
@@ -51,7 +53,9 @@ pub mod nist_800_185{
     /// the length of the string to the beginning of the string.
     /// * `return`: left_encode(len(s)) + s
     pub fn right_encode(value: u64) -> Vec<u8> {
-        if value == 0 {return vec![0, 1];}
+        if value == 0 {
+            return vec![0, 1];
+        }
         let mut b = Vec::new();
         b.write_u64::<BigEndian>(value).unwrap();
         let mut i: u8 = 1;
@@ -62,15 +66,14 @@ pub mod nist_800_185{
         b[0] = 9 - i;
         b[0..(9 - i as usize)].to_vec()
     }
-
 }
 
-pub mod byte_utils{
-    use rug::{Integer as big};
+pub mod byte_utils {
     /// Aux methods for byte operations.
     use rand::prelude::*;
-    use rug::integer::Order::{LsfBe};
-    
+    use rug::integer::Order::LsfBe;
+    use rug::Integer as big;
+
     /// Gets size number of random bytes.
     /// * `size`: number of bytes requested
     /// * `return`: Vec<u8> of size number of random u8s
@@ -81,9 +84,9 @@ pub mod byte_utils{
     }
 
     /// Get a random big with size number of bits
-    pub fn get_random_big(size: u64) -> big{
+    pub fn get_random_big(size: u64) -> big {
         use rug::rand::RandState;
-        use rug::{Integer};
+        use rug::Integer;
         let mut rand = RandState::new();
         let i = Integer::random_bits(size.try_into().unwrap(), &mut rand).into();
         i
@@ -95,9 +98,7 @@ pub mod byte_utils{
     /// * `Remark`: Probable bottleneck unless impl with SIMD.
     pub fn xor_bytes<'a>(a: &'a mut Vec<u8>, b: &Vec<u8>) -> &'a mut Vec<u8> {
         assert_eq!(a.len(), b.len());
-        a.iter_mut()
-        .zip(b.iter())
-        .for_each(|(x1, x2)| *x1 ^= *x2);
+        a.iter_mut().zip(b.iter()).for_each(|(x1, x2)| *x1 ^= *x2);
         a
     }
 
@@ -116,5 +117,4 @@ pub mod byte_utils{
     pub fn big_to_bytes(in_val: big) -> Vec<u8> {
         big::to_digits(&in_val, LsfBe)
     }
-
 }

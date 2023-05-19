@@ -1,10 +1,14 @@
 #[cfg(test)]
 pub mod model_test {
-    use std::borrow::BorrowMut;
-    use capycrypt::{
-        model::shake_functions::{encrypt_with_pw, decrypt_with_pw, gen_keypair, encrypt_with_key, decrypt_with_key, sign_with_key, verify_signature}, 
-        curve::e521::e521_module::get_e521_point};
     use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
+    use capycrypt::{
+        curve::e521::e521_module::get_e521_point,
+        model::shake_functions::{
+            decrypt_with_key, decrypt_with_pw, encrypt_with_key, encrypt_with_pw, gen_keypair,
+            sign_with_key, verify_signature,
+        },
+    };
+    use std::borrow::BorrowMut;
 
     #[test]
     pub fn test_sym_enc() {
@@ -17,30 +21,30 @@ pub mod model_test {
     }
 
     #[test]
-    fn test_key_gen_enc_dec() { //check conversion to and from bytes.
+    fn test_key_gen_enc_dec() {
+        //check conversion to and from bytes.
         let pw = get_random_bytes(16);
         let owner = "test key".to_string();
         let mut message = Box::new(get_random_bytes(5242880).to_owned()); //5mb
         let key_obj = gen_keypair(&mut pw.clone(), owner);
         let x = key_obj.pub_x;
         let y = key_obj.pub_y;
-        let mut pub_key = get_e521_point(x, y);
-        let mut enc = encrypt_with_key(&mut pub_key, &mut message);
+        let pub_key = get_e521_point(x, y);
+        let mut enc = encrypt_with_key(pub_key, &mut message);
         let res = decrypt_with_key(&mut pw.clone(), enc.borrow_mut());
         assert!(res);
     }
 
     #[test]
     pub fn test_signature() {
-        let mut message = Box::new(get_random_bytes(5242880).to_owned());        
+        let mut message = Box::new(get_random_bytes(5242880).to_owned());
         let pw = get_random_bytes(16);
         let key_obj = gen_keypair(&mut pw.clone(), "test".to_string());
         let x = key_obj.pub_x;
         let y = key_obj.pub_y;
-        let mut key = get_e521_point(x, y);
+        let key = get_e521_point(x, y);
         let sig = sign_with_key(&mut pw.clone(), &mut message);
-        let res = verify_signature(&sig, &mut key, &mut message);
+        let res = verify_signature(&sig, key, &mut message);
         assert!(res);
     }
-
 }
