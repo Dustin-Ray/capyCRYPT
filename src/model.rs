@@ -265,9 +265,9 @@ pub mod shake_functions {
     /// ## Algorithm:
     /// * 𝑈 ← 𝑍*𝑮 + h𝑉
     /// ## Arguments:
-    /// * `sig`: signature: (h, 𝑍)
-    /// * `pubKey`: E521 key 𝑉 used to sign message m
-    /// * `message`: Vec<u8> of message to verify
+    /// * `sig: &Signature`: Pointer to a signature object (h, 𝑍)
+    /// * `pubKey: E521` key 𝑉 used to sign message m
+    /// * `message: Vec<u8>` of message to verify
     /// ## Returns:
     /// * `return`: true if, and only if, kmac_xof_256(𝑈ₓ , m, 512, “T”) = h
     pub fn verify_signature(sig: &Signature, pub_key: E521, message: &mut Box<Vec<u8>>) -> bool {

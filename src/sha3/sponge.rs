@@ -18,7 +18,7 @@ pub mod sponge_function {
     /// Accepts state of 25 ```u64```s and permutes, appending each iteration to output until
     /// desired length is met.
     ///
-    /// * `return`: Vec<u8> consisting of absorbed and permuted states of length bit_length.
+    /// * `return: Vec<u8>` consisting of absorbed and permuted states of length bit_length.
     pub fn sponge_squeeze(s: &mut [u64; 25], bit_length: usize, rate: usize) -> Vec<u8> {
         let mut out: Vec<u8> = Vec::new(); //FIPS 202 Algorithm 8 Step 8
         let block_size: usize = rate / 64;
@@ -65,7 +65,7 @@ pub mod sponge_function {
         lane
     }
 
-    /// Shifts u64 into Vec<u8>
+    /// Shifts u64 into `Vec<u8>`
     pub fn u64_to_little_endian_bytes(n: &u64) -> Vec<u8> {
         let mut bytes = vec![0u8; 8];
         for (i, el) in bytes.iter_mut().enumerate().take(8) {

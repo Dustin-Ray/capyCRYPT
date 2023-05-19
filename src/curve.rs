@@ -6,13 +6,10 @@ use std::ops::Mul;
 use std::ops::Neg;
 use std::rc::Rc;
 
-
-const D: &'static str = "-5BCCE";
-const N: &'static str = "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF456DB191D1BF217DCDAE2BD79FB14FC13EF63115A6A3C7D1503A890D7D46035AC";
-const P: &'static str = "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
-const R: &'static str = "7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFD15B6C64746FC85F736B8AF5E7EC53F04FBD8C4569A8F1F4540EA2435F5180D6B";
-
-
+const D: &str = "-5BCCE";
+const N: &str = "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF456DB191D1BF217DCDAE2BD79FB14FC13EF63115A6A3C7D1503A890D7D46035AC";
+const P: &str = "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
+const R: &str = "7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFD15B6C64746FC85F736B8AF5E7EC53F04FBD8C4569A8F1F4540EA2435F5180D6B";
 
 #[derive(Default, Debug)]
 /// Edwards 521 curve: 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦²
@@ -187,7 +184,7 @@ impl Neg for E521 {
     /// If a point is defined as (x, y) then its negation is (-x, y)
     fn neg(self) -> E521 {
         let x = self.x.clone();
-        let y = self.y.clone();
+        let y = self.y;
         let x = x * -1;
         E521::point(x, y)
     }
@@ -253,25 +250,25 @@ fn mod_inv(n: &Integer, p: &Integer) -> Integer {
 }
 
 /// Sets the curve d parameter.
-/// https://eprint.iacr.org/2013/647.pdf
+/// <https://eprint.iacr.org/2013/647.pdf>
 fn set_d() -> Integer {
     Integer::from_str_radix(D, 16).unwrap()
 }
 
 /// Initializes number of points on the curve.
-/// https://eprint.iacr.org/2013/647.pdf
+/// <https://eprint.iacr.org/2013/647.pdf>
 pub fn set_n() -> Integer {
     Integer::from_str_radix(N, 16).unwrap()
 }
 
 /// Initializes curve modulus 𝑝 := 2⁵²¹−1, a Mersenne prime defining the finite field 𝔽𝑝.
-/// https://eprint.iacr.org/2013/647.pdf
+/// <https://eprint.iacr.org/2013/647.pdf>
 fn set_p() -> Integer {
     Integer::from_str_radix(P, 16).unwrap()
 }
 
 /// Initializes r value for curve.
-/// https://eprint.iacr.org/2013/647.pdf
+/// <https://eprint.iacr.org/2013/647.pdf>
 pub fn set_r() -> Integer {
     Integer::from_str_radix(R, 16).unwrap()
 }

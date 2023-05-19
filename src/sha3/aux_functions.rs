@@ -76,7 +76,7 @@ pub mod byte_utils {
 
     /// Gets size number of random bytes.
     /// * `size`: number of bytes requested
-    /// * `return`: Vec<u8> of size number of random u8s
+    /// * `return: Vec<u8>` of size number of random u8s
     pub fn get_random_bytes(size: u64) -> Vec<u8> {
         let mut rand_bytes = vec![0u8; size as usize];
         thread_rng().fill(&mut rand_bytes[..]);
@@ -93,8 +93,8 @@ pub mod byte_utils {
     }
 
     /// XORs byte streams in place using iterators
-    /// * `a`: mut references to Vec<u8>, will be replaced with result of XOR
-    /// * `b`: immut ref to Vec<u8>, dropped after function returns
+    /// * `a`: mut references to `Vec<u8>`, will be replaced with result of XOR
+    /// * `b`: immut ref to `Vec<u8>`, dropped after function returns
     /// * `Remark`: Probable bottleneck unless impl with SIMD.
     pub fn xor_bytes<'a>(a: &'a mut Vec<u8>, b: &Vec<u8>) -> &'a mut Vec<u8> {
         assert_eq!(a.len(), b.len());
