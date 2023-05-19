@@ -16,6 +16,8 @@ pub struct E521 {
     pub r: Integer, //order of curve
     pub n: Integer, //number of points
 }
+
+
 //////////////
 /// TRAITS ///
 //////////////
@@ -37,11 +39,24 @@ pub trait IsPoint {
 
 impl Add<E521> for E521 {
     type Output = E521;
-    /// Adds two E521 points and returns another E521 curve point. If a point is defined as
+    /// # Point Composition
+    /// Composes two E521 points and returns another E521 curve point. If a point is defined as
     /// ```E521``` = (x, y), then ```E521``` addition is defined as:
     /// * (x₁, y₁) + (x₂, y₂)  = (x₁y₂ + y₁x₂) / (1 + dx₁x₂y₁y₂), (y₁y₂ − x₁x₂) / (1 − dx₁x₂y₁y₂)
     /// * where ```"/"``` is defined to be multiplication by modular inverse.
-    
+    /// * The Edwards curve point composition procedure is gauranteed to deliver a point on the curve,
+    /// unlike curves in Weierstrass form which require different composition formulas for different
+    /// point values.
+    ///
+    /// # Usage
+    /// ```
+    /// use capycrypt::curve::{E521, Point, IdPoint};
+    /// use rug::Integer;
+    /// let p = E521::point(Integer::from(0), Integer::from(1));
+    /// let q = E521::point(Integer::from(0), Integer::from(1));
+    /// let s = p + q;
+    /// assert_eq!(s == E521::id_point() * Integer::from(2), true);
+    /// ```
     fn add(self, p2: E521) -> E521 {
         let x1 = Rc::new(&self.x);
         let y1 = Rc::new(&self.y);
@@ -205,7 +220,7 @@ pub fn get_n() -> Integer {
 /// Performs modular inverse via euclidian algorithm.
 /// * `n`: Integer value to mod
 /// * `p`: modulus
-pub fn mod_inv(n: &Integer, p: &Integer) -> Integer {
+fn mod_inv(n: &Integer, p: &Integer) -> Integer {
     if p.eq(&Integer::ZERO) {
         return Integer::ZERO;
     }
@@ -270,7 +285,7 @@ fn solve_for_y(x: &Integer, p: Integer, msb: bool) -> Integer {
 /// * `v`: Integer value to compute square root for
 /// * `p`: Integer curve modulus
 /// * `lsb`: each x has 2 `y` values on curve, lsb selects which `y` value to use
-pub fn sqrt(v: &Integer, p: Integer, lsb: bool) -> Integer {
+fn sqrt(v: &Integer, p: Integer, lsb: bool) -> Integer {
     if v.clone().signum() == 0 {
         return Integer::from(0);
     }
