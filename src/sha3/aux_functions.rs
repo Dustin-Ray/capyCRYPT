@@ -2,7 +2,7 @@
 pub mod nist_800_185 {
     use byteorder::{BigEndian, WriteBytesExt};
 
-    ///NIST SP 800-185 2.3.3
+    /// # NIST SP 800-185 2.3.3
     /// The bytepad(X, w) function prepends an encoding of the integer w to an input string X, then pads
     /// the result with zeros until it is a byte string whose length in bytes is a multiple of w.
     /// * `x`: the byte string to pad
@@ -17,7 +17,7 @@ pub mod nist_800_185 {
         z
     }
 
-    /// NIST SP 800-185 2.3.2: String Encoding.
+    /// # NIST SP 800-185 2.3.2
     /// The encode_string function is used to encode bit strings in a way that may be parsed
     /// unambiguously from the beginning of the string.
     /// * `return`: left_encode(len(`s`)) + `s`

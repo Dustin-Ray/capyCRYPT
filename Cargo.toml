@@ -1,10 +1,10 @@
 [package]
 name = "capycrypt"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 license = "MIT"
-keywords = ["cryptography", "fips202", "kmacxof256", "cshake"]
+keywords = ["cryptography", "fips202", "kmacxof256", "cshake", "schnorr", "edwards curve"]
 readme = "README.md"
 authors = ["Dustin Ray (Dr. Capybara) <dustinray313@gmail.com>"]
 description = "A high performance cryptosystem. Pairs FIPS202 with non-standard Edwards curve."
@@ -27,7 +27,7 @@ name = "benchmark"
 harness = false
 
 [profile.dev]
-opt-level = 3
+opt-level = 0
 
 [profile.release]
 opt-level = 3

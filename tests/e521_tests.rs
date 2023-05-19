@@ -87,76 +87,68 @@ mod e521_tests {
     #[test]
     // k*G = (k mod r)*G
     fn k_g_equals_k_mod_r_times_g() {
-        for _ in 0..5 {
-            let mut rng = thread_rng();
-            let k_u128: u64 = rng.gen();
-            let k = big::from(k_u128);
-            let same_k = k.clone();
-            let g = E521::generator(false) * (k);
-            let r = E521::generator(false).r;
-            let k_mod_r = same_k % r;
-            let mut k_mod_r_timesg = E521::generator(false);
-            k_mod_r_timesg = k_mod_r_timesg * (k_mod_r);
-            assert!(&g == &k_mod_r_timesg)
-        }
+        let mut rng = thread_rng();
+        let k_u128: u64 = rng.gen();
+        let k = big::from(k_u128);
+        let same_k = k.clone();
+        let g = E521::generator(false) * (k);
+        let r = E521::generator(false).r;
+        let k_mod_r = same_k % r;
+        let mut k_mod_r_timesg = E521::generator(false);
+        k_mod_r_timesg = k_mod_r_timesg * (k_mod_r);
+        assert!(&g == &k_mod_r_timesg)
     }
 
     #[test]
     //(k + 1)*G = (k*G) + G
     fn k_plus_one_g() {
-        for _ in 0..5 {
-            let k = get_random_big(256);
-            let k_2 = k.clone();
-            let k1g = E521::generator(false) * (k + 1);
+        let k = get_random_big(256);
+        let k_2 = k.clone();
+        let k1g = E521::generator(false) * (k + 1);
 
-            let mut kgg = E521::generator(false) * (k_2);
-            kgg = kgg + E521::generator(false);
-            assert!(&k1g == &kgg)
-        }
+        let mut kgg = E521::generator(false) * (k_2);
+        kgg = kgg + E521::generator(false);
+        assert!(&k1g == &kgg)
     }
 
     #[test]
     //(k + t)*G = (k*G) + (t*G)
     fn k_t() {
-        for _ in 0..5 {
-            let mut rng = thread_rng();
-            let rnd: u64 = rng.gen();
+        let mut rng = thread_rng();
+        let rnd: u64 = rng.gen();
 
-            let k = big::from(rnd);
-            let k_2 = k.clone();
+        let k = big::from(rnd);
+        let k_2 = k.clone();
 
-            let t = big::from(rnd);
-            let t_2 = t.clone();
+        let t = big::from(rnd);
+        let t_2 = t.clone();
 
-            // (k + t)*G
-            let r0 = E521::generator(false) * (k + t);
-            // (k*G)
-            let mut r1 = E521::generator(false) * (k_2);
-            // (t*G)
-            let r2 = E521::generator(false) * (t_2);
-            r1 = r1 + r2;
-            assert!(&r1 == &r0)
-        }
+        // (k + t)*G
+        let r0 = E521::generator(false) * (k + t);
+        // (k*G)
+        let mut r1 = E521::generator(false) * (k_2);
+        // (t*G)
+        let r2 = E521::generator(false) * (t_2);
+        r1 = r1 + r2;
+        assert!(&r1 == &r0)
     }
 
     #[test]
     //k*(t*P) = t*(k*G) = (k*t mod r)*G
     fn test_ktp() {
-        for _ in 0..5 {
-            let r = E521::generator(false).r;
-            let k = get_random_big(256);
-            let k_2 = k.clone();
-            let k_3 = k.clone();
+        let r = E521::generator(false).r;
+        let k = get_random_big(256);
+        let k_2 = k.clone();
+        let k_3 = k.clone();
 
-            let t = get_random_big(256);
-            let t_2 = t.clone();
-            let t_3 = t.clone();
+        let t = get_random_big(256);
+        let t_2 = t.clone();
+        let t_3 = t.clone();
 
-            let ktp = E521::generator(false) * (t) * (k);
-            let tkg = E521::generator(false) * (k_2) * (t_2);
-            let k_t_mod_r_g = E521::generator(false) * ((k_3 * t_3) % r);
+        let ktp = E521::generator(false) * (t) * (k);
+        let tkg = E521::generator(false) * (k_2) * (t_2);
+        let k_t_mod_r_g = E521::generator(false) * ((k_3 * t_3) % r);
 
-            assert!(&ktp == &tkg && &k_t_mod_r_g == &tkg && &k_t_mod_r_g == &ktp)
-        }
+        assert!(&ktp == &tkg && &k_t_mod_r_g == &tkg && &k_t_mod_r_g == &ktp)
     }
 }

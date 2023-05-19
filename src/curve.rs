@@ -6,8 +6,16 @@ use std::ops::Mul;
 use std::ops::Neg;
 use std::rc::Rc;
 
-/// Edwards 521 curve
+
+const D: &'static str = "-5BCCE";
+const N: &'static str = "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF456DB191D1BF217DCDAE2BD79FB14FC13EF63115A6A3C7D1503A890D7D46035AC";
+const P: &'static str = "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
+const R: &'static str = "7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFD15B6C64746FC85F736B8AF5E7EC53F04FBD8C4569A8F1F4540EA2435F5180D6B";
+
+
+
 #[derive(Default, Debug)]
+/// Edwards 521 curve: 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦²
 pub struct E521 {
     pub x: Integer, //x-coord
     pub y: Integer, //y coord
@@ -17,10 +25,6 @@ pub struct E521 {
     pub n: Integer, //number of points
 }
 
-
-//////////////
-/// TRAITS ///
-//////////////
 pub trait IdPoint {
     fn id_point() -> E521;
 }
@@ -44,8 +48,8 @@ impl Add<E521> for E521 {
     /// ```E521``` = (x, y), then ```E521``` addition is defined as:
     /// * (x₁, y₁) + (x₂, y₂)  = (x₁y₂ + y₁x₂) / (1 + dx₁x₂y₁y₂), (y₁y₂ − x₁x₂) / (1 − dx₁x₂y₁y₂)
     /// * where ```"/"``` is defined to be multiplication by modular inverse.
-    /// * The Edwards curve point composition procedure is gauranteed to deliver a point on the curve,
-    /// unlike curves in Weierstrass form which require different composition formulas for different
+    /// * The Edwards curve point composition procedure is guaranteed to deliver a point on the curve,
+    /// differing from curves in Weierstrass form which require different composition formulas for different
     /// point values.
     ///
     /// # Usage
@@ -103,6 +107,21 @@ impl Clone for E521 {
 }
 
 impl Generator for E521 {
+    /// Returns E521(4, y), where y is obtained from curve equation.
+    ///
+    /// # Arguments
+    ///
+    /// * `msb: bool`: selects the y coordinate for corresponding x coordinate.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rug::Integer;
+    /// use capycrypt::curve::{E521, Generator, IdPoint};
+    /// let g = E521::generator(false);
+    /// assert_eq!(g.clone() * Integer::from(0) == E521::id_point(), true);
+    /// assert_eq!(g.clone() * Integer::from(1) == g, true);
+    /// ```
     fn generator(msb: bool) -> E521 {
         let x = Integer::from(4);
         let new_x = x.clone();
@@ -112,7 +131,7 @@ impl Generator for E521 {
             p: set_p(),
             d: set_d(),
             r: set_r(),
-            n: get_n(),
+            n: set_n(),
         }
     }
 }
@@ -126,14 +145,13 @@ impl IdPoint for E521 {
             p: set_p(),
             d: set_d(),
             r: set_r(),
-            n: get_n(),
+            n: set_n(),
         }
     }
 }
 
 impl IsPoint for E521 {
     /// * Solves curve equation: 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦² with 𝑑 = −376014
-    /// * `v`: key to check
     /// * `return` true if rhs == lhs, false otherwise
     fn is_point(&self) -> bool {
         let x = self.x.clone();
@@ -205,16 +223,9 @@ impl Point for E521 {
             p: set_p(),
             d: set_d(),
             r: set_r(),
-            n: get_n(),
+            n: set_n(),
         }
     }
-}
-
-/// Initializes number of points on the curve.
-pub fn get_n() -> Integer {
-    let mut n = set_r();
-    n *= 4;
-    n
 }
 
 /// Performs modular inverse via euclidian algorithm.
@@ -242,29 +253,27 @@ fn mod_inv(n: &Integer, p: &Integer) -> Integer {
 }
 
 /// Sets the curve d parameter.
+/// https://eprint.iacr.org/2013/647.pdf
 fn set_d() -> Integer {
-    Integer::from(-376014)
+    Integer::from_str_radix(D, 16).unwrap()
+}
+
+/// Initializes number of points on the curve.
+/// https://eprint.iacr.org/2013/647.pdf
+pub fn set_n() -> Integer {
+    Integer::from_str_radix(N, 16).unwrap()
 }
 
 /// Initializes curve modulus 𝑝 := 2⁵²¹−1, a Mersenne prime defining the finite field 𝔽𝑝.
+/// https://eprint.iacr.org/2013/647.pdf
 fn set_p() -> Integer {
-    let mut p = Integer::from(2);
-    p.pow_assign(521);
-    p -= 1;
-    p
+    Integer::from_str_radix(P, 16).unwrap()
 }
 
 /// Initializes r value for curve.
+/// https://eprint.iacr.org/2013/647.pdf
 pub fn set_r() -> Integer {
-    let mut r = rug::Integer::from(2);
-    r.pow_assign(519);
-    let s = Integer::from_str_radix(
-        "337554763258501705789107630418782636071904961214051226618635150085779108655765",
-        10,
-    )
-    .unwrap();
-    r -= s;
-    r
+    Integer::from_str_radix(R, 16).unwrap()
 }
 
 /// Solves for y in curve equation 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦²

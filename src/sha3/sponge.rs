@@ -81,7 +81,8 @@ pub mod sponge_function {
         }
     }
 
-    /// Multi-rate padding scheme defined in FIPS 202 5.1
+    /// # NIST FIPS 202 5.1
+    /// Multi-rate padding scheme
     fn pad_ten_one(m: &mut Vec<u8>, rate_in_bytes: usize) {
         let q = rate_in_bytes - m.len() % rate_in_bytes;
         let mut padded = vec![0; q];
