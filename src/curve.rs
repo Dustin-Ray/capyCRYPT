@@ -12,14 +12,20 @@ const P: &str = "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 const R: &str = "7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFD15B6C64746FC85F736B8AF5E7EC53F04FBD8C4569A8F1F4540EA2435F5180D6B";
 
 #[derive(Default, Debug)]
-/// Edwards 521 curve: 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦²
+/// An Edwards curve takes the form: 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦²
 pub struct E521 {
-    pub x: Integer, //x-coord
-    pub y: Integer, //y coord
-    pub p: Integer, //prime defining finite field
-    pub d: Integer, //d param for curve
-    pub r: Integer, //order of curve
-    pub n: Integer, //number of points
+    //x-coordinate
+    pub x: Integer, 
+    //y coordinate
+    pub y: Integer, 
+    // 𝑝 := 2⁵²¹−1 is a Meresene prime defining finite field 𝔽𝑝.
+    pub p: Integer, 
+    //d param for curve
+    pub d: Integer, 
+    //order of curve
+    pub r: Integer, 
+    //number of points on curve, = 4r
+    pub n: Integer, 
 }
 
 pub trait IdPoint {
@@ -38,8 +44,6 @@ pub trait IsPoint {
     fn is_point(&self) -> bool;
 }
 
-impl Add<E521> for E521 {
-    type Output = E521;
     /// # Point Composition
     /// Composes two E521 points and returns another E521 curve point. If a point is defined as
     /// ```E521``` = (x, y), then ```E521``` addition is defined as:
@@ -58,6 +62,9 @@ impl Add<E521> for E521 {
     /// let s = p + q;
     /// assert_eq!(s == E521::id_point() * Integer::from(2), true);
     /// ```
+impl Add<E521> for E521 {
+    type Output = E521;
+
     fn add(self, p2: E521) -> E521 {
         let x1 = Rc::new(&self.x);
         let y1 = Rc::new(&self.y);
@@ -103,9 +110,8 @@ impl Clone for E521 {
     }
 }
 
-impl Generator for E521 {
     /// Returns E521(4, y), where y is obtained from curve equation.
-    ///
+    /// Any scalar s * G generates the curve.
     /// # Arguments
     ///
     /// * `msb: bool`: selects the y coordinate for corresponding x coordinate.
@@ -119,6 +125,8 @@ impl Generator for E521 {
     /// assert_eq!(g.clone() * Integer::from(0) == E521::id_point(), true);
     /// assert_eq!(g.clone() * Integer::from(1) == g, true);
     /// ```
+impl Generator for E521 {
+
     fn generator(msb: bool) -> E521 {
         let x = Integer::from(4);
         let new_x = x.clone();
@@ -133,8 +141,9 @@ impl Generator for E521 {
     }
 }
 
+/// Returns the neutral point 𝒪 = (0, 1)
 impl IdPoint for E521 {
-    /// Returns the neutral point 𝒪 = (0, 1)
+    
     fn id_point() -> E521 {
         E521 {
             x: Integer::from(0),
@@ -147,9 +156,10 @@ impl IdPoint for E521 {
     }
 }
 
-impl IsPoint for E521 {
     /// * Solves curve equation: 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦² with 𝑑 = −376014
     /// * `return` true if rhs == lhs, false otherwise
+impl IsPoint for E521 {
+
     fn is_point(&self) -> bool {
         let x = self.x.clone();
         let y = self.y.clone();
@@ -158,11 +168,12 @@ impl IsPoint for E521 {
     }
 }
 
-impl Mul<Integer> for E521 {
-    type Output = E521;
-    /// Constant time multiplication NOTE not memory safe afaik.
+    /// Fixed-time point multiplication. NOTE not memory safe afaik.
     /// * `s`: scalar value to multiply by
     /// * multiplication is defined to be P₀ + P₁ + ... Pₛ
+impl Mul<Integer> for E521 {
+    type Output = E521;
+
     fn mul(self, s: Integer) -> E521 {
         let mut r0 = E521::id_point();
         let mut r1 = self;
@@ -179,9 +190,10 @@ impl Mul<Integer> for E521 {
     }
 }
 
+/// If a point is defined as (x, y) then its negation is (-x, y)
 impl Neg for E521 {
     type Output = E521;
-    /// If a point is defined as (x, y) then its negation is (-x, y)
+    
     fn neg(self) -> E521 {
         let x = self.x.clone();
         let y = self.y;
@@ -190,14 +202,13 @@ impl Neg for E521 {
     }
 }
 
-/// Compare points for equality by coordinate values only.
+/// Compares points for equality by coordinate values.
 impl PartialEq for E521 {
     fn eq(&self, other: &Self) -> bool {
         self.x.eq(&other.x) && self.y.eq(&other.y)
     }
 }
 
-impl Point for E521 {
     /// Returns E521(x, y) for any x, y. Assumes valid curve point.
     ///
     /// # Arguments
@@ -213,6 +224,8 @@ impl Point for E521 {
     /// let point = E521::point(Integer::from(0), Integer::from(1));
     /// assert_eq!(point == E521::id_point(), true);
     /// ```
+impl Point for E521 {
+
     fn point(x: Integer, y: Integer) -> E521 {
         E521 {
             x,

@@ -7,26 +7,26 @@ pub mod sponge_function {
     /// * `m`: message to be absorbed
     /// * `capacity`: security parameter which determines rate = ```bit_width``` - ```capacity```
     /// * `return`: a ```state``` consisting of 25 words of 64 bits each.
-    pub fn sponge_absorb(m: &mut Vec<u8>, capacity: usize) -> [u64; 25] {
+    pub fn sponge_absorb(m: &mut Vec<u8>, capacity: u64) -> [u64; 25] {
         let r = (1600 - capacity) / 8;
-        if m.len() % r != 0 {
-            pad_ten_one(m, r);
+        if (m.len() % r as usize) != 0 {
+            pad_ten_one(m, r as usize);
         }
-        bytes_to_state(m, r)
+        bytes_to_state(m, r as usize)
     }
 
     /// Accepts state of 25 ```u64```s and permutes, appending each iteration to output until
     /// desired length is met.
     ///
     /// * `return: Vec<u8>` consisting of absorbed and permuted states of length bit_length.
-    pub fn sponge_squeeze(s: &mut [u64; 25], bit_length: usize, rate: usize) -> Vec<u8> {
+    pub fn sponge_squeeze(s: &mut [u64; 25], bit_length: u64, rate: u64) -> Vec<u8> {
         let mut out: Vec<u8> = Vec::new(); //FIPS 202 Algorithm 8 Step 8
-        let block_size: usize = rate / 64;
-        while out.len() * 8 < bit_length {
+        let block_size: usize = (rate / 64) as usize;
+        while out.len() * 8 < bit_length as usize{
             out.extend_from_slice(&state_to_byte_array(&s[0..block_size]));
             keccakf_1600(s); //FIPS 202 Algorithm 8 Step 10
         }
-        out.truncate(bit_length / 8);
+        out.truncate((bit_length / 8)as usize);
         out
     }
 
@@ -85,6 +85,7 @@ pub mod sponge_function {
     /// Multi-rate padding scheme
     fn pad_ten_one(m: &mut Vec<u8>, rate_in_bytes: usize) {
         let q = rate_in_bytes - m.len() % rate_in_bytes;
+
         let mut padded = vec![0; q];
         padded[q - 1] = 0x80;
         m.extend_from_slice(&padded);
