@@ -23,4 +23,4 @@ A Rust library implementing FIPS 202 paired with a non-standard Edwards-521 curv
 Add the following line to your `Cargo.toml` file:
 
 ```toml
-capycrypt = "0.1.0"
+capycrypt = "0.2.0"
