@@ -1,5 +1,6 @@
 pub mod shake_functions {
-    use crate::curve::{set_n, Generator, Point, E521};
+    use crate::curve::Curves;
+    use crate::curve::{curve_n, CurvePoint, Generator, Point};
     use crate::sha3::aux_functions::byte_utils::{
         big_to_bytes, bytes_to_big, get_date_and_time_as_string, get_random_bytes, xor_bytes,
     };
@@ -8,6 +9,8 @@ pub mod shake_functions {
     use crate::{ECCryptogram, KeyObj, Signature, SymmetricCryptogram};
     use rug::Integer;
     use std::borrow::{Borrow, BorrowMut};
+
+    const SELECTED_CURVE: Curves = Curves::E521;
 
     /// # SHA3-Keccak
     /// ref NIST FIPS 202.
@@ -43,9 +46,7 @@ pub mod shake_functions {
             return shake(x, l);
         }
         let mut encoded_n = encode_string(&mut n.as_bytes().to_vec());
-        println!("encoded n: {:?}", hex::encode(encoded_n.clone()));
         let encoded_s = encode_string(&mut s.as_bytes().to_vec());
-        println!("encoded s: {:?}", hex::encode(encoded_s.clone()));
 
         encoded_n.extend_from_slice(&encoded_s);
 
@@ -54,17 +55,12 @@ pub mod shake_functions {
             512 => 136,
             _ => panic!("Value must be either 256 or 512"),
         };
-        
+
         let mut out = byte_pad(&mut encoded_n, bytepad_w);
-        println!("bytepad: {:?}", hex::encode(out.clone()));
 
         out.append(x);
         out.push(0x04);
-        sponge_squeeze(
-            &mut sponge_absorb(&mut out, d),
-            l,
-            1600 - d,
-        )
+        sponge_squeeze(&mut sponge_absorb(&mut out, d), l, 1600 - d)
     }
 
     /// # Keyed Message Authtentication
@@ -78,18 +74,14 @@ pub mod shake_functions {
     /// * `return  -> Vec<u8>`: kmac_xof of `x` under `k`
     pub fn kmac_xof(k: &mut Vec<u8>, x: &mut Vec<u8>, l: u64, s: &str, d: u64) -> Vec<u8> {
         let mut encode_k = encode_string(k);
-        println!("encoded : {:?}", hex::encode(encode_k.clone()));
-
         let bytepad_w = match d {
             256 => 168,
             512 => 136,
             _ => panic!("Value must be either 256 or 512"),
         };
-
         let mut bp = byte_pad(&mut encode_k, bytepad_w);
         bp.append(x); //x is dropped here?
         let mut right_enc = right_encode(0);
-
         bp.append(&mut right_enc);
         cshake(&mut bp, l, "KMAC", s, d)
     }
@@ -129,7 +121,11 @@ pub mod shake_functions {
     /// * `msg: &mut Box<Vec<u8>>`: borrowed pointer to message to encrypt
     /// ## Returns:
     /// * `return -> SymmetricCryptogram`: SymmetricCryptogram(z, c, t)
-    pub fn encrypt_with_pw(pw: &mut Vec<u8>, msg: &mut Box<Vec<u8>>, d: u64) -> SymmetricCryptogram {
+    pub fn encrypt_with_pw(
+        pw: &mut Vec<u8>,
+        msg: &mut Box<Vec<u8>>,
+        d: u64,
+    ) -> SymmetricCryptogram {
         let z = get_random_bytes(512);
         let mut ke_ka = z.clone();
         ke_ka.append(pw);
@@ -178,8 +174,9 @@ pub mod shake_functions {
     /// verification key 𝑉 is hashed together with the message 𝑚
     /// and the nonce 𝑈: hash (𝑚, 𝑈, 𝑉) .
     pub fn gen_keypair(pw: &mut Vec<u8>, owner: String, d: u64) -> KeyObj {
-        let s: Integer = (bytes_to_big(kmac_xof(pw, &mut vec![], 512, "K", d)) * 4) % set_n();
-        let v = E521::generator(false) * (s);
+        let s: Integer =
+            (bytes_to_big(kmac_xof(pw, &mut vec![], 512, "K", d)) * 4) % curve_n(SELECTED_CURVE);
+        let v = CurvePoint::generator(SELECTED_CURVE, false) * (s);
         KeyObj {
             owner,
             priv_key: pw.to_vec(),
@@ -204,10 +201,14 @@ pub mod shake_functions {
     /// * `message: &mut Box<Vec<u8>>`: borrowed pointer to message of any length
     /// ## Returns:
     /// * `return -> ECCryptogram` : cryptogram: (𝑍, c, t) = 𝑍||c||t
-    pub fn encrypt_with_key(pub_key: E521, message: &mut Box<Vec<u8>>, d: u64) -> ECCryptogram {
-        let k: Integer = (bytes_to_big(get_random_bytes(64)) * 4) % set_n();
+    pub fn encrypt_with_key(
+        pub_key: CurvePoint,
+        message: &mut Box<Vec<u8>>,
+        d: u64,
+    ) -> ECCryptogram {
+        let k: Integer = (bytes_to_big(get_random_bytes(64)) * 4) % curve_n(SELECTED_CURVE);
         let w = pub_key * k.clone();
-        let z = E521::generator(false) * k;
+        let z = CurvePoint::generator(SELECTED_CURVE, false) * k;
         let ke_ka = kmac_xof(&mut big_to_bytes(w.x), &mut vec![], 1024, "P", d);
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
@@ -237,13 +238,13 @@ pub mod shake_functions {
     /// * t’ ← KMACXOF256(ka, m, 512, “PKA”)
     /// ## Arguments:
     /// * `pw: &mut [u8]`: password used to generate ```E521``` encryption key.
-    /// * `message: &mut ECCryptogram`: cryptogram of format (𝑍||c||t)
+    /// * `message: &mut ECCryptogram`: cryptogram of format ```(𝑍||c||t)```
     /// ## Returns:
-    /// * `return  -> bool`: Decryption of cryptogram 𝑍||c||t iff t` = t
+    /// * `return  -> bool`: Decryption of cryptogram ```𝑍||c||t iff t` = t```
     pub fn decrypt_with_key(pw: &mut [u8], message: &mut ECCryptogram, d: u64) -> bool {
-        let z = E521::point(message.z_x.clone(), message.z_y.clone());
-        let s: Integer =
-            (bytes_to_big(kmac_xof(&mut pw.to_owned(), &mut vec![], 512, "K", d)) * 4) % set_n();
+        let z = CurvePoint::point(SELECTED_CURVE, message.z_x.clone(), message.z_y.clone());
+        let s: Integer = (bytes_to_big(kmac_xof(&mut pw.to_owned(), &mut vec![], 512, "K", d)) * 4)
+            % z.clone().n;
 
         let w = z * s;
         let ke_ka = kmac_xof(&mut big_to_bytes(w.x), &mut vec![], 1024, "P", d);
@@ -252,6 +253,7 @@ pub mod shake_functions {
         let len = message.c.len() * 8;
         let m = Box::new(kmac_xof(ke, &mut vec![], (len) as u64, "PKE", d));
         xor_bytes(&mut message.c, m.borrow());
+        dbg!(message.c.clone());
         let t_p = kmac_xof(&mut ka.clone(), &mut message.c, 512, "PKA", d);
         t_p == message.t
     }
@@ -272,9 +274,10 @@ pub mod shake_functions {
         let s: Integer = bytes_to_big(kmac_xof(pw, &mut vec![], 512, "K", d)) * 4;
         let mut s_bytes = big_to_bytes(s.clone());
 
-        let k: Integer = bytes_to_big(kmac_xof(&mut s_bytes, message.borrow_mut(), 512, "N", d)) * 4;
+        let k: Integer =
+            bytes_to_big(kmac_xof(&mut s_bytes, message.borrow_mut(), 512, "N", d)) * 4;
 
-        let u = E521::generator(false) * k.clone();
+        let u = CurvePoint::generator(SELECTED_CURVE, false) * k.clone();
         let mut ux_bytes = big_to_bytes(u.x);
         let h = kmac_xof(&mut ux_bytes, message.borrow_mut(), 512, "T", d);
         let h_big = bytes_to_big(h.clone());
@@ -294,8 +297,13 @@ pub mod shake_functions {
     /// * `message: Vec<u8>` of message to verify
     /// ## Returns:
     /// * `return`: true if, and only if, kmac_xof(𝑈ₓ , m, 512, “T”) = h
-    pub fn verify_signature(sig: &Signature, pub_key: E521, message: &mut Box<Vec<u8>>, d:u64) -> bool {
-        let mut u = E521::generator(false) * sig.z.clone();
+    pub fn verify_signature(
+        sig: &Signature,
+        pub_key: CurvePoint,
+        message: &mut Box<Vec<u8>>,
+        d: u64,
+    ) -> bool {
+        let mut u = CurvePoint::generator(SELECTED_CURVE, false) * sig.z.clone();
         let hv = pub_key * (bytes_to_big(sig.h.clone()));
         u = u + hv;
         let mut ux_bytes = big_to_bytes(u.x);

@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod e521_tests {
+mod e382_tests {
     use capycrypt::{
         curve::{CurvePoint, Generator, IdPoint},
         sha3::aux_functions::byte_utils::get_random_big,
@@ -9,7 +9,7 @@ mod e521_tests {
     use rug::Integer as big;
 
     use capycrypt::curve::Curves;
-    const SELECTED_CURVE: Curves = Curves::E521;
+    const SELECTED_CURVE: Curves = Curves::E382;
 
     #[test]
     // 0 * G = 𝒪
@@ -31,6 +31,7 @@ mod e521_tests {
         let s = big::from(1);
         let g = CurvePoint::generator(SELECTED_CURVE, false);
         point = point * (s);
+
         assert!(
             &g == &point,
             "points are not equal, check mul and add functions"

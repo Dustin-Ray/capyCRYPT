@@ -6,66 +6,98 @@ use std::ops::Mul;
 use std::ops::Neg;
 use std::rc::Rc;
 
-const D: &str = "-5BCCE";
-const N: &str = "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF456DB191D1BF217DCDAE2BD79FB14FC13EF63115A6A3C7D1503A890D7D46035AC";
-const P: &str = "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
-const R: &str = "7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFD15B6C64746FC85F736B8AF5E7EC53F04FBD8C4569A8F1F4540EA2435F5180D6B";
+#[derive(Debug, Clone, Copy)]
+pub enum Curves {
+    E222,
+    E382,
+    E448,
+    E521,
+}
 
-#[derive(Default, Debug)]
+/// d, n, p, and r values for each curve
+mod curve_constants {
+    pub const D_521: i32 = -376014;
+    pub const N_521: &str = "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF456DB191D1BF217DCDAE2BD79FB14FC13EF63115A6A3C7D1503A890D7D46035AC";
+    pub const P_521: &str = "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
+    pub const R_521: &str = "7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFD15B6C64746FC85F736B8AF5E7EC53F04FBD8C4569A8F1F4540EA2435F5180D6B";
+
+    pub const D_448: i32 = -39081;
+    pub const N_448: &str = "3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFDF3288FA7113B6D26BB58DA4085B309CA37163D548DE30A4AAD6113CC";
+    pub const P_448: &str = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
+    pub const R_448: &str = "3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7CCA23E9C44EDB49AED63690216CC2728DC58F552378C292AB5844F3";
+
+    pub const D_382: i32 = -67254;
+    pub const N_382: &str = "3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF57EC87C87A57BB85F179A4A06C40B49DCF89F84FF4F25C64";
+    pub const P_382: &str = "3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF97";
+    pub const R_382: &str = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFD5FB21F21E95EEE17C5E69281B102D2773E27E13FD3C9719";
+
+    pub const D_222: i32 = 160102;
+    pub const N_222: &str = "3FFFFFFFFFFFFFFFFFFFFFFFFFFFDC32F257A4CBE00BCC508D6632FC";
+    pub const P_222: &str = "3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF8B";
+    pub const R_222: &str = "FFFFFFFFFFFFFFFFFFFFFFFFFFFF70CBC95E932F802F31423598CBF";
+}
+#[derive(Debug)]
 /// An Edwards curve takes the form: 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦²
-pub struct E521 {
+pub struct CurvePoint {
     //x-coordinate
-    pub x: Integer, 
+    pub x: Integer,
     //y coordinate
-    pub y: Integer, 
-    // 𝑝 := 2⁵²¹−1 is a Meresene prime defining finite field 𝔽𝑝.
-    pub p: Integer, 
-    //d param for curve
-    pub d: Integer, 
+    pub y: Integer,
+    // 𝑝 := prime defining finite field 𝔽𝑝.
+    pub p: Integer,
+    //d coefficient for Edwards curve equation;
+    pub d: Integer,
     //order of curve
-    pub r: Integer, 
+    pub r: Integer,
     //number of points on curve, = 4r
-    pub n: Integer, 
+    pub n: Integer,
+    //curve selector
+    pub curve: Curves,
 }
 
 pub trait IdPoint {
-    fn id_point() -> E521;
+    fn id_point(curve: Curves) -> CurvePoint;
+}
+
+pub trait CurveD {
+    fn set_d(curve: Curves) -> Integer;
 }
 
 pub trait Generator {
-    fn generator(msb: bool) -> E521;
+    fn generator(curve: Curves, msb: bool) -> CurvePoint;
 }
 
 pub trait Point {
-    fn point(x: rug::Integer, y: rug::Integer) -> E521;
+    fn point(curve: Curves, x: rug::Integer, y: rug::Integer) -> CurvePoint;
 }
 
 pub trait IsPoint {
     fn is_point(&self) -> bool;
 }
 
-    /// # Point Composition
-    /// Composes two E521 points and returns another E521 curve point. If a point is defined as
-    /// ```E521``` = (x, y), then ```E521``` addition is defined as:
-    /// * (x₁, y₁) + (x₂, y₂)  = (x₁y₂ + y₁x₂) / (1 + dx₁x₂y₁y₂), (y₁y₂ − x₁x₂) / (1 − dx₁x₂y₁y₂)
-    /// * where ```"/"``` is defined to be multiplication by modular inverse.
-    /// * The Edwards curve point composition procedure is guaranteed to deliver a point on the curve,
-    /// differing from curves in Weierstrass form which require different composition formulas for different
-    /// point values.
-    ///
-    /// # Usage
-    /// ```
-    /// use capycrypt::curve::{E521, Point, IdPoint};
-    /// use rug::Integer;
-    /// let p = E521::point(Integer::from(0), Integer::from(1));
-    /// let q = E521::point(Integer::from(0), Integer::from(1));
-    /// let s = p + q;
-    /// assert_eq!(s == E521::id_point() * Integer::from(2), true);
-    /// ```
-impl Add<E521> for E521 {
-    type Output = E521;
+/// # Point Composition
+/// Composes two curve points and returns another curve point. If a point is defined as
+/// ```E521``` = (x, y), then ```Edwards Curve``` addition is defined as:
+/// * ```(x₁, y₁) + (x₂, y₂)  = (x₁y₂ + y₁x₂) / (1 + dx₁x₂y₁y₂), (y₁y₂ − x₁x₂) / (1 − dx₁x₂y₁y₂)```
+/// * where ```"/"``` is defined to be multiplication by modular inverse.
+/// * The Edwards curve point composition procedure is guaranteed to deliver a point on the curve,
+/// differing from curves in Weierstrass form which require different composition formulas for different
+/// point values. In particular, because d is not square in Z/pZ, the strongly
+/// unified Edwards point addition formulas apply. ref:
+/// <https://csrc.nist.gov/publications/detail/fips/186/5/final>
+/// # Usage
+/// ```
+/// use capycrypt::curve::{E521, Point, IdPoint};
+/// use rug::Integer;
+/// let p = E521::point(Integer::from(0), Integer::from(1));
+/// let q = E521::point(Integer::from(0), Integer::from(1));
+/// let s = p + q;
+/// assert_eq!(s == E521::id_point() * Integer::from(2), true);
+/// ```
+impl Add<CurvePoint> for CurvePoint {
+    type Output = CurvePoint;
 
-    fn add(self, p2: E521) -> E521 {
+    fn add(self, p2: CurvePoint) -> CurvePoint {
         let x1 = Rc::new(&self.x);
         let y1 = Rc::new(&self.y);
         let x2 = p2.x.clone();
@@ -93,23 +125,25 @@ impl Add<E521> for E521 {
         let new_x = ((x1y2y1x2_sum * one_plus_dx1x2y1y2inv) % p.clone() + p.clone()) % p.clone();
         // (y₁y₂ − x₁x₂) / (1 − dx₁x₂y₁y₂)
         let new_y = ((y1y2x1x2_difference * one_minus_dx1x2y1y2inv) % p.clone() + p.clone()) % p;
-        E521::point(new_x, new_y)
+        CurvePoint::point(self.curve, new_x, new_y)
     }
 }
 
-impl Clone for E521 {
-    fn clone(&self) -> E521 {
-        E521 {
+impl Clone for CurvePoint {
+    fn clone(&self) -> CurvePoint {
+        CurvePoint {
             x: self.x.clone(),
             y: self.y.clone(),
             p: self.p.clone(),
             d: self.d.clone(),
             r: self.r.clone(),
             n: self.n.clone(),
+            curve: self.curve,
         }
     }
 }
 
+impl Generator for CurvePoint {
     /// Returns E521(4, y), where y is obtained from curve equation.
     /// Any scalar s * G generates the curve.
     /// # Arguments
@@ -125,41 +159,48 @@ impl Clone for E521 {
     /// assert_eq!(g.clone() * Integer::from(0) == E521::id_point(), true);
     /// assert_eq!(g.clone() * Integer::from(1) == g, true);
     /// ```
-impl Generator for E521 {
+    fn generator(req_curve: Curves, msb: bool) -> CurvePoint {
+        let x = match req_curve {
+            Curves::E222 => Integer::from_str_radix(
+                "2705691079882681090389589001251962954446177367541711474502428610129",
+                10,
+            )
+            .unwrap(),
+            Curves::E382 => Integer::from(7),
+            Curves::E448 => Integer::from(8),
+            Curves::E521 => Integer::from(4),
+        };
 
-    fn generator(msb: bool) -> E521 {
-        let x = Integer::from(4);
-        let new_x = x.clone();
-        E521 {
-            x,
-            y: solve_for_y(&new_x, set_p(), msb),
-            p: set_p(),
-            d: set_d(),
-            r: set_r(),
-            n: set_n(),
+        CurvePoint {
+            x: x.clone(),
+            y: solve_for_y(&x, curve_p(req_curve), curve_d(req_curve), msb),
+            p: curve_p(req_curve),
+            d: curve_d(req_curve),
+            r: curve_r(req_curve),
+            n: curve_n(req_curve),
+            curve: req_curve,
         }
     }
 }
 
 /// Returns the neutral point 𝒪 = (0, 1)
-impl IdPoint for E521 {
-    
-    fn id_point() -> E521 {
-        E521 {
+impl IdPoint for CurvePoint {
+    fn id_point(req_curve: Curves) -> CurvePoint {
+        CurvePoint {
             x: Integer::from(0),
             y: Integer::from(1),
-            p: set_p(),
-            d: set_d(),
-            r: set_r(),
-            n: set_n(),
+            p: curve_p(req_curve),
+            d: curve_d(req_curve),
+            r: curve_r(req_curve),
+            n: curve_n(req_curve),
+            curve: req_curve,
         }
     }
 }
 
-    /// * Solves curve equation: 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦² with 𝑑 = −376014
-    /// * `return` true if rhs == lhs, false otherwise
-impl IsPoint for E521 {
-
+/// * Solves curve equation: 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦² with 𝑑 = −376014
+/// * `return` true if rhs == lhs, false otherwise
+impl IsPoint for CurvePoint {
     fn is_point(&self) -> bool {
         let x = self.x.clone();
         let y = self.y.clone();
@@ -168,14 +209,14 @@ impl IsPoint for E521 {
     }
 }
 
-    /// Fixed-time point multiplication. NOTE not memory safe afaik.
-    /// * `s`: scalar value to multiply by
-    /// * multiplication is defined to be P₀ + P₁ + ... Pₛ
-impl Mul<Integer> for E521 {
-    type Output = E521;
+/// Fixed-time point multiplication. NOTE not memory safe afaik.
+/// * `s`: scalar value to multiply by
+/// * multiplication is defined to be P₀ + P₁ + ... Pₛ
+impl Mul<Integer> for CurvePoint {
+    type Output = CurvePoint;
 
-    fn mul(self, s: Integer) -> E521 {
-        let mut r0 = E521::id_point();
+    fn mul(self, s: Integer) -> CurvePoint {
+        let mut r0 = CurvePoint::id_point(self.curve);
         let mut r1 = self;
         for i in (0..=s.significant_bits()).rev() {
             if s.get_bit(i) {
@@ -191,49 +232,45 @@ impl Mul<Integer> for E521 {
 }
 
 /// If a point is defined as (x, y) then its negation is (-x, y)
-impl Neg for E521 {
-    type Output = E521;
-    
-    fn neg(self) -> E521 {
-        let x = self.x.clone();
-        let y = self.y;
-        let x = x * -1;
-        E521::point(x, y)
+impl Neg for CurvePoint {
+    type Output = CurvePoint;
+    fn neg(self) -> CurvePoint {
+        CurvePoint::point(self.curve, self.p - self.x, self.y)
     }
 }
 
 /// Compares points for equality by coordinate values.
-impl PartialEq for E521 {
+impl PartialEq for CurvePoint {
     fn eq(&self, other: &Self) -> bool {
         self.x.eq(&other.x) && self.y.eq(&other.y)
     }
 }
 
-    /// Returns E521(x, y) for any x, y. Assumes valid curve point.
-    ///
-    /// # Arguments
-    ///
-    /// * `x: rug::Integer`     x-coordinate for point.
-    /// * `y: rug::Integer`     y-coordinate for point.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use rug::Integer;
-    /// use capycrypt::curve::{Point, E521, IdPoint,};
-    /// let point = E521::point(Integer::from(0), Integer::from(1));
-    /// assert_eq!(point == E521::id_point(), true);
-    /// ```
-impl Point for E521 {
-
-    fn point(x: Integer, y: Integer) -> E521 {
-        E521 {
+/// Returns E521(x, y) for any x, y. Assumes valid curve point.
+///
+/// # Arguments
+///
+/// * `x: rug::Integer`     x-coordinate for point.
+/// * `y: rug::Integer`     y-coordinate for point.
+///
+/// # Examples
+///
+/// ```
+/// use rug::Integer;
+/// use capycrypt::curve::{Point, E521, IdPoint,};
+/// let point = E521::point(Integer::from(0), Integer::from(1));
+/// assert_eq!(point == E521::id_point(), true);
+/// ```
+impl Point for CurvePoint {
+    fn point(req_curve: Curves, x: Integer, y: Integer) -> CurvePoint {
+        CurvePoint {
             x,
             y,
-            p: set_p(),
-            d: set_d(),
-            r: set_r(),
-            n: set_n(),
+            p: curve_p(req_curve),
+            d: curve_d(req_curve),
+            r: curve_r(req_curve),
+            n: curve_n(req_curve),
+            curve: req_curve,
         }
     }
 }
@@ -262,37 +299,57 @@ fn mod_inv(n: &Integer, p: &Integer) -> Integer {
     inv
 }
 
-/// Sets the curve d parameter.
+/// The d coefficient for Edwards formulas defines the order of the curve.
 /// <https://eprint.iacr.org/2013/647.pdf>
-fn set_d() -> Integer {
-    Integer::from_str_radix(D, 16).unwrap()
+fn curve_d(curve: Curves) -> Integer {
+    match curve {
+        Curves::E222 => Integer::from(curve_constants::D_222),
+        Curves::E382 => Integer::from(curve_constants::D_382),
+        Curves::E448 => Integer::from(curve_constants::D_448),
+        Curves::E521 => Integer::from(curve_constants::D_521),
+    }
 }
 
 /// Initializes number of points on the curve.
 /// <https://eprint.iacr.org/2013/647.pdf>
-pub fn set_n() -> Integer {
-    Integer::from_str_radix(N, 16).unwrap()
+pub fn curve_n(curve: Curves) -> Integer {
+    match curve {
+        Curves::E222 => Integer::from_str_radix(curve_constants::N_222, 16).unwrap(),
+        Curves::E382 => Integer::from_str_radix(curve_constants::N_382, 16).unwrap(),
+        Curves::E448 => Integer::from_str_radix(curve_constants::N_448, 16).unwrap(),
+        Curves::E521 => Integer::from_str_radix(curve_constants::N_521, 16).unwrap(),
+    }
 }
 
-/// Initializes curve modulus 𝑝 := 2⁵²¹−1, a Mersenne prime defining the finite field 𝔽𝑝.
+/// Initializes curve modulus 𝑝, a prime defining the finite field 𝔽𝑝.
 /// <https://eprint.iacr.org/2013/647.pdf>
-fn set_p() -> Integer {
-    Integer::from_str_radix(P, 16).unwrap()
+fn curve_p(curve: Curves) -> Integer {
+    match curve {
+        Curves::E222 => Integer::from_str_radix(curve_constants::P_222, 16).unwrap(),
+        Curves::E382 => Integer::from_str_radix(curve_constants::P_382, 16).unwrap(),
+        Curves::E448 => Integer::from_str_radix(curve_constants::P_448, 16).unwrap(),
+        Curves::E521 => Integer::from_str_radix(curve_constants::P_521, 16).unwrap(),
+    }
 }
 
 /// Initializes r value for curve.
 /// <https://eprint.iacr.org/2013/647.pdf>
-pub fn set_r() -> Integer {
-    Integer::from_str_radix(R, 16).unwrap()
+pub fn curve_r(curve: Curves) -> Integer {
+    match curve {
+        Curves::E222 => Integer::from_str_radix(curve_constants::R_222, 16).unwrap(),
+        Curves::E382 => Integer::from_str_radix(curve_constants::R_382, 16).unwrap(),
+        Curves::E448 => Integer::from_str_radix(curve_constants::R_448, 16).unwrap(),
+        Curves::E521 => Integer::from_str_radix(curve_constants::R_521, 16).unwrap(),
+    }
 }
 
 /// Solves for y in curve equation 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦²
-fn solve_for_y(x: &Integer, p: Integer, msb: bool) -> Integer {
+fn solve_for_y(x: &Integer, p: Integer, d: Integer, msb: bool) -> Integer {
     let mut sq = x.clone();
     sq.pow_assign(2);
     let num = Integer::from(1) - sq.clone();
     let num = num % p.clone();
-    let denom = Integer::from(376014) * sq + Integer::from(1);
+    let denom = -d * sq + Integer::from(1);
     let denom = denom % p.clone();
     let denom = mod_inv(&denom, &p);
     let radicand = num * denom;

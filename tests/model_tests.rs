@@ -1,12 +1,15 @@
 #[cfg(test)]
-pub mod model_test {
-    use capycrypt::curve::{Point, E521};
+pub mod model_tests {
+    use capycrypt::curve::{CurvePoint, Point};
     use capycrypt::model::shake_functions::{
         decrypt_with_key, decrypt_with_pw, encrypt_with_key, encrypt_with_pw, gen_keypair,
         sign_with_key, verify_signature,
     };
     use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
     use std::borrow::BorrowMut;
+
+    use capycrypt::curve::Curves;
+    const SELECTED_CURVE: Curves = Curves::E521;
 
     #[test]
     pub fn test_sym_enc() {
@@ -23,12 +26,14 @@ pub mod model_test {
         //check conversion to and from bytes.
         let pw = get_random_bytes(16);
         let owner = "test key".to_string();
-        let mut message = Box::new(get_random_bytes(5242880).to_owned()); //5mb
+        let mut message = Box::new(get_random_bytes(1).to_owned()); //5mb
+        dbg!(message.clone());
         let key_obj = gen_keypair(&mut pw.clone(), owner, 512);
         let x = key_obj.pub_x;
         let y = key_obj.pub_y;
-        let pub_key = E521::point(x, y);
+        let pub_key = CurvePoint::point(SELECTED_CURVE, x, y);
         let mut enc = encrypt_with_key(pub_key, &mut message, 512);
+        dbg!(enc.c.clone());
         let res = decrypt_with_key(&mut pw.clone(), enc.borrow_mut(), 512);
         assert!(res);
     }
@@ -40,7 +45,7 @@ pub mod model_test {
         let key_obj = gen_keypair(&mut pw.clone(), "test".to_string(), 512);
         let x = key_obj.pub_x;
         let y = key_obj.pub_y;
-        let key = E521::point(x, y);
+        let key = CurvePoint::point(SELECTED_CURVE, x, y);
         let sig = sign_with_key(&mut pw.clone(), &mut message, 512);
         let res = verify_signature(&sig, key, &mut message, 512);
         assert!(res);

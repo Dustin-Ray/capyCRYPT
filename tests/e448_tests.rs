@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod e521_tests {
+mod e448_tests {
     use capycrypt::{
         curve::{CurvePoint, Generator, IdPoint},
         sha3::aux_functions::byte_utils::get_random_big,
@@ -9,7 +9,7 @@ mod e521_tests {
     use rug::Integer as big;
 
     use capycrypt::curve::Curves;
-    const SELECTED_CURVE: Curves = Curves::E521;
+    const SELECTED_CURVE: Curves = Curves::E448;
 
     #[test]
     // 0 * G = 𝒪
@@ -31,6 +31,8 @@ mod e521_tests {
         let s = big::from(1);
         let g = CurvePoint::generator(SELECTED_CURVE, false);
         point = point * (s);
+        // println!("point x: {}", point.x);
+        // println!("point y: {}", point.y);
         assert!(
             &g == &point,
             "points are not equal, check mul and add functions"
@@ -90,13 +92,12 @@ mod e521_tests {
     #[test]
     // k*G = (k mod r)*G
     fn k_g_equals_k_mod_r_times_g() {
-        let g = CurvePoint::generator(SELECTED_CURVE, false);
         let mut rng = thread_rng();
         let k_u128: u64 = rng.gen();
         let k = big::from(k_u128);
         let same_k = k.clone();
-        let g = g * (k);
-        let r = g.clone().r;
+        let g = CurvePoint::generator(SELECTED_CURVE, false) * (k);
+        let r = CurvePoint::generator(SELECTED_CURVE, false).r;
         let k_mod_r = same_k % r;
         let mut k_mod_r_timesg = CurvePoint::generator(SELECTED_CURVE, false);
         k_mod_r_timesg = k_mod_r_timesg * (k_mod_r);
@@ -118,7 +119,6 @@ mod e521_tests {
     #[test]
     //(k + t)*G = (k*G) + (t*G)
     fn k_t() {
-        let g = CurvePoint::generator(SELECTED_CURVE, false);
         let mut rng = thread_rng();
         let rnd: u64 = rng.gen();
 
@@ -129,11 +129,11 @@ mod e521_tests {
         let t_2 = t.clone();
 
         // (k + t)*G
-        let r0 = g.clone() * (k + t);
+        let r0 = CurvePoint::generator(SELECTED_CURVE, false) * (k + t);
         // (k*G)
-        let mut r1 = g.clone() * (k_2);
+        let mut r1 = CurvePoint::generator(SELECTED_CURVE, false) * (k_2);
         // (t*G)
-        let r2 = g * (t_2);
+        let r2 = CurvePoint::generator(SELECTED_CURVE, false) * (t_2);
         r1 = r1 + r2;
         assert!(&r1 == &r0)
     }
@@ -141,7 +141,6 @@ mod e521_tests {
     #[test]
     //k*(t*P) = t*(k*G) = (k*t mod r)*G
     fn test_ktp() {
-        let g = CurvePoint::generator(SELECTED_CURVE, false);
         let r = CurvePoint::generator(SELECTED_CURVE, false).r;
         let k = get_random_big(256);
         let k_2 = k.clone();
@@ -151,9 +150,9 @@ mod e521_tests {
         let t_2 = t.clone();
         let t_3 = t.clone();
 
-        let ktp = g.clone() * (t) * (k);
-        let tkg = g.clone() * (k_2) * (t_2);
-        let k_t_mod_r_g = g * ((k_3 * t_3) % r);
+        let ktp = CurvePoint::generator(SELECTED_CURVE, false) * (t) * (k);
+        let tkg = CurvePoint::generator(SELECTED_CURVE, false) * (k_2) * (t_2);
+        let k_t_mod_r_g = CurvePoint::generator(SELECTED_CURVE, false) * ((k_3 * t_3) % r);
 
         assert!(&ktp == &tkg && &k_t_mod_r_g == &tkg && &k_t_mod_r_g == &ktp)
     }
