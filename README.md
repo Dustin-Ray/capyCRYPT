@@ -12,8 +12,8 @@ A Rust library implementing FIPS 202 paired with a variety of Edwards curves. En
 - **Edwards Elliptic Curve:** A variety of Edwards curve implementations for elliptic curve cryptography (ECC) operations are offered, varying in security and efficiency. Curves can be easily interchanged in asymmetric operations to suit the needs of the application.
 
 ## Supported Operations
-- **Message Digest:** Computes 512 bit hash of a given message.
-- **MACs:** Computes 512 bit message authentication code of a given message.
+- **Message Digest:** Computes hash of a given message, with adjustable digest lengths.
+- **MACs:** Computes message authentication code of a given message, with adjustable bit security.
 - **Passkey:** Symmetric message encryption and decryption, and MAC generation.
 - **Public Key Cryptography:** Asymmetric message encryption under public key, decryption with secret key.
 - **Zero-Knowledge:** Prove knowledge of secret information with Schnorr/ECDHIES signatures.
