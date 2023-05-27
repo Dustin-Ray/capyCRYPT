@@ -10,7 +10,7 @@ pub mod shake_functions {
     use rug::Integer;
     use std::borrow::{Borrow, BorrowMut};
 
-    const SELECTED_CURVE: Curves = Curves::E521;
+    const SELECTED_CURVE: Curves = Curves::E448;
 
     /// # SHA3-Keccak
     /// ref NIST FIPS 202.
@@ -209,7 +209,7 @@ pub mod shake_functions {
         let k: Integer = (bytes_to_big(get_random_bytes(64)) * 4) % curve_n(SELECTED_CURVE);
         let w = pub_key * k.clone();
         let z = CurvePoint::generator(SELECTED_CURVE, false) * k;
-        let ke_ka = kmac_xof(&mut big_to_bytes(w.x), &mut vec![], 1024, "P", d);
+        let ke_ka = kmac_xof(&mut big_to_bytes(w.x), &mut vec![], 1024, "PK", d);
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
 
@@ -247,13 +247,12 @@ pub mod shake_functions {
             % z.clone().n;
 
         let w = z * s;
-        let ke_ka = kmac_xof(&mut big_to_bytes(w.x), &mut vec![], 1024, "P", d);
+        let ke_ka = kmac_xof(&mut big_to_bytes(w.x), &mut vec![], 1024, "PK", d);
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
         let len = message.c.len() * 8;
         let m = Box::new(kmac_xof(ke, &mut vec![], (len) as u64, "PKE", d));
         xor_bytes(&mut message.c, m.borrow());
-        dbg!(message.c.clone());
         let t_p = kmac_xof(&mut ka.clone(), &mut message.c, 512, "PKA", d);
         t_p == message.t
     }
@@ -306,8 +305,7 @@ pub mod shake_functions {
         let mut u = CurvePoint::generator(SELECTED_CURVE, false) * sig.z.clone();
         let hv = pub_key * (bytes_to_big(sig.h.clone()));
         u = u + hv;
-        let mut ux_bytes = big_to_bytes(u.x);
-        let h_p = kmac_xof(&mut ux_bytes, message.borrow_mut(), 512, "T", d);
+        let h_p = kmac_xof(&mut big_to_bytes(u.x), message.borrow_mut(), 512, "T", d);
         h_p == sig.h
     }
 }

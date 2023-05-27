@@ -7,7 +7,7 @@ use capycrypt::model::shake_functions::{
 use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
 use criterion::{criterion_group, criterion_main, Criterion};
 use std::borrow::BorrowMut;
-const SELECTED_CURVE: Curves = Curves::E448;
+const SELECTED_CURVE: Curves = Curves::E222;
 
 /// Symmetric encrypt and decrypt roundtrip
 fn sym_enc(pw: &mut Vec<u8>, mut message: Box<Vec<u8>>) {

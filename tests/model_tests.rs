@@ -7,9 +7,8 @@ pub mod model_tests {
     };
     use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
     use std::borrow::BorrowMut;
-
     use capycrypt::curve::Curves;
-    const SELECTED_CURVE: Curves = Curves::E521;
+    const SELECTED_CURVE: Curves = Curves::E448;
 
     #[test]
     pub fn test_sym_enc() {
@@ -26,14 +25,12 @@ pub mod model_tests {
         //check conversion to and from bytes.
         let pw = get_random_bytes(16);
         let owner = "test key".to_string();
-        let mut message = Box::new(get_random_bytes(1).to_owned()); //5mb
-        dbg!(message.clone());
+        let mut message = Box::new(get_random_bytes(5242880).to_owned()); //5mb
         let key_obj = gen_keypair(&mut pw.clone(), owner, 512);
         let x = key_obj.pub_x;
         let y = key_obj.pub_y;
         let pub_key = CurvePoint::point(SELECTED_CURVE, x, y);
         let mut enc = encrypt_with_key(pub_key, &mut message, 512);
-        dbg!(enc.c.clone());
         let res = decrypt_with_key(&mut pw.clone(), enc.borrow_mut(), 512);
         assert!(res);
     }
