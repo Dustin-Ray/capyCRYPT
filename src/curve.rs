@@ -37,47 +37,56 @@ mod curve_constants {
     pub const R_222: &str = "FFFFFFFFFFFFFFFFFFFFFFFFFFFF70CBC95E932F802F31423598CBF";
 }
 #[derive(Debug)]
-/// An Edwards curve takes the form: 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦²
+/// # CurvePoint - Edwards Form
+/// An Edwards curve takes the form: 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦², where:
+/// * x: x-coordinate
+/// * y: y-coordinate
+/// * p: prime defining finite field 𝔽𝑝
+/// * d: d coefficient for Edwards curve equation, defines order
+/// * r: order of curve, determined from d
+/// * n: number of points on curve, equal to 4r
+/// * curve: enumeration representing the requested curve
+/// ## Supported Curves:
+/// This library supports multiple curves of Edwards form which can be used interchangebly
+/// with supported model functionality. Current supported curves are:
+/// * E222
+/// * E382
+/// * E448
+/// * E521
+/// ## Security claims
+/// A comparison of security provided by each curve is made in <https://eprint.iacr.org/2013/647.pdf>
 pub struct CurvePoint {
-    //x-coordinate
     pub x: Integer,
-    //y coordinate
     pub y: Integer,
-    // 𝑝 := prime defining finite field 𝔽𝑝.
     pub p: Integer,
-    //d coefficient for Edwards curve equation;
     pub d: Integer,
-    //order of curve
     pub r: Integer,
-    //number of points on curve, = 4r
     pub n: Integer,
-    //curve selector
     pub curve: Curves,
 }
-
+/// Specifies the function for producing the neutral point of the curve.
 pub trait IdPoint {
     fn id_point(curve: Curves) -> CurvePoint;
 }
 
-pub trait CurveD {
-    fn set_d(curve: Curves) -> Integer;
-}
-
+/// Specifies the function for producing the generator point of the curve.
 pub trait Generator {
     fn generator(curve: Curves, msb: bool) -> CurvePoint;
 }
 
+/// Specifies the function for producing any point of the curve.
 pub trait Point {
     fn point(curve: Curves, x: rug::Integer, y: rug::Integer) -> CurvePoint;
 }
 
+/// Specifies the function for verifying that a point is on the curve.
 pub trait IsPoint {
     fn is_point(&self) -> bool;
 }
 
 /// # Point Composition
 /// Composes two curve points and returns another curve point. If a point is defined as
-/// ```E521``` = (x, y), then ```Edwards Curve``` addition is defined as:
+/// = (x, y), then ```Edwards Curve``` point addition is defined as:
 /// * ```(x₁, y₁) + (x₂, y₂)  = (x₁y₂ + y₁x₂) / (1 + dx₁x₂y₁y₂), (y₁y₂ − x₁x₂) / (1 − dx₁x₂y₁y₂)```
 /// * where ```"/"``` is defined to be multiplication by modular inverse.
 /// * The Edwards curve point composition procedure is guaranteed to deliver a point on the curve,
@@ -86,14 +95,8 @@ pub trait IsPoint {
 /// unified Edwards point addition formulas apply. ref:
 /// <https://csrc.nist.gov/publications/detail/fips/186/5/final>
 /// # Usage
-/// ```
-/// use capycrypt::curve::{E521, Point, IdPoint};
-/// use rug::Integer;
-/// let p = E521::point(Integer::from(0), Integer::from(1));
-/// let q = E521::point(Integer::from(0), Integer::from(1));
-/// let s = p + q;
-/// assert_eq!(s == E521::id_point() * Integer::from(2), true);
-/// ```
+///
+///
 impl Add<CurvePoint> for CurvePoint {
     type Output = CurvePoint;
 
@@ -144,28 +147,17 @@ impl Clone for CurvePoint {
 }
 
 impl Generator for CurvePoint {
-    /// Returns E521(4, y), where y is obtained from curve equation.
+    /// Returns CurvePoint(x, y), where x is provided and y is obtained from curve equation.
     /// Any scalar s * G generates the curve.
     /// # Arguments
     ///
     /// * `msb: bool`: selects the y coordinate for corresponding x coordinate.
     ///
-    /// # Examples
+    /// # Usage
     ///
-    /// ```
-    /// use rug::Integer;
-    /// use capycrypt::curve::{E521, Generator, IdPoint};
-    /// let g = E521::generator(false);
-    /// assert_eq!(g.clone() * Integer::from(0) == E521::id_point(), true);
-    /// assert_eq!(g.clone() * Integer::from(1) == g, true);
-    /// ```
     fn generator(req_curve: Curves, msb: bool) -> CurvePoint {
         let x = match req_curve {
-            Curves::E222 => Integer::from_str_radix(
-                "2705691079882681090389589001251962954446177367541711474502428610129",
-                10,
-            )
-            .unwrap(),
+            Curves::E222 => Integer::from(18),
             Curves::E382 => Integer::from(7),
             Curves::E448 => Integer::from(8),
             Curves::E521 => Integer::from(4),
@@ -198,7 +190,7 @@ impl IdPoint for CurvePoint {
     }
 }
 
-/// * Solves curve equation: 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦² with 𝑑 = −376014
+/// * Solves curve equation: 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦²
 /// * `return` true if rhs == lhs, false otherwise
 impl IsPoint for CurvePoint {
     fn is_point(&self) -> bool {
@@ -246,7 +238,7 @@ impl PartialEq for CurvePoint {
     }
 }
 
-/// Returns E521(x, y) for any x, y. Assumes valid curve point.
+/// Returns CurvePoint(x, y) for any x, y. Assumes valid curve point.
 ///
 /// # Arguments
 ///
@@ -254,13 +246,6 @@ impl PartialEq for CurvePoint {
 /// * `y: rug::Integer`     y-coordinate for point.
 ///
 /// # Examples
-///
-/// ```
-/// use rug::Integer;
-/// use capycrypt::curve::{Point, E521, IdPoint,};
-/// let point = E521::point(Integer::from(0), Integer::from(1));
-/// assert_eq!(point == E521::id_point(), true);
-/// ```
 impl Point for CurvePoint {
     fn point(req_curve: Curves, x: Integer, y: Integer) -> CurvePoint {
         CurvePoint {
@@ -301,7 +286,7 @@ fn mod_inv(n: &Integer, p: &Integer) -> Integer {
 
 /// The d coefficient for Edwards formulas defines the order of the curve.
 /// <https://eprint.iacr.org/2013/647.pdf>
-fn curve_d(curve: Curves) -> Integer {
+pub fn curve_d(curve: Curves) -> Integer {
     match curve {
         Curves::E222 => Integer::from(curve_constants::D_222),
         Curves::E382 => Integer::from(curve_constants::D_382),

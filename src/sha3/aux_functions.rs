@@ -114,6 +114,7 @@ pub mod byte_utils {
         big::from_digits(&in_bytes, LsfBe)
     }
 
+    /// Converts rug::Integer into `Vec<u8>` of form Least significant digit first, with big endian digits.
     pub fn big_to_bytes(in_val: big) -> Vec<u8> {
         big::to_digits(&in_val, LsfBe)
     }

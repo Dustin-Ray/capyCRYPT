@@ -55,7 +55,7 @@ impl Clone for Signature {
 }
 
 #[derive(Debug)]
-/// An object containing the necessary fields for an asymmetric key.
+/// An object containing the fields necessary to represent an asymmetric keypair.
 pub struct KeyObj {
     /// String indicating the owner of the key, can be arbitrary
     pub owner: String,
@@ -63,7 +63,7 @@ pub struct KeyObj {
     pub pub_x: Integer,
     /// Curve Point Y coordinate
     pub pub_y: Integer,
-    /// value representing secret scalar, nil if KeyType is PUBLIC
+    /// value representing secret scalar, None if KeyType is PUBLIC
     pub priv_key: Vec<u8>,
     /// Date key was generated
     pub date_created: String,

@@ -6,7 +6,7 @@ mod sponge_tests {
     use capycrypt::sha3::aux_functions::nist_800_185::{byte_pad, left_encode, right_encode};
     use capycrypt::sha3::{
         aux_functions::byte_utils::get_random_bytes,
-        sponge::sponge_function::{sponge_absorb, sponge_squeeze},
+        sponge::{sponge_absorb, sponge_squeeze},
     };
     use hex::ToHex;
 

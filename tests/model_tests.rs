@@ -1,5 +1,6 @@
 #[cfg(test)]
 pub mod model_tests {
+    use capycrypt::curve::Curves;
     use capycrypt::curve::{CurvePoint, Point};
     use capycrypt::model::shake_functions::{
         decrypt_with_key, decrypt_with_pw, encrypt_with_key, encrypt_with_pw, gen_keypair,
@@ -7,7 +8,6 @@ pub mod model_tests {
     };
     use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
     use std::borrow::BorrowMut;
-    use capycrypt::curve::Curves;
     const SELECTED_CURVE: Curves = Curves::E448;
 
     #[test]

@@ -5,7 +5,7 @@ pub mod shake_functions {
         big_to_bytes, bytes_to_big, get_date_and_time_as_string, get_random_bytes, xor_bytes,
     };
     use crate::sha3::aux_functions::nist_800_185::{byte_pad, encode_string, right_encode};
-    use crate::sha3::sponge::sponge_function::{sponge_absorb, sponge_squeeze};
+    use crate::sha3::sponge::{sponge_absorb, sponge_squeeze};
     use crate::{ECCryptogram, KeyObj, Signature, SymmetricCryptogram};
     use rug::Integer;
     use std::borrow::{Borrow, BorrowMut};
@@ -197,7 +197,7 @@ pub mod shake_functions {
     /// * c ← kmac_xof(ke, “”, |m|, “PKE”) ⊕ m
     /// * t ← kmac_xof(ka, m, 512, “PKA”)
     /// ## Arguments:
-    /// * `pub_key: E521` : X coordinate of public static key 𝑉, accepted as ```E521```
+    /// * `pub_key: CurvePoint` : X coordinate of public static key 𝑉, accepted as ```CurvePoint```
     /// * `message: &mut Box<Vec<u8>>`: borrowed pointer to message of any length
     /// ## Returns:
     /// * `return -> ECCryptogram` : cryptogram: (𝑍, c, t) = 𝑍||c||t
@@ -237,7 +237,7 @@ pub mod shake_functions {
     /// * m ← KMACXOF256(ke, “”, |c|, “PKE”) ⊕ c
     /// * t’ ← KMACXOF256(ka, m, 512, “PKA”)
     /// ## Arguments:
-    /// * `pw: &mut [u8]`: password used to generate ```E521``` encryption key.
+    /// * `pw: &mut [u8]`: password used to generate ```CurvePoint``` encryption key.
     /// * `message: &mut ECCryptogram`: cryptogram of format ```(𝑍||c||t)```
     /// ## Returns:
     /// * `return  -> bool`: Decryption of cryptogram ```𝑍||c||t iff t` = t```
@@ -292,7 +292,7 @@ pub mod shake_functions {
     /// * 𝑈 ← 𝑍*𝑮 + h𝑉
     /// ## Arguments:
     /// * `sig: &Signature`: Pointer to a signature object (h, 𝑍)
-    /// * `pubKey: E521` key 𝑉 used to sign message m
+    /// * `pubKey: CurvePoint` key 𝑉 used to sign message m
     /// * `message: Vec<u8>` of message to verify
     /// ## Returns:
     /// * `return`: true if, and only if, kmac_xof(𝑈ₓ , m, 512, “T”) = h
