@@ -11,29 +11,29 @@ const SELECTED_CURVE: Curves = Curves::E222;
 
 /// Symmetric encrypt and decrypt roundtrip
 fn sym_enc(pw: &mut Vec<u8>, mut message: Box<Vec<u8>>) {
-    let mut cg2 = Box::new(encrypt_with_pw(&mut pw.clone(), &mut message, 512));
-    decrypt_with_pw(&mut pw.clone(), &mut cg2.borrow_mut(), 512);
+    let mut cg2 = Box::new(encrypt_with_pw(&mut pw.clone(), &mut message, 256));
+    decrypt_with_pw(&mut pw.clone(), &mut cg2.borrow_mut(), 256);
 }
 
 /// Asymmetric encrypt and decrypt roundtrip + keygen
 fn key_gen_enc_dec(pw: &mut Vec<u8>, mut message: Box<Vec<u8>>) {
     let owner = "test key".to_string();
-    let key_obj = gen_keypair(&mut pw.clone(), owner, 512);
+    let key_obj = gen_keypair(&mut pw.clone(), owner, 256);
     let x = key_obj.pub_x;
     let y = key_obj.pub_y;
     let pub_key = CurvePoint::point(SELECTED_CURVE, x, y);
-    let mut enc = encrypt_with_key(pub_key, &mut message, 512);
-    decrypt_with_key(&mut pw.clone(), enc.borrow_mut(), 512);
+    let mut enc = encrypt_with_key(pub_key, &mut message, 256);
+    decrypt_with_key(&mut pw.clone(), enc.borrow_mut(), 256);
 }
 
 /// Signature generation + verification roundtrip
 pub fn sign_verify(pw: &mut Vec<u8>, mut message: Box<Vec<u8>>) {
-    let key_obj = gen_keypair(&mut pw.clone(), "test".to_string(), 512);
+    let key_obj = gen_keypair(&mut pw.clone(), "test".to_string(), 256);
     let x = key_obj.pub_x;
     let y = key_obj.pub_y;
     let key = CurvePoint::point(SELECTED_CURVE, x, y);
-    let sig = sign_with_key(&mut pw.clone(), &mut message, 512);
-    verify_signature(&sig, key, &mut message, 512);
+    let sig = sign_with_key(&mut pw.clone(), &mut message, 256);
+    verify_signature(&sig, key, &mut message, 256);
 }
 
 fn bench_sign_verify(c: &mut Criterion) {

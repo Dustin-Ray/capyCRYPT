@@ -26,7 +26,8 @@ capycrypt = "0.3.0"
 ```
 
 ## Benches
-This library uses the criterion crate for benches. Bench various curves and SHA-3 security levels with:
+This library uses the criterion crate for benches. Running:
 ```bash
 cargo bench
 ```
+Conducts benchmarks in order from lowest security to highest. For example, the lowest security configuration available in this library is the pairing of E222 with cSHAKE256, while the highest security offered is E521 paired with cSHAKE512.

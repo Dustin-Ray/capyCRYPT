@@ -23,7 +23,11 @@ gmp-mpfr-sys = "1.4.12"
 criterion = "0.3"
 
 [[bench]]
-name = "benchmark"
+name = "benchmark_e222_256"
+harness = false
+
+[[bench]]
+name = "benchmark_e521_512"
 harness = false
 
 [profile.dev]
