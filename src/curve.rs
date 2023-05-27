@@ -54,7 +54,7 @@ mod curve_constants {
 /// * E448
 /// * E521
 /// ## Security claims
-/// A comparison of security provided by each curve is made in <https://eprint.iacr.org/2013/647.pdf>
+/// An analysis of security and performance provided by each curve is made in <https://eprint.iacr.org/2013/647.pdf>
 pub struct CurvePoint {
     pub x: Integer,
     pub y: Integer,

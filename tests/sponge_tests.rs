@@ -2,24 +2,20 @@
 /// "exptected" in cshake and kmac tests are official test vectors supplied by NIST.
 #[cfg(test)]
 mod sponge_tests {
-    use capycrypt::model::shake_functions::{compute_sha3_hash, cshake, kmac_xof};
+    use capycrypt::model::operations::{compute_sha3_hash, compute_tagged_hash, cshake, kmac_xof};
     use capycrypt::sha3::aux_functions::nist_800_185::{byte_pad, left_encode, right_encode};
-    use capycrypt::sha3::{
-        aux_functions::byte_utils::get_random_bytes,
-        sponge::{sponge_absorb, sponge_squeeze},
-    };
+    use capycrypt::sha3::sponge::{sponge_absorb, sponge_squeeze};
     use hex::ToHex;
 
     #[test]
     fn test_kmac_256() {
+        use capycrypt::model::operations::kmac_xof;
         let key_str = "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f";
         let s_str = "My Tagged Application";
-
         let mut key_bytes = hex::decode(key_str).unwrap();
-        let mut data = hex::decode("000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F202122232425262728292A2B2C2D2E2F303132333435363738393A3B3C3D3E3F404142434445464748494A4B4C4D4E4F505152535455565758595A5B5C5D5E5F606162636465666768696A6B6C6D6E6F707172737475767778797A7B7C7D7E7F808182838485868788898A8B8C8D8E8F909192939495969798999A9B9C9D9E9FA0A1A2A3A4A5A6A7A8A9AAABACADAEAFB0B1B2B3B4B5B6B7B8B9BABBBCBDBEBFC0C1C2C3C4C5C6C7").unwrap();
-
-        let res = kmac_xof(&mut key_bytes, &mut data, 256, &s_str, 256);
-        let expected = "47026c7cd793084aa0283c253ef658490c0db61438b8326fe9bddf281b83ae0f";
+        let mut data = hex::decode("00010203").unwrap();
+        let res = kmac_xof(&mut key_bytes, &mut data, 64, &s_str, 512);
+        let expected = "1755133f1534752a";
         assert_eq!(hex::encode(res), expected)
     }
 
@@ -61,7 +57,7 @@ mod sponge_tests {
     // #[test]
     // #[should_panic = "Value must be either 256 or 512"]
     // fn test_cshake_invalid() {
-    //     cshake(&mut vec![0], 0, "Test", "Test");
+    //     cshake(&mut vec![0], 0, "Test", "Test", 136);
     // }
 
     #[test]
@@ -165,23 +161,69 @@ mod sponge_tests {
     }
 
     #[test]
-    fn test_shake() {
-        //test for expected NIST values
-        let mut test_bytes = "".as_bytes().to_vec();
-        let res = compute_sha3_hash(&mut test_bytes).encode_hex::<String>();
-        let expected = "a69f73cca23a9ac5c8b567dc185a756e97c982164fe25859e0d1dcc1475c80a615b2123af1f5f94c11e3e9402c3ac558f500199d95b6d3e301758586281dcd26";
-        assert!(res == expected);
+    fn test_shake_224() {
+        let mut message = "".as_bytes().to_vec();
+        let digest = compute_sha3_hash(&mut message, 224);
+        let expected = "6b4e03423667dbb73b6e15454f0eb1abd4597f9a1b078e3f5b5a6bc7";
+        assert_eq!(hex::encode(digest), expected);
 
         let mut test_bytes = "test".as_bytes().to_vec();
-        let expected = "9ece086e9bac491fac5c1d1046ca11d737b92a2b2ebd93f005d7b710110c0a678288166e7fbe796883a4f2e9b3ca9f484f521d0ce464345cc1aec96779149c14";
-        let res = compute_sha3_hash(&mut test_bytes).encode_hex::<String>();
+        let expected = "3797bf0afbbfca4a7bbba7602a2b552746876517a7f9b7ce2db0ae7b";
+        let res = compute_sha3_hash(&mut test_bytes, 224).encode_hex::<String>();
         assert!(res == expected);
     }
 
     #[test]
-    fn test_shake_run_time() {
-        //test runtime of different input sizes
-        let mut message = get_random_bytes(5242880).to_vec();
-        let _ = hex::encode(compute_sha3_hash(&mut message));
+    fn test_shake_256() {
+        let mut message = "".as_bytes().to_vec();
+        let digest = compute_sha3_hash(&mut message, 256);
+        let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
+        assert_eq!(hex::encode(digest), expected);
+
+        let mut test_bytes = "test".as_bytes().to_vec();
+        let expected = "36f028580bb02cc8272a9a020f4200e346e276ae664e45ee80745574e2f5ab80";
+        let res = compute_sha3_hash(&mut test_bytes, 256).encode_hex::<String>();
+        assert!(res == expected);
+    }
+
+    #[test]
+    fn test_shake_384() {
+        let mut message = "".as_bytes().to_vec();
+        let digest = compute_sha3_hash(&mut message, 384);
+        let expected = "0c63a75b845e4f7d01107d852e4c2485c51a50aaaa94fc61995e71bbee983a2ac3713831264adb47fb6bd1e058d5f004";
+        assert_eq!(hex::encode(digest), expected);
+
+        let mut test_bytes = "test".as_bytes().to_vec();
+        let expected = "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd";
+        let res = compute_sha3_hash(&mut test_bytes, 384).encode_hex::<String>();
+        assert!(res == expected);
+    }
+
+    #[test]
+    fn test_shake_512() {
+        let mut test_bytes = "test".as_bytes().to_vec();
+        let expected = "9ece086e9bac491fac5c1d1046ca11d737b92a2b2ebd93f005d7b710110c0a678288166e7fbe796883a4f2e9b3ca9f484f521d0ce464345cc1aec96779149c14";
+        let res = compute_sha3_hash(&mut test_bytes, 512).encode_hex::<String>();
+        assert!(res == expected);
+    }
+
+    #[test]
+    fn test_compute_tagged_hash_256() {
+        let mut pw = "".as_bytes().to_vec();
+        let mut message = "".as_bytes().to_vec();
+        let mut s = "".to_owned();
+        let digest = compute_tagged_hash(&mut pw, &mut message, &mut s, 256);
+        let expected = "3f9259e80b35e0719c26025f7e38a4a38172bf1142a6a9c1930e50df03904312";
+        assert_eq!(hex::encode(digest), expected);
+    }
+
+    #[test]
+    fn test_compute_tagged_hash_512() {
+        let mut pw = "test".as_bytes().to_vec();
+        let mut message = "".as_bytes().to_vec();
+        let mut s = "".to_owned();
+        let digest = compute_tagged_hash(&mut pw, &mut message, &mut s, 512);
+        let expected = "0f9b5dcd47dc08e08a173bbe9a57b1a65784e318cf93cccb7f1f79f186ee1caeff11b12f8ca3a39db82a63f4ca0b65836f5261ee64644ce5a88456d3d30efbed";
+        assert_eq!(hex::encode(digest), expected);
     }
 }

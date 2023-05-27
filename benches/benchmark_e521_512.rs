@@ -1,6 +1,6 @@
 use capycrypt::curve::Curves;
 use capycrypt::curve::{CurvePoint, Point};
-use capycrypt::model::shake_functions::{
+use capycrypt::model::operations::{
     decrypt_with_key, decrypt_with_pw, encrypt_with_key, encrypt_with_pw, gen_keypair,
     sign_with_key, verify_signature,
 };

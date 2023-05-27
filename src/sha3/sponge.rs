@@ -1,4 +1,3 @@
-
 use crate::sha3::keccakf::keccakf_1600;
 
 /// Absorbs rate amount of data into state and permute. Continue absorbing and permuting until
