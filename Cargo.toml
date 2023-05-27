@@ -1,13 +1,13 @@
 [package]
 name = "capycrypt"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 
 license = "MIT"
 keywords = ["cryptography", "fips202", "kmacxof256", "sha3", "schnorr"]
 readme = "README.md"
 authors = ["Dustin Ray (Dr. Capybara) <dustinray313@gmail.com>"]
-description = "A high performance cryptosystem. Pairs FIPS202 with non-standard Edwards curve."
+description = "A high performance cryptosystem. Pairs NIST FIPS202 with a variety of Edwards curves."
 repository = "https://github.com/drcapybara/capyCRYPT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
