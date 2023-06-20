@@ -21,7 +21,7 @@ A complete Rust cryptosystem implementing FIPS 202 paired with a variety of Edwa
 ## Installation
 Add the following line to your `Cargo.toml` file:
 ```toml
-capycrypt = "0.3.0"
+capycrypt = "0.3.1"
 ```
 
 ## Benches
@@ -30,3 +30,5 @@ This library uses the criterion crate for benches. Running:
 cargo bench
 ```
 Conducts benchmarks in order from lowest security to highest. For example, the lowest security configuration available in this library is the pairing of E222 with cSHAKE256, while the highest security offered is E521 paired with cSHAKE512.
+
+I make no claims as to the security of this library. It probably shouldn't be used for anything serious. If you find cool ways to make it better, open a PR and I'll gladly engage.
