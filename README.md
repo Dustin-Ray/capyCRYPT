@@ -4,7 +4,7 @@
 [![Crates.io](https://img.shields.io/crates/v/capycrypt?style=flat-square)](https://crates.io/crates/capycrypt)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/auditless/cairo-template/blob/main/LICENSE) 
 
-A complete Rust cryptosystem implementing FIPS 202 paired with a variety of Edwards curves. Engineered for performance; supports arbitrary message size.
+A complete Rust cryptosystem implementing FIPS 202 paired with a variety of Edwards curves. An academic exercise in cryptographic algorithm design.
 
 ## Features
 - **SHA-3:** NIST-Compliant Secure Hash Algorithm 3 (SHA-3) implementation for generating cryptographic hash values.
