@@ -1,6 +1,6 @@
 #[cfg(test)]
 pub mod model_tests {
-    use capycrypt::curve::Curves;
+    use capycrypt::curve::{Curves, Generator};
     use capycrypt::curve::{CurvePoint, Point};
     use capycrypt::model::operations::{
         decrypt_with_key, decrypt_with_pw, encrypt_with_key, encrypt_with_pw, gen_keypair,
@@ -8,7 +8,9 @@ pub mod model_tests {
     };
     use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
     use std::borrow::BorrowMut;
+    use std::time::Instant;
     const SELECTED_CURVE: Curves = Curves::E448;
+    use rug::Integer as big;
 
     #[test]
     pub fn test_sym_enc_512() {
@@ -72,6 +74,24 @@ pub mod model_tests {
         let res = verify_signature(&sig, key, &mut message, 512);
         assert!(res);
     }
+
+    #[test]
+    fn test_sig_timing_side_channel() {
+        for i in 0..32 {
+            let mut message = Box::new(get_random_bytes(16).to_owned());
+            let pw = get_random_bytes(1 + i);
+            let key_obj = gen_keypair(&mut pw.clone(), "test".to_string(), 256);
+            let x = key_obj.pub_x;
+            let y = key_obj.pub_y;
+            let key = CurvePoint::point(SELECTED_CURVE, x, y);
+
+            let now = Instant::now();
+            let _result = sign_with_key(&mut pw.clone(), &mut message, 256);
+            println!("{} needed {} micro seconds", i, now.elapsed().as_micros());
+            assert!(verify_signature(&_result, key, &mut message, 256));
+        }
+    }
+
 
     #[test]
     pub fn test_signature_256() {

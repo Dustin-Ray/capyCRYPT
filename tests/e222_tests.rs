@@ -10,8 +10,8 @@ mod e222_tests {
 
     use capycrypt::curve::Curves;
     const SELECTED_CURVE: Curves = Curves::E222;
-
-    #[test]
+    
+   #[test]
     // 0 * G = 𝒪
     fn test_zero_times_g() {
         let mut point = CurvePoint::generator(SELECTED_CURVE, false);
@@ -43,7 +43,7 @@ mod e222_tests {
     fn test_g_plus_neg_g() {
         let g = CurvePoint::generator(SELECTED_CURVE, false);
         assert!(
-            g.clone() + -g == CurvePoint::id_point(SELECTED_CURVE),
+            g.clone() + &-g == CurvePoint::id_point(SELECTED_CURVE),
             "points are not equal, check mul and add functions"
         )
     }
@@ -54,7 +54,7 @@ mod e222_tests {
         let s = big::from(2);
         let two_g = CurvePoint::generator(SELECTED_CURVE, false) * (s);
         let mut sum_g = CurvePoint::generator(SELECTED_CURVE, false);
-        sum_g = sum_g.clone() + sum_g.clone();
+        sum_g = sum_g.clone() + &sum_g;
         assert!(
             &sum_g == &two_g,
             "points are not equal, check mul and add functions"
@@ -112,7 +112,7 @@ mod e222_tests {
         let k1g = CurvePoint::generator(SELECTED_CURVE, false) * (k + 1);
 
         let mut kgg = CurvePoint::generator(SELECTED_CURVE, false) * (k_2);
-        kgg = kgg + CurvePoint::generator(SELECTED_CURVE, false);
+        kgg = kgg + &CurvePoint::generator(SELECTED_CURVE, false);
         assert!(&k1g == &kgg)
     }
 
@@ -135,7 +135,7 @@ mod e222_tests {
         let mut r1 = g.clone() * (k_2);
         // (t*G)
         let r2 = g * (t_2);
-        r1 = r1 + r2;
+        r1 = r1 + &r2;
         assert!(&r1 == &r0)
     }
 

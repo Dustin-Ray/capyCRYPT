@@ -404,10 +404,10 @@ pub mod operations {
     /// use capycrypt::model::operations;
     /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
     /// use std::borrow::BorrowMut;
-    /// 
+    ///
     /// let mut message = Box::new(get_random_bytes(5242880).to_owned());
     /// let pw = get_random_bytes(32);
-    /// 
+    ///
     /// const SELECTED_CURVE: Curves = Curves::E448;
     /// let key_obj = operations::gen_keypair(&mut pw.clone(), "test".to_string(), 256);
     /// let x = key_obj.pub_x;
@@ -453,10 +453,10 @@ pub mod operations {
     /// use capycrypt::model::operations;
     /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
     /// use std::borrow::BorrowMut;
-    /// 
+    ///
     /// let mut message = Box::new(get_random_bytes(5242880).to_owned());
     /// let pw = get_random_bytes(32);
-    /// 
+    ///
     /// const SELECTED_CURVE: Curves = Curves::E448;
     /// let key_obj = operations::gen_keypair(&mut pw.clone(), "test".to_string(), 256);
     /// let x = key_obj.pub_x;
@@ -476,7 +476,7 @@ pub mod operations {
     ) -> bool {
         let mut u = CurvePoint::generator(SELECTED_CURVE, false) * sig.z.clone();
         let hv = pub_key * (bytes_to_big(sig.h.clone()));
-        u = u + hv;
+        u = u + &hv;
         let h_p = kmac_xof(&mut big_to_bytes(u.x), message.borrow_mut(), 512, "T", d);
         h_p == sig.h
     }

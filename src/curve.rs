@@ -97,32 +97,32 @@ pub trait IsPoint {
 /// # Usage
 ///
 ///
-impl Add<CurvePoint> for CurvePoint {
+impl Add<&CurvePoint> for CurvePoint {
     type Output = CurvePoint;
 
-    fn add(self, p2: CurvePoint) -> CurvePoint {
-        let x1 = Rc::new(&self.x);
-        let y1 = Rc::new(&self.y);
+    fn add(self, p2: &CurvePoint) -> CurvePoint {
+        let x1 = &self.x;
+        let y1 = &self.y;
         let x2 = p2.x.clone();
-        let y2 = p2.y;
+        let y2 = &p2.y;
 
         let p = self.p.clone();
         let d = self.d.clone();
 
         // (x₁y₂ + y₁x₂)
-        let x1y2 = (*x1.clone() * y2.clone()) % p.clone();
-        let y1x2 = (*y1.clone() * x2.clone()) % p.clone();
+        let x1y2 = (x1.clone() * y2.clone()) % p.clone();
+        let y1x2 = (y1.clone() * x2.clone()) % p.clone();
         let x1y2y1x2_sum = (x1y2 + y1x2) % p.clone();
         // 1 / (1 + dx₁x₂y₁y₂)
         let one_plus_dx1x2y1y2 = (Integer::from(1)
-            + (d.clone() * *x1.clone() * x2.clone() * *y1.clone() * y2.clone()))
+            + (d.clone() * x1.clone() * x2.clone() * y1.clone() * y2.clone()))
             % p.clone();
         let one_plus_dx1x2y1y2inv = mod_inv(&one_plus_dx1x2y1y2, &p);
         // (y₁y₂ − x₁x₂)
         let y1y2x1x2_difference =
-            ((*y1.clone() * y2.clone()) - (*x1.clone() * x2.clone())) % p.clone();
+            ((y1.clone() * y2.clone()) - (x1.clone() * x2.clone())) % p.clone();
         // 1 / (1 − dx₁x₂y₁y₂)
-        let one_minus_dx1x2y1y2 = (Integer::from(1) - (d * *x1 * x2 * *y1 * y2)) % p.clone();
+        let one_minus_dx1x2y1y2 = (Integer::from(1) - (d * x1 * x2 * y1 * y2)) % p.clone();
         let one_minus_dx1x2y1y2inv = mod_inv(&one_minus_dx1x2y1y2, &p);
         // (x₁y₂ + y₁x₂) / (1 + dx₁x₂y₁y₂)
         let new_x = ((x1y2y1x2_sum * one_plus_dx1x2y1y2inv) % p.clone() + p.clone()) % p.clone();
@@ -147,7 +147,8 @@ impl Clone for CurvePoint {
 }
 
 impl Generator for CurvePoint {
-    /// Returns CurvePoint(x, y), where x is provided and y is obtained from curve equation.
+    /// Returns CurvePoint(x, y), where x is the smallest possible value that satisfies the curve
+    /// equation, and y is obtained from solving the curve equation with x.
     /// Any scalar s * G generates the curve.
     /// # Arguments
     ///
@@ -209,14 +210,15 @@ impl Mul<Integer> for CurvePoint {
 
     fn mul(self, s: Integer) -> CurvePoint {
         let mut r0 = CurvePoint::id_point(self.curve);
-        let mut r1 = self;
+        let mut r1 = self.clone();
+        
         for i in (0..=s.significant_bits()).rev() {
             if s.get_bit(i) {
-                r0 = r0 + r1.clone();
-                r1 = r1.clone() + r1.clone();
+                r0 = r0 + &r1;
+                r1 = r1.clone() + &r1;
             } else {
-                r1 = r0.clone() + r1;
-                r0 = r0.clone() + r0.clone();
+                r1 = r0.clone() + &r1;
+                r0 = r0.clone() + &r0;
             }
         }
         r0 // r0 = P * s
