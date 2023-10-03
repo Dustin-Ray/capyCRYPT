@@ -4,7 +4,6 @@ use rug::Integer;
 use std::ops::Add;
 use std::ops::Mul;
 use std::ops::Neg;
-use std::rc::Rc;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Curves {

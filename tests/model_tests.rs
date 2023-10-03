@@ -1,6 +1,6 @@
 #[cfg(test)]
 pub mod model_tests {
-    use capycrypt::curve::{Curves, Generator};
+    use capycrypt::curve::Curves;
     use capycrypt::curve::{CurvePoint, Point};
     use capycrypt::model::operations::{
         decrypt_with_key, decrypt_with_pw, encrypt_with_key, encrypt_with_pw, gen_keypair,
@@ -10,7 +10,6 @@ pub mod model_tests {
     use std::borrow::BorrowMut;
     use std::time::Instant;
     const SELECTED_CURVE: Curves = Curves::E448;
-    use rug::Integer as big;
 
     #[test]
     pub fn test_sym_enc_512() {

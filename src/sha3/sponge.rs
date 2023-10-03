@@ -14,10 +14,12 @@ pub fn sponge_absorb(m: &mut Vec<u8>, capacity: u64) -> [u64; 25] {
     bytes_to_state(m, r as usize)
 }
 
-/// Accepts state of 25 ```u64```s and permutes, appending each iteration to output until
-/// desired length is met.
-///
-/// * `return: Vec<u8>` consisting of absorbed and permuted states of length bit_length.
+/// Finalizes a state
+/// 
+/// * `s`: the state to finalize
+/// * `bit_length`: requested output length in bits
+/// * `rate`: security parameter
+/// * `return: Vec<u8>` digest of permuted states of length `bit_length`.
 pub fn sponge_squeeze(s: &mut [u64; 25], bit_length: u64, rate: u64) -> Vec<u8> {
     let mut out: Vec<u8> = Vec::new(); //FIPS 202 Algorithm 8 Step 8
     let block_size: usize = (rate / 64) as usize;
