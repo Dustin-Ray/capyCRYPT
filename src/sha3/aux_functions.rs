@@ -96,10 +96,9 @@ pub mod byte_utils {
     /// * `a`: mut references to `Vec<u8>`, will be replaced with result of XOR
     /// * `b`: immut ref to `Vec<u8>`, dropped after function returns
     /// * `Remark`: Probable bottleneck unless impl with SIMD.
-    pub fn xor_bytes<'a>(a: &'a mut Vec<u8>, b: &Vec<u8>) -> &'a mut Vec<u8> {
+    pub fn xor_bytes(a: &mut Vec<u8>, b: &Vec<u8>) {
         assert_eq!(a.len(), b.len());
         a.iter_mut().zip(b.iter()).for_each(|(x1, x2)| *x1 ^= *x2);
-        a
     }
 
     ///`return` A string timestamp of current time and date

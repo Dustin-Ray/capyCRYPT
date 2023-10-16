@@ -1,16 +1,15 @@
-use capycrypt::curve::Curves;
-use capycrypt::curve::{CurvePoint, Point};
-use capycrypt::model::operations::{
-    decrypt_with_key, decrypt_with_pw, encrypt_with_key, encrypt_with_pw, gen_keypair,
-    sign_with_key, verify_signature,
+use capycrypt::curves::{
+    ArbitraryPoint, EdCurvePoint,
+    EdCurves::{self, E222},
 };
+use capycrypt::ops::Message;
 use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
 use criterion::{criterion_group, criterion_main, Criterion};
 use std::borrow::BorrowMut;
-const SELECTED_CURVE: Curves = Curves::E222;
+const SELECTED_CURVE: EdCurves = E222;
 
 /// Symmetric encrypt and decrypt roundtrip
-fn sym_enc(pw: &mut Vec<u8>, mut message: Box<Vec<u8>>) {
+fn sym_enc(pw: &mut Vec<u8>, mut message: Message) {
     let mut cg2 = Box::new(encrypt_with_pw(&mut pw.clone(), &mut message, 256));
     decrypt_with_pw(&mut pw.clone(), &mut cg2.borrow_mut(), 256);
 }
@@ -21,7 +20,7 @@ fn key_gen_enc_dec(pw: &mut Vec<u8>, mut message: Box<Vec<u8>>) {
     let key_obj = gen_keypair(&mut pw.clone(), owner, 256);
     let x = key_obj.pub_x;
     let y = key_obj.pub_y;
-    let pub_key = CurvePoint::point(SELECTED_CURVE, x, y);
+    let pub_key = EdCurvePoint::arbitrary_point(SELECTED_CURVE, x, y);
     let mut enc = encrypt_with_key(pub_key, &mut message, 256);
     decrypt_with_key(&mut pw.clone(), enc.borrow_mut(), 256);
 }
@@ -31,7 +30,7 @@ pub fn sign_verify(pw: &mut Vec<u8>, mut message: Box<Vec<u8>>) {
     let key_obj = gen_keypair(&mut pw.clone(), "test".to_string(), 256);
     let x = key_obj.pub_x;
     let y = key_obj.pub_y;
-    let key = CurvePoint::point(SELECTED_CURVE, x, y);
+    let key = EdCurvePoint::arbitrary_point(SELECTED_CURVE, x, y);
     let sig = sign_with_key(&mut pw.clone(), &mut message, 256);
     verify_signature(&sig, key, &mut message, 256);
 }

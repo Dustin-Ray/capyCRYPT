@@ -1,23 +1,25 @@
 #[cfg(test)]
 mod e222_tests {
     use capycrypt::{
-        curve::{CurvePoint, Generator, IdPoint},
+        curves::{
+            EdCurvePoint,
+            EdCurves::{self, E222},
+            Generator, IdPoint,
+        },
         sha3::aux_functions::byte_utils::get_random_big,
     };
 
     use rand::{thread_rng, Rng};
     use rug::Integer as big;
+    const SELECTED_CURVE: EdCurves = E222;
 
-    use capycrypt::curve::Curves;
-    const SELECTED_CURVE: Curves = Curves::E222;
-    
-   #[test]
+    #[test]
     // 0 * G = 𝒪
     fn test_zero_times_g() {
-        let mut point = CurvePoint::generator(SELECTED_CURVE, false);
+        let mut point = EdCurvePoint::generator(SELECTED_CURVE, false);
         let s = big::from(0);
         point = point * (s);
-        let id_point = CurvePoint::id_point(SELECTED_CURVE);
+        let id_point = EdCurvePoint::id_point(SELECTED_CURVE);
         assert!(
             &id_point == &point,
             "points are not equal, check addition function"
@@ -27,9 +29,9 @@ mod e222_tests {
     // G * 1 = G
     #[test]
     fn test_g_times_one() {
-        let mut point = CurvePoint::generator(SELECTED_CURVE, false);
+        let mut point = EdCurvePoint::generator(SELECTED_CURVE, false);
         let s = big::from(1);
-        let g = CurvePoint::generator(SELECTED_CURVE, false);
+        let g = EdCurvePoint::generator(SELECTED_CURVE, false);
         point = point * (s);
 
         assert!(
@@ -41,9 +43,9 @@ mod e222_tests {
     // G + (-G) = 𝒪
     #[test]
     fn test_g_plus_neg_g() {
-        let g = CurvePoint::generator(SELECTED_CURVE, false);
+        let g = EdCurvePoint::generator(SELECTED_CURVE, false);
         assert!(
-            g.clone() + &-g == CurvePoint::id_point(SELECTED_CURVE),
+            g.clone() + &-g == EdCurvePoint::id_point(SELECTED_CURVE),
             "points are not equal, check mul and add functions"
         )
     }
@@ -52,8 +54,8 @@ mod e222_tests {
     // 2 * G = G + G
     fn test_two_times_g() {
         let s = big::from(2);
-        let two_g = CurvePoint::generator(SELECTED_CURVE, false) * (s);
-        let mut sum_g = CurvePoint::generator(SELECTED_CURVE, false);
+        let two_g = EdCurvePoint::generator(SELECTED_CURVE, false) * (s);
+        let mut sum_g = EdCurvePoint::generator(SELECTED_CURVE, false);
         sum_g = sum_g.clone() + &sum_g;
         assert!(
             &sum_g == &two_g,
@@ -64,34 +66,34 @@ mod e222_tests {
     #[test]
     // 4 * G = 2 * (2 * G)
     fn test_four_g() {
-        let mut four_g = CurvePoint::generator(SELECTED_CURVE, false);
+        let mut four_g = EdCurvePoint::generator(SELECTED_CURVE, false);
         four_g = four_g * (big::from(4));
         let two = big::from(2);
         let two_times_two_g =
-            CurvePoint::generator(SELECTED_CURVE, false) * (two.clone()) * (two.clone());
+            EdCurvePoint::generator(SELECTED_CURVE, false) * (two.clone()) * (two.clone());
         assert!(&four_g == &two_times_two_g)
     }
 
     #[test]
     //4 * G != 𝒪
     fn test_four_g_not_id() {
-        let four_g = CurvePoint::generator(SELECTED_CURVE, false) * (big::from(4));
-        let id = CurvePoint::id_point(SELECTED_CURVE);
+        let four_g = EdCurvePoint::generator(SELECTED_CURVE, false) * (big::from(4));
+        let id = EdCurvePoint::id_point(SELECTED_CURVE);
         assert!(!(&four_g == &id))
     }
 
     #[test]
     //r*G = 𝒪
     fn r_times_g_id() {
-        let g =
-            CurvePoint::generator(SELECTED_CURVE, false) * (CurvePoint::id_point(SELECTED_CURVE).r);
-        assert!(&g == &CurvePoint::id_point(SELECTED_CURVE))
+        let g = EdCurvePoint::generator(SELECTED_CURVE, false)
+            * (EdCurvePoint::id_point(SELECTED_CURVE).r);
+        assert!(&g == &EdCurvePoint::id_point(SELECTED_CURVE))
     }
 
     #[test]
     // k*G = (k mod r)*G
     fn k_g_equals_k_mod_r_times_g() {
-        let g = CurvePoint::generator(SELECTED_CURVE, false);
+        let g = EdCurvePoint::generator(SELECTED_CURVE, false);
         let mut rng = thread_rng();
         let k_u128: u64 = rng.gen();
         let k = big::from(k_u128);
@@ -99,7 +101,7 @@ mod e222_tests {
         let g = g * (k);
         let r = g.clone().r;
         let k_mod_r = same_k % r;
-        let mut k_mod_r_timesg = CurvePoint::generator(SELECTED_CURVE, false);
+        let mut k_mod_r_timesg = EdCurvePoint::generator(SELECTED_CURVE, false);
         k_mod_r_timesg = k_mod_r_timesg * (k_mod_r);
         assert!(&g == &k_mod_r_timesg)
     }
@@ -109,17 +111,17 @@ mod e222_tests {
     fn k_plus_one_g() {
         let k = get_random_big(256);
         let k_2 = k.clone();
-        let k1g = CurvePoint::generator(SELECTED_CURVE, false) * (k + 1);
+        let k1g = EdCurvePoint::generator(SELECTED_CURVE, false) * (k + 1);
 
-        let mut kgg = CurvePoint::generator(SELECTED_CURVE, false) * (k_2);
-        kgg = kgg + &CurvePoint::generator(SELECTED_CURVE, false);
+        let mut kgg = EdCurvePoint::generator(SELECTED_CURVE, false) * (k_2);
+        kgg = kgg + &EdCurvePoint::generator(SELECTED_CURVE, false);
         assert!(&k1g == &kgg)
     }
 
     #[test]
     //(k + t)*G = (k*G) + (t*G)
     fn k_t() {
-        let g = CurvePoint::generator(SELECTED_CURVE, false);
+        let g = EdCurvePoint::generator(SELECTED_CURVE, false);
         let mut rng = thread_rng();
         let rnd: u64 = rng.gen();
 
@@ -142,8 +144,8 @@ mod e222_tests {
     #[test]
     //k*(t*P) = t*(k*G) = (k*t mod r)*G
     fn test_ktp() {
-        let g = CurvePoint::generator(SELECTED_CURVE, false);
-        let r = CurvePoint::generator(SELECTED_CURVE, false).r;
+        let g = EdCurvePoint::generator(SELECTED_CURVE, false);
+        let r = EdCurvePoint::generator(SELECTED_CURVE, false).r;
         let k = get_random_big(256);
         let k_2 = k.clone();
         let k_3 = k.clone();

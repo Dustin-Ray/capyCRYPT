@@ -1,107 +1,115 @@
-pub mod operations {
-    use crate::curve::Curves;
-    use crate::curve::{curve_n, CurvePoint, Generator, Point};
-    use crate::sha3::aux_functions::byte_utils::{
-        big_to_bytes, bytes_to_big, get_date_and_time_as_string, get_random_bytes, xor_bytes,
+use crate::curves::{
+    order, ArbitraryPoint, EdCurvePoint,
+    EdCurves::{self, E448},
+    Generator,
+};
+use crate::sha3::{
+    aux_functions::{
+        byte_utils::{
+            big_to_bytes, bytes_to_big, get_date_and_time_as_string, get_random_bytes, xor_bytes,
+        },
+        nist_800_185::{byte_pad, encode_string, right_encode},
+    },
+    sponge::{sponge_absorb, sponge_squeeze},
+};
+use crate::{ECCryptogram, KeyPair, Signature, SymmetricCryptogram};
+
+use rug::Integer;
+use std::borrow::{Borrow, BorrowMut};
+
+const SELECTED_CURVE: EdCurves = E448;
+
+/// # SHA3-Keccak
+/// ref NIST FIPS 202.
+/// ## Arguments:
+/// * `n: &mut Vec<u8>`: pointer to message to be hashed.
+/// * `d: usize`: requested output length and security strength
+/// ## Returns:
+/// * `return  -> Vec<u8>`: SHA3-d message digest
+fn shake(n: &mut Vec<u8>, d: u64) -> Vec<u8> {
+    let bytes_to_pad = 136 - n.len() % 136; // SHA3-256 r = 1088 / 8 = 136
+    if bytes_to_pad == 1 {
+        //delim suffix
+        n.extend_from_slice(&[0x86]);
+    } else {
+        //delim suffix
+        n.extend_from_slice(&[0x06]);
+    }
+    sponge_squeeze(&mut sponge_absorb(n, 2 * d), d, 1600 - (2 * d))
+}
+
+/// # Customizable SHAKE
+/// Implements FIPS 202 Section 3. Returns: customizable and
+/// domain-seperated length `L` SHA3XOF hash of input string.
+/// ## Arguments:
+/// * `x: &mut Vec<u8>`: input message as ```Vec<u8>```
+/// * `l: u64`: requested output length
+/// * `n: &str`: optional function name string
+/// * `s: &str`: option customization string
+/// ## Returns:
+/// * `return -> Vec<u8>`: SHA3XOF hash of length `l` of input message `x`
+pub fn cshake(x: &mut Vec<u8>, l: u64, n: &str, s: &str, d: u64) -> Vec<u8> {
+    if n.is_empty() && s.is_empty() {
+        shake(x, l);
+    }
+    let mut encoded_n = encode_string(&mut n.as_bytes().to_vec());
+    let encoded_s = encode_string(&mut s.as_bytes().to_vec());
+
+    encoded_n.extend_from_slice(&encoded_s);
+
+    let bytepad_w = match d {
+        256 => 168,
+        512 => 136,
+        _ => panic!("Value must be either 256 or 512"),
     };
-    use crate::sha3::aux_functions::nist_800_185::{byte_pad, encode_string, right_encode};
-    use crate::sha3::sponge::{sponge_absorb, sponge_squeeze};
-    use crate::{ECCryptogram, KeyObj, Signature, SymmetricCryptogram};
-    use rug::Integer;
-    use std::borrow::{Borrow, BorrowMut};
 
-    const SELECTED_CURVE: Curves = Curves::E448;
+    let mut out = byte_pad(&mut encoded_n, bytepad_w);
 
-    /// # SHA3-Keccak
-    /// ref NIST FIPS 202.
-    /// ## Arguments:
-    /// * `n: &mut Vec<u8>`: pointer to message to be hashed.
-    /// * `d: usize`: requested output length and security strength
-    /// ## Returns:
-    /// * `return  -> Vec<u8>`: SHA3-d message digest
-    fn shake(n: &mut Vec<u8>, d: u64) -> Vec<u8> {
-        let bytes_to_pad = 136 - n.len() % 136; // SHA3-256 r = 1088 / 8 = 136
-        if bytes_to_pad == 1 {
-            //delim suffix
-            n.extend_from_slice(&[0x86]);
-        } else {
-            //delim suffix
-            n.extend_from_slice(&[0x06]);
-        }
-        sponge_squeeze(&mut sponge_absorb(n, 2 * d), d, 1600 - (2 * d))
-    }
+    out.append(x);
+    out.push(0x04);
+    sponge_squeeze(&mut sponge_absorb(&mut out, d), l, 1600 - d)
+}
 
-    /// # Customizable SHAKE
-    /// Implements FIPS 202 Section 3. Returns: customizable and
-    /// domain-seperated length `L` SHA3XOF hash of input string.
-    /// ## Arguments:
-    /// * `x: &mut Vec<u8>`: input message as ```Vec<u8>```
-    /// * `l: u64`: requested output length
-    /// * `n: &str`: optional function name string
-    /// * `s: &str`: option customization string
-    /// ## Returns:
-    /// * `return -> Vec<u8>`: SHA3XOF hash of length `l` of input message `x`
-    pub fn cshake(x: &mut Vec<u8>, l: u64, n: &str, s: &str, d: u64) -> Vec<u8> {
-        if n.is_empty() && s.is_empty() {
-            return shake(x, l);
-        }
-        let mut encoded_n = encode_string(&mut n.as_bytes().to_vec());
-        let encoded_s = encode_string(&mut s.as_bytes().to_vec());
+/// # Keyed Message Authtentication
+/// Generates keyed hash for given input as specified in NIST SP 800-185 section 4.
+/// ## Arguments:
+/// * `k: &mut Vec<u8>`: key. SP 800 185 8.4.1 KMAC Key Length requires key length >= d
+/// * `x: &mut Vec<u8>`: byte-oriented message
+/// * `l: u64`: requested bit output length
+/// * `s: &str`: customization string
+/// * `d: u64`: the security parameter for the operation. NIST-standard values for d consist of the following:
+/// d = 512; 256 bits of security
+/// d = 256; 128 bits of security
+///
+/// ## Returns:
+/// * `return  -> Vec<u8>`: kmac_xof of `x` under `k`
+/// ## Usage:
+/// ```
+/// use capycrypt::ops::kmac_xof;
+///
+/// let key_str = "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f";
+/// let s_str = "My Tagged Application";
+/// let mut key_bytes = hex::decode(key_str).unwrap();
+/// let mut data = hex::decode("00010203").unwrap();
+///
+/// let res = kmac_xof(&mut key_bytes, &mut data, 64, &s_str, 512);
+/// assert_eq!(hex::encode(res), "1755133f1534752a")
+/// ```
+pub fn kmac_xof(k: &mut Vec<u8>, x: &mut Vec<u8>, l: u64, s: &str, d: u64) -> Vec<u8> {
+    let mut encode_k = encode_string(k);
+    let bytepad_w = match d {
+        256 => 168,
+        512 => 136,
+        _ => panic!("Value must be either 256 or 512"),
+    };
+    let mut bp = byte_pad(&mut encode_k, bytepad_w);
+    bp.append(x);
+    let mut right_enc = right_encode(0); // SP 800-185 4.3.1 KMAC with Arbitrary-Length Output
+    bp.append(&mut right_enc);
+    cshake(&mut bp, l, "KMAC", s, d)
+}
 
-        encoded_n.extend_from_slice(&encoded_s);
-
-        let bytepad_w = match d {
-            256 => 168,
-            512 => 136,
-            _ => panic!("Value must be either 256 or 512"),
-        };
-
-        let mut out = byte_pad(&mut encoded_n, bytepad_w);
-
-        out.append(x);
-        out.push(0x04);
-        sponge_squeeze(&mut sponge_absorb(&mut out, d), l, 1600 - d)
-    }
-
-    /// # Keyed Message Authtentication
-    /// Generates keyed hash for given input as specified in NIST SP 800-185 section 4.
-    /// ## Arguments:
-    /// * `k: &mut Vec<u8>`: key. SP 800 185 8.4.1 KMAC Key Length requires key length >= d
-    /// * `x: &mut Vec<u8>`: byte-oriented message
-    /// * `l: u64`: requested bit output length
-    /// * `s: &str`: customization string
-    /// * `d: u64`: the security parameter for the operation. NIST-standard values for d consist of the following:
-    /// d = 512; 256 bits of security
-    /// d = 256; 128 bits of security
-    ///
-    /// ## Returns:
-    /// * `return  -> Vec<u8>`: kmac_xof of `x` under `k`
-    /// ## Usage:
-    /// ```
-    /// use capycrypt::model::operations::kmac_xof;
-    ///
-    /// let key_str = "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f";
-    /// let s_str = "My Tagged Application";
-    /// let mut key_bytes = hex::decode(key_str).unwrap();
-    /// let mut data = hex::decode("00010203").unwrap();
-    ///
-    /// let res = kmac_xof(&mut key_bytes, &mut data, 64, &s_str, 512);
-    /// assert_eq!(hex::encode(res), "1755133f1534752a")
-    /// ```
-    pub fn kmac_xof(k: &mut Vec<u8>, x: &mut Vec<u8>, l: u64, s: &str, d: u64) -> Vec<u8> {
-        let mut encode_k = encode_string(k);
-        let bytepad_w = match d {
-            256 => 168,
-            512 => 136,
-            _ => panic!("Value must be either 256 or 512"),
-        };
-        let mut bp = byte_pad(&mut encode_k, bytepad_w);
-        bp.append(x);
-        let mut right_enc = right_encode(0); // SP 800-185 4.3.1 KMAC with Arbitrary-Length Output
-        bp.append(&mut right_enc);
-        cshake(&mut bp, l, "KMAC", s, d)
-    }
-
+impl Hashable for Message {
     /// # Message Digest
     /// Computes SHA3-d hash of input
     /// ## Arguments:
@@ -110,15 +118,15 @@ pub mod operations {
     /// * `return  -> Vec<u8>`: containing result of shake operation of size 512 bits
     /// ## Usage:
     /// ```
-    /// use capycrypt::model::operations::compute_sha3_hash;
+    /// use capycrypt::ops::compute_sha3_hash;
     /// use hex::ToHex;
     ///
     /// let digest = compute_sha3_hash(&mut "test".as_bytes().to_vec(), 224).encode_hex::<String>();
     /// assert!(digest == "3797bf0afbbfca4a7bbba7602a2b552746876517a7f9b7ce2db0ae7b");
     /// ```
-    pub fn compute_sha3_hash(data: &mut Vec<u8>, d: u64) -> Vec<u8> {
-        match d {
-            224 | 256 | 384 | 512 => shake(data, d),
+    fn compute_sha3_hash(&mut self, d: u64) {
+        self.digest = match d {
+            224 | 256 | 384 | 512 => Some(Box::new(shake(&mut self.msg, d))),
             _ => panic!("Value must be either 224, 256. 384, or 512"),
         }
     }
@@ -134,7 +142,7 @@ pub mod operations {
     /// * `return  -> Vec<u8>`: `t` ← kmac_xof(pw, m, 512, “T”) as ```Vec<u8>``` of size `l`
     /// ## Usage:
     /// ```
-    /// use capycrypt::model::operations::compute_tagged_hash;
+    /// use capycrypt::ops::compute_tagged_hash;
     /// let mut pw = "".as_bytes().to_vec();
     /// let mut message = "".as_bytes().to_vec();
     /// let mut s = "".to_owned();
@@ -142,15 +150,15 @@ pub mod operations {
     /// let expected = "3f9259e80b35e0719c26025f7e38a4a38172bf1142a6a9c1930e50df03904312";
     /// assert_eq!(hex::encode(digest), expected);
     /// ```
-    pub fn compute_tagged_hash(
-        pw: &mut Vec<u8>,
-        message: &mut Vec<u8>,
-        s: &mut str,
-        d: u64,
-    ) -> Vec<u8> {
-        kmac_xof(pw, message, d, s, d)
+    fn compute_tagged_hash(&mut self, pw: &mut Vec<u8>, s: &mut str, d: u64) {
+        self.digest = match d {
+            224 | 256 | 384 | 512 => Some(Box::new(kmac_xof(pw, &mut self.msg, d, s, d))),
+            _ => panic!("Value must be either 224, 256. 384, or 512"),
+        }
     }
+}
 
+impl PwEncryptable for Message {
     /// # Symmetric Encryption
     /// Encrypts a byte array m symmetrically under passphrase pw:
     /// SECURITY NOTE: ciphertext length == plaintext length
@@ -167,27 +175,39 @@ pub mod operations {
     ///
     /// ## Usage:
     /// ```
-    /// use capycrypt::model::operations::encrypt_with_pw;
+    /// use capycrypt::ops::encrypt_with_pw;
     /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
     ///
     /// let pw = get_random_bytes(64);
     /// let mut message = Box::new(hex::decode("C0C1C2C3C4C5C6C7").unwrap().to_owned());
     /// let mut encryption = Box::new(encrypt_with_pw(&mut pw.clone(), &mut message, 256));
     /// ```
-    pub fn encrypt_with_pw(
-        pw: &mut Vec<u8>,
-        msg: &mut Box<Vec<u8>>,
-        d: u64,
-    ) -> SymmetricCryptogram {
+    fn encrypt_with_pw(&mut self, pw: &mut Vec<u8>, d: u64) {
         let z = get_random_bytes(512);
         let mut ke_ka = z.clone();
         ke_ka.append(pw);
         let ke_ka = kmac_xof(&mut ke_ka, &mut vec![], 1024, "S", d);
-        let mut ke = ke_ka[..64].to_vec();
-        let mut c = kmac_xof(&mut ke, &mut vec![], (&msg.len() * 8) as u64, "SKE", d);
-        xor_bytes(&mut c, msg.borrow_mut());
-        let t = kmac_xof(&mut ke_ka[64..].to_vec(), msg.borrow_mut(), 512, "SKA", d);
-        SymmetricCryptogram { z, c, t }
+        let c = kmac_xof(
+            &mut ke_ka[..64].to_vec(),
+            &mut vec![],
+            (self.msg.len() * 8) as u64,
+            "SKE",
+            d,
+        );
+        println!("message before encryption: {:?}", self.msg);
+        xor_bytes(self.msg.borrow_mut(), &c);
+        println!("message after encryption: {:?}", self.msg);
+        self.digest = Some(Box::new(kmac_xof(
+            &mut ke_ka[64..].to_vec(),
+            &mut self.msg.clone(),
+            512,
+            "SKA",
+            d,
+        )));
+        println!("message after tag: {:?}", self.msg);
+
+        self.sym_params = Some(SymmetricCryptogram { z });
+        println!("tag: {:?}", self.digest.as_mut().unwrap());
     }
 
     /// # Symmetric Decryption
@@ -204,7 +224,7 @@ pub mod operations {
     /// * `return -> bool`: t` == t, result of tag verification
     /// ## Usage:
     /// ```
-    /// use capycrypt::model::operations;
+    /// use capycrypt::ops;
     /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
     /// use std::borrow::BorrowMut;
     ///
@@ -213,16 +233,39 @@ pub mod operations {
     /// let mut encryption = Box::new(operations::encrypt_with_pw(&mut pw.clone(), &mut message, 256));
     /// assert!(operations::decrypt_with_pw(&mut pw.clone(), &mut encryption.borrow_mut(), 256));
     /// ```
-    pub fn decrypt_with_pw(pw: &mut Vec<u8>, msg: &mut Box<SymmetricCryptogram>, d: u64) -> bool {
-        msg.z.append(pw);
-        let ke_ka = kmac_xof(&mut msg.z, &mut vec![], 1024, "S", d);
-        let ke = &mut ke_ka[..64].to_vec();
-        let ka = &mut ke_ka[64..].to_vec();
-        let m = kmac_xof(ke, &mut vec![], (msg.c.len() * 8) as u64, "SKE", d);
-        xor_bytes(&mut msg.c, &m);
-        msg.t == kmac_xof(ka, msg.c.borrow_mut(), 512, "SKA", d)
+    fn decrypt_with_pw(&mut self, pw: &mut Vec<u8>, d: u64) {
+        self.sym_params.as_mut().unwrap().z.append(pw);
+        let ke_ka = kmac_xof(
+            &mut self.sym_params.as_mut().unwrap().z,
+            &mut vec![],
+            1024,
+            "S",
+            d,
+        );
+        let m = kmac_xof(
+            &mut ke_ka[..64].to_vec(),
+            &mut vec![],
+            (self.msg.len() * 8) as u64,
+            "SKE",
+            d,
+        );
+        println!("message before decryption: {:?}", self.msg);
+        xor_bytes(&mut self.msg, &m);
+        println!("message after decryption: {:?}", self.msg);
+        self.op_result = Some(
+            self.digest.as_mut().unwrap()
+                == &mut Box::new(kmac_xof(
+                    &mut ke_ka[64..].to_vec(),
+                    &mut self.msg.clone(),
+                    512,
+                    "SKA",
+                    d,
+                )),
+        );
     }
+}
 
+impl KeyPair {
     /// # Asymmetric Keypair Generation
     /// Generates a (Schnorr/ECDHIES) key pair from passphrase pw:
     /// ## Algorithm:
@@ -240,7 +283,7 @@ pub mod operations {
     /// ```
     /// use capycrypt::curve::Curves;
     /// use capycrypt::curve::{CurvePoint, Point};
-    /// use capycrypt::model::operations::gen_keypair;
+    /// use capycrypt::ops::gen_keypair;
     /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
     /// const SELECTED_CURVE: Curves = Curves::E448;
     ///
@@ -251,19 +294,20 @@ pub mod operations {
     /// let y = key_obj.pub_y;
     /// let pub_key = CurvePoint::point(SELECTED_CURVE, x, y);     
     /// ```
-    pub fn gen_keypair(pw: &mut Vec<u8>, owner: String, d: u64) -> KeyObj {
+    fn gen_keypair(&mut self, pw: &mut Vec<u8>, owner: String, d: u64) {
         let s: Integer =
-            (bytes_to_big(kmac_xof(pw, &mut vec![], 512, "K", d)) * 4) % curve_n(SELECTED_CURVE);
-        let v = CurvePoint::generator(SELECTED_CURVE, false) * (s);
-        KeyObj {
-            owner,
-            priv_key: pw.to_vec(),
-            pub_x: v.x,
-            pub_y: v.y,
-            date_created: get_date_and_time_as_string(),
-        }
-    }
+            (bytes_to_big(kmac_xof(pw, &mut vec![], 512, "K", d)) * 4) % order(SELECTED_CURVE);
+        let v = EdCurvePoint::generator(SELECTED_CURVE, false) * (s);
 
+        self.owner = owner;
+        self.priv_key = pw.to_vec();
+        self.pub_x = v.x;
+        self.pub_y = v.y;
+        self.date_created = get_date_and_time_as_string();
+    }
+}
+
+impl KeyEncryptable for Message {
     /// # Asymmetric Encryption
     /// Encrypts a byte array m under the (Schnorr/ECDHIES) public key 𝑉.
     /// Operates under Schnorr/ECDHIES principle in that shared symmetric key is
@@ -281,11 +325,11 @@ pub mod operations {
     /// * `return -> ECCryptogram` : cryptogram: (𝑍, c, t) = 𝑍||c||t
     /// ## Usage:
     /// ```
-    /// use capycrypt::model::operations;
+    /// use capycrypt::ops;
     /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
     /// use std::borrow::BorrowMut;
-    /// use capycrypt::curve::Curves;
-    /// use capycrypt::curve::{CurvePoint, Point};
+    /// use capycrypt::curves::EdCurves;
+    /// use capycrypt::curves::{CurvePoint, Point};
     ///
     /// // Box the message to support arbitrary size and best performance
     /// let pw = get_random_bytes(32);
@@ -294,39 +338,34 @@ pub mod operations {
     ///
     /// // Select curve and generate keypair
     /// const SELECTED_CURVE: Curves = Curves::E448;
-    /// let key_obj = operations::gen_keypair(&mut pw.clone(), owner, 256);
+    /// let key_obj = ops::gen_keypair(&mut pw.clone(), owner, 256);
     /// let x = key_obj.pub_x;
     /// let y = key_obj.pub_y;
     /// let pub_key = CurvePoint::point(SELECTED_CURVE, x, y);
     ///
     /// // Assert decryption correctness
     /// let mut enc = operations::encrypt_with_key(pub_key, &mut message, 256);
-    /// let res = operations::decrypt_with_key(&mut pw.clone(), enc.borrow_mut(), 256);
+    /// let res = ops::decrypt_with_key(&mut pw.clone(), enc.borrow_mut(), 256);
     /// assert!(res);
     /// ```
-    pub fn encrypt_with_key(
-        pub_key: CurvePoint,
-        message: &mut Box<Vec<u8>>,
-        d: u64,
-    ) -> ECCryptogram {
-        let k: Integer = (bytes_to_big(get_random_bytes(64)) * 4) % curve_n(SELECTED_CURVE);
+    fn encrypt_with_key(&mut self, pub_key: EdCurvePoint, d: u64) {
+        let k: Integer = (bytes_to_big(get_random_bytes(64)) * 4) % order(SELECTED_CURVE);
         let w = pub_key * k.clone();
-        let z = CurvePoint::generator(SELECTED_CURVE, false) * k;
+        let z = EdCurvePoint::generator(SELECTED_CURVE, false) * k;
         let ke_ka = kmac_xof(&mut big_to_bytes(w.x), &mut vec![], 1024, "PK", d);
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
 
-        let len = (message.len() * 8) as u64;
-        let mut c = kmac_xof(ke, &mut vec![], len, "PKE", d);
-        xor_bytes(&mut c, message);
-        let t = kmac_xof(&mut ka.clone(), message.borrow_mut(), 512, "PKA", d);
-
-        ECCryptogram {
+        let len = (self.msg.len() * 8) as u64;
+        let c = kmac_xof(ke, &mut vec![], len, "PKE", d);
+        xor_bytes(&mut self.msg, &c);
+        let t = kmac_xof(&mut ka.clone(), self.msg.borrow_mut(), 512, "PKA", d);
+        self.msg = Box::new(c);
+        self.ecc_params = Some(ECCryptogram {
             z_x: z.x,
             z_y: z.y,
-            c,
             t,
-        }
+        })
     }
 
     /// # Asymmetric Decryption
@@ -346,11 +385,11 @@ pub mod operations {
     /// * `return  -> bool`: Decryption of cryptogram ```𝑍||c||t iff t` = t```
     /// ## Usage:
     /// ```
-    /// use capycrypt::model::operations;
+    /// use capycrypt::ops;
     /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
     /// use std::borrow::BorrowMut;
-    /// use capycrypt::curve::Curves;
-    /// use capycrypt::curve::{CurvePoint, Point};
+    /// use capycrypt::curves::EdCurves;
+    /// use capycrypt::curves::{EdCurvePoint, ArbitraryPoint};
     ///
     /// // Box the message to support arbitrary size and best performance
     /// let pw = get_random_bytes(32);
@@ -358,19 +397,23 @@ pub mod operations {
     /// let mut message = Box::new(get_random_bytes(5242880).to_owned()); //5mb
     ///
     /// // Select curve and generate key
-    /// const SELECTED_CURVE: Curves = Curves::E448;
-    /// let key_obj = operations::gen_keypair(&mut pw.clone(), owner, 256);
+    /// const SELECTED_CURVE: EdCurves = EdCurves::E448;
+    /// let key_obj = ops::gen_keypair(&mut pw.clone(), owner, 256);
     /// let x = key_obj.pub_x;
     /// let y = key_obj.pub_y;
-    /// let pub_key = CurvePoint::point(SELECTED_CURVE, x, y);
+    /// let pub_key = EdCurvePoint::ArbitraryPoint(SELECTED_CURVE, x, y);
     ///
     /// // Assert decryption correctness
     /// let mut enc = operations::encrypt_with_key(pub_key, &mut message, 256);
-    /// let res = operations::decrypt_with_key(&mut pw.clone(), enc.borrow_mut(), 256);
+    /// let res = ops::decrypt_with_key(&mut pw.clone(), enc.borrow_mut(), 256);
     /// assert!(res);
     /// ```
-    pub fn decrypt_with_key(pw: &mut [u8], message: &mut ECCryptogram, d: u64) -> bool {
-        let z = CurvePoint::point(SELECTED_CURVE, message.z_x.clone(), message.z_y.clone());
+    fn decrypt_with_key(&mut self, pw: &mut [u8], d: u64) {
+        let z = EdCurvePoint::arbitrary_point(
+            SELECTED_CURVE,
+            self.ecc_params.as_mut().unwrap().z_x.clone(),
+            self.ecc_params.as_mut().unwrap().z_y.clone(),
+        );
         let s: Integer = (bytes_to_big(kmac_xof(&mut pw.to_owned(), &mut vec![], 512, "K", d)) * 4)
             % z.clone().n;
 
@@ -378,13 +421,15 @@ pub mod operations {
         let ke_ka = kmac_xof(&mut big_to_bytes(w.x), &mut vec![], 1024, "PK", d);
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
-        let len = message.c.len() * 8;
+        let len = self.msg.len() * 8;
         let m = Box::new(kmac_xof(ke, &mut vec![], (len) as u64, "PKE", d));
-        xor_bytes(&mut message.c, m.borrow());
-        let t_p = kmac_xof(&mut ka.clone(), &mut message.c, 512, "PKA", d);
-        t_p == message.t
+        xor_bytes(&mut self.msg, m.borrow());
+        let t_p = kmac_xof(&mut ka.clone(), &mut self.msg, 512, "PKA", d);
+        self.op_result = Some(t_p == self.ecc_params.as_mut().unwrap().t);
     }
+}
 
+impl Signable for Message {
     /// # Schnorr Signatures
     /// Generates a signature for a byte array m under passphrase pw.
     /// ## Algorithm:
@@ -401,7 +446,7 @@ pub mod operations {
     /// ```
     /// use capycrypt::curve::Curves;
     /// use capycrypt::curve::{CurvePoint, Point};
-    /// use capycrypt::model::operations;
+    /// use capycrypt::ops;
     /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
     /// use std::borrow::BorrowMut;
     ///
@@ -419,22 +464,21 @@ pub mod operations {
     /// let res = operations::verify_signature(&sig, key, &mut message, 256);
     /// assert!(res);
     /// ```
-    pub fn sign_with_key(pw: &mut Vec<u8>, message: &mut Box<Vec<u8>>, d: u64) -> Signature {
+    fn sign_with_key(&mut self, pw: &mut Vec<u8>, d: u64) {
         let s: Integer = bytes_to_big(kmac_xof(pw, &mut vec![], 512, "K", d)) * 4;
         let mut s_bytes = big_to_bytes(s.clone());
 
         let k: Integer =
-            bytes_to_big(kmac_xof(&mut s_bytes, message.borrow_mut(), 512, "N", d)) * 4;
+            bytes_to_big(kmac_xof(&mut s_bytes, self.msg.borrow_mut(), 512, "N", d)) * 4;
 
-        let u = CurvePoint::generator(SELECTED_CURVE, false) * k.clone();
+        let u = EdCurvePoint::generator(SELECTED_CURVE, false) * k.clone();
         let mut ux_bytes = big_to_bytes(u.x);
-        let h = kmac_xof(&mut ux_bytes, message.borrow_mut(), 512, "T", d);
+        let h = kmac_xof(&mut ux_bytes, self.msg.borrow_mut(), 512, "T", d);
         let h_big = bytes_to_big(h.clone());
         //(a % b + b) % b
         let z = ((k - (h_big * s)) % u.r.clone() + u.r.clone()) % u.r;
-        Signature { h, z }
+        self.signature = Some(Signature { h, z })
     }
-
     /// # Signature Verification
     /// Verifies a signature (h, 𝑍) for a byte array m under the (Schnorr/
     /// ECDHIES) public key 𝑉:
@@ -450,7 +494,7 @@ pub mod operations {
     /// ```
     /// use capycrypt::curve::Curves;
     /// use capycrypt::curve::{CurvePoint, Point};
-    /// use capycrypt::model::operations;
+    /// use capycrypt::ops;
     /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
     /// use std::borrow::BorrowMut;
     ///
@@ -468,16 +512,42 @@ pub mod operations {
     /// let res = operations::verify_signature(&sig, key, &mut message, 256);
     /// assert!(res);
     /// ```
-    pub fn verify_signature(
-        sig: &Signature,
-        pub_key: CurvePoint,
-        message: &mut Box<Vec<u8>>,
-        d: u64,
-    ) -> bool {
-        let mut u = CurvePoint::generator(SELECTED_CURVE, false) * sig.z.clone();
+    fn verify_signature(&mut self, sig: &Signature, pub_key: EdCurvePoint, d: u64) {
+        let mut u = EdCurvePoint::generator(SELECTED_CURVE, false) * sig.z.clone();
         let hv = pub_key * (bytes_to_big(sig.h.clone()));
         u = u + &hv;
-        let h_p = kmac_xof(&mut big_to_bytes(u.x), message.borrow_mut(), 512, "T", d);
-        h_p == sig.h
+        let h_p = kmac_xof(&mut big_to_bytes(u.x), self.msg.borrow_mut(), 512, "T", d);
+        self.op_result = Some(h_p == sig.h)
     }
+}
+
+#[derive(Debug)]
+/// Message type for which cryptographic traits are defined.
+pub struct Message {
+    pub msg: Box<Vec<u8>>,
+    pub digest: Option<Box<Vec<u8>>>,
+    pub sym_params: Option<SymmetricCryptogram>,
+    pub ecc_params: Option<ECCryptogram>,
+    pub op_result: Option<bool>,
+    pub signature: Option<Signature>,
+}
+
+pub trait Hashable {
+    fn compute_sha3_hash(&mut self, d: u64);
+    fn compute_tagged_hash(&mut self, pw: &mut Vec<u8>, s: &mut str, d: u64);
+}
+
+pub trait PwEncryptable {
+    fn encrypt_with_pw(&mut self, pw: &mut Vec<u8>, d: u64);
+    fn decrypt_with_pw(&mut self, pw: &mut Vec<u8>, d: u64);
+}
+
+pub trait KeyEncryptable {
+    fn encrypt_with_key(&mut self, pub_key: EdCurvePoint, d: u64);
+    fn decrypt_with_key(&mut self, pw: &mut [u8], d: u64);
+}
+
+pub trait Signable {
+    fn sign_with_key(&mut self, pw: &mut Vec<u8>, d: u64);
+    fn verify_signature(&mut self, sig: &Signature, pub_key: EdCurvePoint, d: u64);
 }
