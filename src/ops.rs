@@ -1,5 +1,5 @@
 use crate::curves::{
-    order, ArbitraryPoint, EdCurvePoint,
+    order, EdCurvePoint,
     EdCurves::{self, E448},
     Generator,
 };
@@ -12,7 +12,7 @@ use crate::sha3::{
     },
     sponge::{sponge_absorb, sponge_squeeze},
 };
-use crate::{ECCryptogram, KeyPair, Signature, SymmetricCryptogram};
+use crate::{KeyPair, Signature};
 
 use rug::Integer;
 use std::borrow::{Borrow, BorrowMut};
@@ -85,17 +85,8 @@ pub fn cshake(x: &mut Vec<u8>, l: u64, n: &str, s: &str, d: u64) -> Vec<u8> {
 /// * `return  -> Vec<u8>`: kmac_xof of `x` under `k`
 /// ## Usage:
 /// ```
-/// use capycrypt::ops::kmac_xof;
-///
-/// let key_str = "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f";
-/// let s_str = "My Tagged Application";
-/// let mut key_bytes = hex::decode(key_str).unwrap();
-/// let mut data = hex::decode("00010203").unwrap();
-///
-/// let res = kmac_xof(&mut key_bytes, &mut data, 64, &s_str, 512);
-/// assert_eq!(hex::encode(res), "1755133f1534752a")
 /// ```
-pub fn kmac_xof(k: &mut Vec<u8>, x: &mut Vec<u8>, l: u64, s: &str, d: u64) -> Vec<u8> {
+pub fn kmac_xof(k: &mut Vec<u8>, x: &Vec<u8>, l: u64, s: &str, d: u64) -> Vec<u8> {
     let mut encode_k = encode_string(k);
     let bytepad_w = match d {
         256 => 168,
@@ -103,7 +94,7 @@ pub fn kmac_xof(k: &mut Vec<u8>, x: &mut Vec<u8>, l: u64, s: &str, d: u64) -> Ve
         _ => panic!("Value must be either 256 or 512"),
     };
     let mut bp = byte_pad(&mut encode_k, bytepad_w);
-    bp.append(x);
+    bp.append(&mut x.to_owned());
     let mut right_enc = right_encode(0); // SP 800-185 4.3.1 KMAC with Arbitrary-Length Output
     bp.append(&mut right_enc);
     cshake(&mut bp, l, "KMAC", s, d)
@@ -118,15 +109,10 @@ impl Hashable for Message {
     /// * `return  -> Vec<u8>`: containing result of shake operation of size 512 bits
     /// ## Usage:
     /// ```
-    /// use capycrypt::ops::compute_sha3_hash;
-    /// use hex::ToHex;
-    ///
-    /// let digest = compute_sha3_hash(&mut "test".as_bytes().to_vec(), 224).encode_hex::<String>();
-    /// assert!(digest == "3797bf0afbbfca4a7bbba7602a2b552746876517a7f9b7ce2db0ae7b");
     /// ```
     fn compute_sha3_hash(&mut self, d: u64) {
         self.digest = match d {
-            224 | 256 | 384 | 512 => Some(Box::new(shake(&mut self.msg, d))),
+            224 | 256 | 384 | 512 => Some(shake(&mut self.msg, d)),
             _ => panic!("Value must be either 224, 256. 384, or 512"),
         }
     }
@@ -142,17 +128,10 @@ impl Hashable for Message {
     /// * `return  -> Vec<u8>`: `t` ← kmac_xof(pw, m, 512, “T”) as ```Vec<u8>``` of size `l`
     /// ## Usage:
     /// ```
-    /// use capycrypt::ops::compute_tagged_hash;
-    /// let mut pw = "".as_bytes().to_vec();
-    /// let mut message = "".as_bytes().to_vec();
-    /// let mut s = "".to_owned();
-    /// let digest = compute_tagged_hash(&mut pw, &mut message, &mut s, 256);
-    /// let expected = "3f9259e80b35e0719c26025f7e38a4a38172bf1142a6a9c1930e50df03904312";
-    /// assert_eq!(hex::encode(digest), expected);
     /// ```
     fn compute_tagged_hash(&mut self, pw: &mut Vec<u8>, s: &mut str, d: u64) {
         self.digest = match d {
-            224 | 256 | 384 | 512 => Some(Box::new(kmac_xof(pw, &mut self.msg, d, s, d))),
+            224 | 256 | 384 | 512 => Some(kmac_xof(pw, &self.msg, d, s, d)),
             _ => panic!("Value must be either 224, 256. 384, or 512"),
         }
     }
@@ -175,39 +154,18 @@ impl PwEncryptable for Message {
     ///
     /// ## Usage:
     /// ```
-    /// use capycrypt::ops::encrypt_with_pw;
-    /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-    ///
-    /// let pw = get_random_bytes(64);
-    /// let mut message = Box::new(hex::decode("C0C1C2C3C4C5C6C7").unwrap().to_owned());
-    /// let mut encryption = Box::new(encrypt_with_pw(&mut pw.clone(), &mut message, 256));
     /// ```
-    fn encrypt_with_pw(&mut self, pw: &mut Vec<u8>, d: u64) {
+    fn pw_encrypt(&mut self, pw: &[u8], d: u64) {
         let z = get_random_bytes(512);
         let mut ke_ka = z.clone();
-        ke_ka.append(pw);
-        let ke_ka = kmac_xof(&mut ke_ka, &mut vec![], 1024, "S", d);
-        let c = kmac_xof(
-            &mut ke_ka[..64].to_vec(),
-            &mut vec![],
-            (self.msg.len() * 8) as u64,
-            "SKE",
-            d,
-        );
-        println!("message before encryption: {:?}", self.msg);
+        ke_ka.append(&mut pw.to_owned());
+        let ke_ka = kmac_xof(&mut ke_ka, &vec![], 1024, "S", d);
+        let ke = &mut ke_ka[..64].to_vec();
+        let ka = &mut ke_ka[64..].to_vec();
+        self.digest = Some(kmac_xof(ka, &self.msg, 512, "SKA", d));
+        let c = kmac_xof(ke, &vec![], (self.msg.len() * 8) as u64, "SKE", d);
         xor_bytes(self.msg.borrow_mut(), &c);
-        println!("message after encryption: {:?}", self.msg);
-        self.digest = Some(Box::new(kmac_xof(
-            &mut ke_ka[64..].to_vec(),
-            &mut self.msg.clone(),
-            512,
-            "SKA",
-            d,
-        )));
-        println!("message after tag: {:?}", self.msg);
-
-        self.sym_params = Some(SymmetricCryptogram { z });
-        println!("tag: {:?}", self.digest.as_mut().unwrap());
+        self.sym_nonce = Some(z);
     }
 
     /// # Symmetric Decryption
@@ -224,44 +182,18 @@ impl PwEncryptable for Message {
     /// * `return -> bool`: t` == t, result of tag verification
     /// ## Usage:
     /// ```
-    /// use capycrypt::ops;
-    /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-    /// use std::borrow::BorrowMut;
     ///
-    /// let pw = get_random_bytes(32);
-    /// let mut message = Box::new(hex::decode("C0C1C2C3C4C5C6C7").unwrap().to_owned());
-    /// let mut encryption = Box::new(operations::encrypt_with_pw(&mut pw.clone(), &mut message, 256));
-    /// assert!(operations::decrypt_with_pw(&mut pw.clone(), &mut encryption.borrow_mut(), 256));
     /// ```
-    fn decrypt_with_pw(&mut self, pw: &mut Vec<u8>, d: u64) {
-        self.sym_params.as_mut().unwrap().z.append(pw);
-        let ke_ka = kmac_xof(
-            &mut self.sym_params.as_mut().unwrap().z,
-            &mut vec![],
-            1024,
-            "S",
-            d,
-        );
-        let m = kmac_xof(
-            &mut ke_ka[..64].to_vec(),
-            &mut vec![],
-            (self.msg.len() * 8) as u64,
-            "SKE",
-            d,
-        );
-        println!("message before decryption: {:?}", self.msg);
+    fn pw_decrypt(&mut self, pw: &[u8], d: u64) {
+        let mut z_pw = self.sym_nonce.clone().unwrap();
+        z_pw.append(&mut pw.to_owned());
+        let ke_ka = kmac_xof(&mut z_pw, &vec![], 1024, "S", d);
+        let ke = &mut ke_ka[..64].to_vec();
+        let ka = &mut ke_ka[64..].to_vec();
+        let m = kmac_xof(ke, &vec![], (self.msg.len() * 8) as u64, "SKE", d);
         xor_bytes(&mut self.msg, &m);
-        println!("message after decryption: {:?}", self.msg);
-        self.op_result = Some(
-            self.digest.as_mut().unwrap()
-                == &mut Box::new(kmac_xof(
-                    &mut ke_ka[64..].to_vec(),
-                    &mut self.msg.clone(),
-                    512,
-                    "SKA",
-                    d,
-                )),
-        );
+        let new_t = &kmac_xof(ka, &self.msg, 512, "SKA", d);
+        self.op_result = Some(self.digest.as_mut().unwrap() == new_t);
     }
 }
 
@@ -280,30 +212,18 @@ impl KeyPair {
     /// verification key 𝑉 is hashed together with the message 𝑚
     /// and the nonce 𝑈: hash (𝑚, 𝑈, 𝑉) .
     /// ## Usage:
+    /// ```  
     /// ```
-    /// use capycrypt::curve::Curves;
-    /// use capycrypt::curve::{CurvePoint, Point};
-    /// use capycrypt::ops::gen_keypair;
-    /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-    /// const SELECTED_CURVE: Curves = Curves::E448;
-    ///
-    /// let pw = get_random_bytes(32);
-    /// let owner = "test key".to_string();
-    /// let key_obj = gen_keypair(&mut pw.clone(), owner, 256);
-    /// let x = key_obj.pub_x;
-    /// let y = key_obj.pub_y;
-    /// let pub_key = CurvePoint::point(SELECTED_CURVE, x, y);     
-    /// ```
-    fn gen_keypair(&mut self, pw: &mut Vec<u8>, owner: String, d: u64) {
-        let s: Integer =
-            (bytes_to_big(kmac_xof(pw, &mut vec![], 512, "K", d)) * 4) % order(SELECTED_CURVE);
+    pub fn new(pw: &Vec<u8>, owner: String, d: u64) -> KeyPair {
+        let s: Integer = (bytes_to_big(kmac_xof(&mut pw.to_owned(), &vec![], 512, "K", d)) * 4)
+            % order(SELECTED_CURVE);
         let v = EdCurvePoint::generator(SELECTED_CURVE, false) * (s);
-
-        self.owner = owner;
-        self.priv_key = pw.to_vec();
-        self.pub_x = v.x;
-        self.pub_y = v.y;
-        self.date_created = get_date_and_time_as_string();
+        KeyPair {
+            owner,
+            pub_key: v,
+            priv_key: pw.to_vec(),
+            date_created: get_date_and_time_as_string(),
+        }
     }
 }
 
@@ -325,47 +245,22 @@ impl KeyEncryptable for Message {
     /// * `return -> ECCryptogram` : cryptogram: (𝑍, c, t) = 𝑍||c||t
     /// ## Usage:
     /// ```
-    /// use capycrypt::ops;
-    /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-    /// use std::borrow::BorrowMut;
-    /// use capycrypt::curves::EdCurves;
-    /// use capycrypt::curves::{CurvePoint, Point};
-    ///
-    /// // Box the message to support arbitrary size and best performance
-    /// let pw = get_random_bytes(32);
-    /// let owner = "test key".to_string();
-    /// let mut message = Box::new(get_random_bytes(5242880).to_owned()); //5mb
-    ///
-    /// // Select curve and generate keypair
-    /// const SELECTED_CURVE: Curves = Curves::E448;
-    /// let key_obj = ops::gen_keypair(&mut pw.clone(), owner, 256);
-    /// let x = key_obj.pub_x;
-    /// let y = key_obj.pub_y;
-    /// let pub_key = CurvePoint::point(SELECTED_CURVE, x, y);
-    ///
-    /// // Assert decryption correctness
-    /// let mut enc = operations::encrypt_with_key(pub_key, &mut message, 256);
-    /// let res = ops::decrypt_with_key(&mut pw.clone(), enc.borrow_mut(), 256);
-    /// assert!(res);
     /// ```
-    fn encrypt_with_key(&mut self, pub_key: EdCurvePoint, d: u64) {
+    fn key_encrypt(&mut self, pub_key: EdCurvePoint, d: u64) {
         let k: Integer = (bytes_to_big(get_random_bytes(64)) * 4) % order(SELECTED_CURVE);
         let w = pub_key * k.clone();
         let z = EdCurvePoint::generator(SELECTED_CURVE, false) * k;
-        let ke_ka = kmac_xof(&mut big_to_bytes(w.x), &mut vec![], 1024, "PK", d);
+        let ke_ka = kmac_xof(&mut big_to_bytes(w.x), &vec![], 1024, "PK", d);
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
-
+        let t = kmac_xof(&mut ka.clone(), self.msg.borrow(), 512, "PKA", d);
         let len = (self.msg.len() * 8) as u64;
-        let c = kmac_xof(ke, &mut vec![], len, "PKE", d);
+        let c = kmac_xof(ke, &vec![], len, "PKE", d);
         xor_bytes(&mut self.msg, &c);
-        let t = kmac_xof(&mut ka.clone(), self.msg.borrow_mut(), 512, "PKA", d);
+
         self.msg = Box::new(c);
-        self.ecc_params = Some(ECCryptogram {
-            z_x: z.x,
-            z_y: z.y,
-            t,
-        })
+        self.digest = Some(t);
+        self.asym_nonce = Some(z);
     }
 
     /// # Asymmetric Decryption
@@ -385,47 +280,22 @@ impl KeyEncryptable for Message {
     /// * `return  -> bool`: Decryption of cryptogram ```𝑍||c||t iff t` = t```
     /// ## Usage:
     /// ```
-    /// use capycrypt::ops;
-    /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-    /// use std::borrow::BorrowMut;
-    /// use capycrypt::curves::EdCurves;
-    /// use capycrypt::curves::{EdCurvePoint, ArbitraryPoint};
-    ///
-    /// // Box the message to support arbitrary size and best performance
-    /// let pw = get_random_bytes(32);
-    /// let owner = "test key".to_string();
-    /// let mut message = Box::new(get_random_bytes(5242880).to_owned()); //5mb
-    ///
-    /// // Select curve and generate key
-    /// const SELECTED_CURVE: EdCurves = EdCurves::E448;
-    /// let key_obj = ops::gen_keypair(&mut pw.clone(), owner, 256);
-    /// let x = key_obj.pub_x;
-    /// let y = key_obj.pub_y;
-    /// let pub_key = EdCurvePoint::ArbitraryPoint(SELECTED_CURVE, x, y);
-    ///
-    /// // Assert decryption correctness
-    /// let mut enc = operations::encrypt_with_key(pub_key, &mut message, 256);
-    /// let res = ops::decrypt_with_key(&mut pw.clone(), enc.borrow_mut(), 256);
-    /// assert!(res);
     /// ```
-    fn decrypt_with_key(&mut self, pw: &mut [u8], d: u64) {
-        let z = EdCurvePoint::arbitrary_point(
-            SELECTED_CURVE,
-            self.ecc_params.as_mut().unwrap().z_x.clone(),
-            self.ecc_params.as_mut().unwrap().z_y.clone(),
-        );
-        let s: Integer = (bytes_to_big(kmac_xof(&mut pw.to_owned(), &mut vec![], 512, "K", d)) * 4)
-            % z.clone().n;
+    fn key_decrypt(&mut self, pw: &[u8], d: u64) {
+        let z = self.asym_nonce.clone().unwrap();
+
+        let s: Integer =
+            (bytes_to_big(kmac_xof(&mut pw.to_owned(), &vec![], 512, "K", d)) * 4) % z.clone().n;
 
         let w = z * s;
-        let ke_ka = kmac_xof(&mut big_to_bytes(w.x), &mut vec![], 1024, "PK", d);
+        let ke_ka = kmac_xof(&mut big_to_bytes(w.x), &vec![], 1024, "PK", d);
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
         let len = self.msg.len() * 8;
-        let m = Box::new(kmac_xof(ke, &mut vec![], (len) as u64, "PKE", d));
+        let m = Box::new(kmac_xof(ke, &vec![], (len) as u64, "PKE", d));
         xor_bytes(&mut self.msg, m.borrow());
-        let t_p = kmac_xof(&mut ka.clone(), &mut self.msg, 512, "PKA", d);
-        self.op_result = Some(t_p == self.ecc_params.as_mut().unwrap().t);
+        let t_p = kmac_xof(&mut ka.clone(), &self.msg, 512, "PKA", d);
+        self.op_result = Some(t_p == self.digest.clone().unwrap());
     }
 }
 
@@ -444,28 +314,9 @@ impl Signable for Message {
     /// * `return -> Signature`: signature: (`ℎ`, `𝑍`)
     /// ## Usage
     /// ```
-    /// use capycrypt::curve::Curves;
-    /// use capycrypt::curve::{CurvePoint, Point};
-    /// use capycrypt::ops;
-    /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-    /// use std::borrow::BorrowMut;
-    ///
-    /// let mut message = Box::new(get_random_bytes(5242880).to_owned());
-    /// let pw = get_random_bytes(32);
-    ///
-    /// const SELECTED_CURVE: Curves = Curves::E448;
-    /// let key_obj = operations::gen_keypair(&mut pw.clone(), "test".to_string(), 256);
-    /// let x = key_obj.pub_x;
-    /// let y = key_obj.pub_y;
-    ///
-    /// // Sign then verify
-    /// let key = CurvePoint::point(SELECTED_CURVE, x, y);
-    /// let sig = operations::sign_with_key(&mut pw.clone(), &mut message, 256);
-    /// let res = operations::verify_signature(&sig, key, &mut message, 256);
-    /// assert!(res);
     /// ```
-    fn sign_with_key(&mut self, pw: &mut Vec<u8>, d: u64) {
-        let s: Integer = bytes_to_big(kmac_xof(pw, &mut vec![], 512, "K", d)) * 4;
+    fn sign(&mut self, pw: &mut Vec<u8>, d: u64) {
+        let s: Integer = bytes_to_big(kmac_xof(pw, &vec![], 512, "K", d)) * 4;
         let mut s_bytes = big_to_bytes(s.clone());
 
         let k: Integer =
@@ -492,27 +343,8 @@ impl Signable for Message {
     /// * `return`: true if, and only if, kmac_xof(𝑈ₓ , m, 512, “T”) = h
     /// ## Usage
     /// ```
-    /// use capycrypt::curve::Curves;
-    /// use capycrypt::curve::{CurvePoint, Point};
-    /// use capycrypt::ops;
-    /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-    /// use std::borrow::BorrowMut;
-    ///
-    /// let mut message = Box::new(get_random_bytes(5242880).to_owned());
-    /// let pw = get_random_bytes(32);
-    ///
-    /// const SELECTED_CURVE: Curves = Curves::E448;
-    /// let key_obj = operations::gen_keypair(&mut pw.clone(), "test".to_string(), 256);
-    /// let x = key_obj.pub_x;
-    /// let y = key_obj.pub_y;
-    ///
-    /// // Sign then verify
-    /// let key = CurvePoint::point(SELECTED_CURVE, x, y);
-    /// let sig = operations::sign_with_key(&mut pw.clone(), &mut message, 256);
-    /// let res = operations::verify_signature(&sig, key, &mut message, 256);
-    /// assert!(res);
     /// ```
-    fn verify_signature(&mut self, sig: &Signature, pub_key: EdCurvePoint, d: u64) {
+    fn verify(&mut self, sig: &Signature, pub_key: EdCurvePoint, d: u64) {
         let mut u = EdCurvePoint::generator(SELECTED_CURVE, false) * sig.z.clone();
         let hv = pub_key * (bytes_to_big(sig.h.clone()));
         u = u + &hv;
@@ -521,13 +353,26 @@ impl Signable for Message {
     }
 }
 
+impl Message {
+    pub fn new(data: &mut Vec<u8>) -> Message {
+        Message {
+            msg: Box::new(data.to_owned()),
+            sym_nonce: None,
+            asym_nonce: None,
+            digest: None,
+            op_result: None,
+            signature: None,
+        }
+    }
+}
+
 #[derive(Debug)]
 /// Message type for which cryptographic traits are defined.
 pub struct Message {
     pub msg: Box<Vec<u8>>,
-    pub digest: Option<Box<Vec<u8>>>,
-    pub sym_params: Option<SymmetricCryptogram>,
-    pub ecc_params: Option<ECCryptogram>,
+    pub sym_nonce: Option<Vec<u8>>,
+    pub asym_nonce: Option<EdCurvePoint>,
+    pub digest: Option<Vec<u8>>,
     pub op_result: Option<bool>,
     pub signature: Option<Signature>,
 }
@@ -538,16 +383,16 @@ pub trait Hashable {
 }
 
 pub trait PwEncryptable {
-    fn encrypt_with_pw(&mut self, pw: &mut Vec<u8>, d: u64);
-    fn decrypt_with_pw(&mut self, pw: &mut Vec<u8>, d: u64);
+    fn pw_encrypt(&mut self, pw: &[u8], d: u64);
+    fn pw_decrypt(&mut self, pw: &[u8], d: u64);
 }
 
 pub trait KeyEncryptable {
-    fn encrypt_with_key(&mut self, pub_key: EdCurvePoint, d: u64);
-    fn decrypt_with_key(&mut self, pw: &mut [u8], d: u64);
+    fn key_encrypt(&mut self, pub_key: EdCurvePoint, d: u64);
+    fn key_decrypt(&mut self, pw: &[u8], d: u64);
 }
 
 pub trait Signable {
-    fn sign_with_key(&mut self, pw: &mut Vec<u8>, d: u64);
-    fn verify_signature(&mut self, sig: &Signature, pub_key: EdCurvePoint, d: u64);
+    fn sign(&mut self, pw: &mut Vec<u8>, d: u64);
+    fn verify(&mut self, sig: &Signature, pub_key: EdCurvePoint, d: u64);
 }

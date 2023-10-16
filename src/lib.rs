@@ -1,12 +1,13 @@
+use curves::EdCurvePoint;
 use rug::Integer;
 
 /*
-    TODO: 
+    TODO:
     - refactor z, z_x, z_y into message
     - fix tag authentication failure
     - update usage examples in docs
     - Fix benches
-*/ 
+*/
 
 /// Module for all EC operations.
 pub mod curves;
@@ -19,24 +20,6 @@ pub mod sha3 {
 
 /// Module for encrypt, decrypt, and sign functions.
 pub mod ops;
-
-#[derive(Debug)]
-/// An object containing the necessary fields for symmetric encryptions and decryptions.
-pub struct SymmetricCryptogram {
-    /// nonce
-    pub z: Vec<u8>,
-}
-
-#[derive(Debug)]
-/// An object containing the necessary fields for asymmetric encryptions and decryptions.
-pub struct ECCryptogram {
-    /// Z_x is the x coordinate of the public nonce
-    pub z_x: Integer,
-    /// Z_y is the y coordinate of the public nonce
-    pub z_y: Integer,
-    /// c represents the ciphertext of an encryption
-    pub t: Vec<u8>,
-}
 
 #[derive(Debug)]
 /// An object containing the necessary fields for Schnorr signatures.
@@ -61,10 +44,8 @@ impl Clone for Signature {
 pub struct KeyPair {
     /// String indicating the owner of the key, can be arbitrary
     pub owner: String,
-    /// Curve Point X coordinate
-    pub pub_x: Integer,
-    /// Curve Point Y coordinate
-    pub pub_y: Integer,
+    /// Public encryption key
+    pub pub_key: EdCurvePoint,
     /// value representing secret scalar, None if KeyType is PUBLIC
     pub priv_key: Vec<u8>,
     /// Date key was generated
