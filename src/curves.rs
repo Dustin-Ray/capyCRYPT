@@ -75,12 +75,6 @@ pub trait Generator {
     fn generator(curve: EdCurves, msb: bool) -> EdCurvePoint;
 }
 
-/// Specifies the function for producing a coordinate pair.
-/// Does not check that point is on curve.
-pub trait ArbitraryPoint {
-    fn arbitrary_point(curve: EdCurves, x: rug::Integer, y: rug::Integer) -> EdCurvePoint;
-}
-
 /// Specifies the function for verifying that a point is on the curve.
 pub trait IsPoint {
     fn is_point(&self) -> bool;
@@ -102,7 +96,7 @@ impl Add<&EdCurvePoint> for EdCurvePoint {
     /// excessive cloning in this function is a consequence of the
     /// Rug Integer GMP FFI which does not implement ```copy``` trait. Observed complexity
     /// impact appears minimal.
-    fn add(self, p2: &EdCurvePoint) -> EdCurvePoint {
+    fn add(mut self, p2: &EdCurvePoint) -> EdCurvePoint {
         let x1 = &self.x;
         let y1 = &self.y;
         let x2 = p2.x.clone();
@@ -130,7 +124,9 @@ impl Add<&EdCurvePoint> for EdCurvePoint {
         let new_x = ((x1y2y1x2_sum * one_plus_dx1x2y1y2inv) % p.clone() + p.clone()) % p.clone();
         // (y₁y₂ − x₁x₂) / (1 − dx₁x₂y₁y₂)
         let new_y = ((y1y2x1x2_difference * one_minus_dx1x2y1y2inv) % p.clone() + p.clone()) % p;
-        EdCurvePoint::arbitrary_point(self.curve, new_x, new_y)
+        self.x = new_x;
+        self.y = new_y;
+        self
     }
 }
 
@@ -233,8 +229,9 @@ impl Mul<Integer> for EdCurvePoint {
 /// If a point is defined as (x, y) then its negation is (-x, y)
 impl Neg for EdCurvePoint {
     type Output = EdCurvePoint;
-    fn neg(self) -> EdCurvePoint {
-        EdCurvePoint::arbitrary_point(self.curve, self.p - self.x, self.y)
+    fn neg(mut self) -> EdCurvePoint {
+        self.x = self.p.clone() - self.x.clone();
+        self
     }
 }
 
@@ -242,28 +239,6 @@ impl Neg for EdCurvePoint {
 impl PartialEq for EdCurvePoint {
     fn eq(&self, other: &Self) -> bool {
         self.x.eq(&other.x) && self.y.eq(&other.y)
-    }
-}
-
-/// Returns CurvePoint(x, y) for any x, y. Assumes valid curve point.
-///
-/// # Arguments
-///
-/// * `x: rug::Integer`     x-coordinate for point.
-/// * `y: rug::Integer`     y-coordinate for point.
-///
-/// # Examples
-impl ArbitraryPoint for EdCurvePoint {
-    fn arbitrary_point(req_curve: EdCurves, x: Integer, y: Integer) -> EdCurvePoint {
-        EdCurvePoint {
-            x,
-            y,
-            p: curve_p(req_curve),
-            d: curve_d(req_curve),
-            r: curve_r(req_curve),
-            n: order(req_curve),
-            curve: req_curve,
-        }
     }
 }
 

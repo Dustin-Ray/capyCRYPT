@@ -1,61 +1,62 @@
-use capycrypt::curves::{
-    ArbitraryPoint, EdCurvePoint,
-    EdCurves::{self, E222},
+use capycrypt::{
+    curves::EdCurves::{self, E222},
+    KeyEncryptable, KeyPair, Message, PwEncryptable, Signable,
 };
-use capycrypt::ops::Message;
+
 use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
 use criterion::{criterion_group, criterion_main, Criterion};
-use std::borrow::BorrowMut;
+
 const SELECTED_CURVE: EdCurves = E222;
 
 /// Symmetric encrypt and decrypt roundtrip
-fn sym_enc(pw: &mut Vec<u8>, mut message: Message) {
-    let mut cg2 = Box::new(encrypt_with_pw(&mut pw.clone(), &mut message, 256));
-    decrypt_with_pw(&mut pw.clone(), &mut cg2.borrow_mut(), 256);
+fn sym_enc(pw: &mut Vec<u8>, mut msg: Message) {
+    msg.pw_encrypt(&mut pw.clone(), 256);
+    msg.pw_decrypt(&mut pw.clone(), 256);
 }
 
 /// Asymmetric encrypt and decrypt roundtrip + keygen
-fn key_gen_enc_dec(pw: &mut Vec<u8>, mut message: Box<Vec<u8>>) {
-    let owner = "test key".to_string();
-    let key_obj = gen_keypair(&mut pw.clone(), owner, 256);
-    let x = key_obj.pub_x;
-    let y = key_obj.pub_y;
-    let pub_key = EdCurvePoint::arbitrary_point(SELECTED_CURVE, x, y);
-    let mut enc = encrypt_with_key(pub_key, &mut message, 256);
-    decrypt_with_key(&mut pw.clone(), enc.borrow_mut(), 256);
+fn key_gen_enc_dec(pw: &mut Vec<u8>, mut msg: Message) {
+    let key_pair = KeyPair::new(pw, "test key".to_string(), SELECTED_CURVE, 256);
+    msg.key_encrypt(&key_pair.pub_key, 256);
+    msg.key_decrypt(&key_pair.priv_key, 256);
 }
 
 /// Signature generation + verification roundtrip
-pub fn sign_verify(pw: &mut Vec<u8>, mut message: Box<Vec<u8>>) {
-    let key_obj = gen_keypair(&mut pw.clone(), "test".to_string(), 256);
-    let x = key_obj.pub_x;
-    let y = key_obj.pub_y;
-    let key = EdCurvePoint::arbitrary_point(SELECTED_CURVE, x, y);
-    let sig = sign_with_key(&mut pw.clone(), &mut message, 256);
-    verify_signature(&sig, key, &mut message, 256);
+pub fn sign_verify(mut key_pair: KeyPair, mut msg: Message) {
+    msg.sign(&mut key_pair.priv_key, 512);
+    msg.verify(key_pair.pub_key, 512);
 }
 
 fn bench_sign_verify(c: &mut Criterion) {
-    let pw = get_random_bytes(16);
-    let message = Box::new(get_random_bytes(5242880).to_owned());
     c.bench_function("Signature Generation + Verification Roundtrip", |b| {
-        b.iter(|| sign_verify(&mut pw.clone(), message.clone()))
+        b.iter(|| {
+            sign_verify(
+                KeyPair::new(&get_random_bytes(16), "test key".to_string(), SELECTED_CURVE, 512),
+                Message::new(&mut get_random_bytes(5242880)),
+            )
+        });
     });
 }
 
 fn bench_sym_enc(c: &mut Criterion) {
-    let pw = get_random_bytes(16);
-    let message = Box::new(get_random_bytes(5242880).to_owned());
     c.bench_function("Symmetric Encrypt + Decrypt Roundtrip", |b| {
-        b.iter(|| sym_enc(&mut pw.clone(), message.clone()))
+        b.iter(|| {
+            sym_enc(
+                &mut get_random_bytes(64),
+                Message::new(&mut get_random_bytes(5242880)),
+            )
+        });
     });
 }
 
 fn bench_key_gen_enc_dec(c: &mut Criterion) {
-    let pw = get_random_bytes(16);
-    let message = Box::new(get_random_bytes(5242880).to_owned());
     c.bench_function("Keygen + Asymmetric Encrypt + Decrypt Roundtrip", |b| {
-        b.iter(|| key_gen_enc_dec(&mut pw.clone(), message.clone()))
+        b.iter(|| {
+            key_gen_enc_dec(
+                &mut KeyPair::new(&get_random_bytes(32), "test key".to_string(), SELECTED_CURVE, 256).priv_key,
+                Message::new(&mut get_random_bytes(5242880)),
+            )
+        });
     });
 }
 

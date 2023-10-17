@@ -1,4 +1,4 @@
-use curves::EdCurvePoint;
+use curves::{EdCurvePoint, EdCurves};
 use rug::Integer;
 
 /*
@@ -50,4 +50,50 @@ pub struct KeyPair {
     pub priv_key: Vec<u8>,
     /// Date key was generated
     pub date_created: String,
+    /// Selected curve type
+    pub curve: EdCurves
+}
+
+impl Message {
+    pub fn new(data: &mut Vec<u8>) -> Message {
+        Message {
+            msg: Box::new(data.to_owned()),
+            sym_nonce: None,
+            asym_nonce: None,
+            digest: None,
+            op_result: None,
+            sig: None,
+        }
+    }
+}
+
+#[derive(Debug)]
+/// Message type for which cryptographic traits are defined.
+pub struct Message {
+    pub msg: Box<Vec<u8>>,
+    pub sym_nonce: Option<Vec<u8>>,
+    pub asym_nonce: Option<EdCurvePoint>,
+    pub digest: Option<Vec<u8>>,
+    pub op_result: Option<bool>,
+    pub sig: Option<Signature>,
+}
+
+pub trait Hashable {
+    fn compute_sha3_hash(&mut self, d: u64);
+    fn compute_tagged_hash(&mut self, pw: &mut Vec<u8>, s: &str, d: u64);
+}
+
+pub trait PwEncryptable {
+    fn pw_encrypt(&mut self, pw: &[u8], d: u64);
+    fn pw_decrypt(&mut self, pw: &[u8], d: u64);
+}
+
+pub trait KeyEncryptable {
+    fn key_encrypt(&mut self, pub_key: &EdCurvePoint, d: u64);
+    fn key_decrypt(&mut self, pw: &[u8], d: u64);
+}
+
+pub trait Signable {
+    fn sign(&mut self, pw: &mut Vec<u8>, d: u64);
+    fn verify(&mut self, pub_key: EdCurvePoint, d: u64);
 }

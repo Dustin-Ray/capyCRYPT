@@ -1,8 +1,3 @@
-use crate::curves::{
-    order, EdCurvePoint,
-    EdCurves::{self, E448},
-    Generator,
-};
 use crate::sha3::{
     aux_functions::{
         byte_utils::{
@@ -11,6 +6,14 @@ use crate::sha3::{
         nist_800_185::{byte_pad, encode_string, right_encode},
     },
     sponge::{sponge_absorb, sponge_squeeze},
+};
+use crate::{
+    curves::{
+        order, EdCurvePoint,
+        EdCurves::{self, E448},
+        Generator,
+    },
+    Hashable, KeyEncryptable, Message, PwEncryptable, Signable,
 };
 use crate::{KeyPair, Signature};
 
@@ -129,7 +132,7 @@ impl Hashable for Message {
     /// ## Usage:
     /// ```
     /// ```
-    fn compute_tagged_hash(&mut self, pw: &mut Vec<u8>, s: &mut str, d: u64) {
+    fn compute_tagged_hash(&mut self, pw: &mut Vec<u8>, s: &str, d: u64) {
         self.digest = match d {
             224 | 256 | 384 | 512 => Some(kmac_xof(pw, &self.msg, d, s, d)),
             _ => panic!("Value must be either 224, 256. 384, or 512"),
@@ -214,15 +217,16 @@ impl KeyPair {
     /// ## Usage:
     /// ```  
     /// ```
-    pub fn new(pw: &Vec<u8>, owner: String, d: u64) -> KeyPair {
+    pub fn new(pw: &Vec<u8>, owner: String, curve: EdCurves, d: u64) -> KeyPair {
         let s: Integer = (bytes_to_big(kmac_xof(&mut pw.to_owned(), &vec![], 512, "K", d)) * 4)
             % order(SELECTED_CURVE);
-        let v = EdCurvePoint::generator(SELECTED_CURVE, false) * (s);
+        let pub_key = EdCurvePoint::generator(SELECTED_CURVE, false) * (s);
         KeyPair {
             owner,
-            pub_key: v,
+            pub_key,
             priv_key: pw.to_vec(),
             date_created: get_date_and_time_as_string(),
+            curve
         }
     }
 }
@@ -246,19 +250,19 @@ impl KeyEncryptable for Message {
     /// ## Usage:
     /// ```
     /// ```
-    fn key_encrypt(&mut self, pub_key: EdCurvePoint, d: u64) {
+    fn key_encrypt(&mut self, pub_key: &EdCurvePoint, d: u64) {
         let k: Integer = (bytes_to_big(get_random_bytes(64)) * 4) % order(SELECTED_CURVE);
-        let w = pub_key * k.clone();
+        let w = pub_key.clone() * k.clone();
         let z = EdCurvePoint::generator(SELECTED_CURVE, false) * k;
+
         let ke_ka = kmac_xof(&mut big_to_bytes(w.x), &vec![], 1024, "PK", d);
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
-        let t = kmac_xof(&mut ka.clone(), self.msg.borrow(), 512, "PKA", d);
-        let len = (self.msg.len() * 8) as u64;
-        let c = kmac_xof(ke, &vec![], len, "PKE", d);
+
+        let t = kmac_xof(ka, self.msg.borrow(), 512, "PKA", d);
+        let c = kmac_xof(ke, &vec![], (self.msg.len() * 8) as u64, "PKE", d);
         xor_bytes(&mut self.msg, &c);
 
-        self.msg = Box::new(c);
         self.digest = Some(t);
         self.asym_nonce = Some(z);
     }
@@ -283,17 +287,16 @@ impl KeyEncryptable for Message {
     /// ```
     fn key_decrypt(&mut self, pw: &[u8], d: u64) {
         let z = self.asym_nonce.clone().unwrap();
-
         let s: Integer =
             (bytes_to_big(kmac_xof(&mut pw.to_owned(), &vec![], 512, "K", d)) * 4) % z.clone().n;
-
         let w = z * s;
+
         let ke_ka = kmac_xof(&mut big_to_bytes(w.x), &vec![], 1024, "PK", d);
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
-        let len = self.msg.len() * 8;
-        let m = Box::new(kmac_xof(ke, &vec![], (len) as u64, "PKE", d));
-        xor_bytes(&mut self.msg, m.borrow());
+
+        let m = Box::new(kmac_xof(ke, &vec![], (self.msg.len() * 8) as u64, "PKE", d));
+        xor_bytes(&mut self.msg, &m);
         let t_p = kmac_xof(&mut ka.clone(), &self.msg, 512, "PKA", d);
         self.op_result = Some(t_p == self.digest.clone().unwrap());
     }
@@ -319,16 +322,15 @@ impl Signable for Message {
         let s: Integer = bytes_to_big(kmac_xof(pw, &vec![], 512, "K", d)) * 4;
         let mut s_bytes = big_to_bytes(s.clone());
 
-        let k: Integer =
-            bytes_to_big(kmac_xof(&mut s_bytes, self.msg.borrow_mut(), 512, "N", d)) * 4;
+        let k: Integer = bytes_to_big(kmac_xof(&mut s_bytes, &self.msg, 512, "N", d)) * 4;
 
         let u = EdCurvePoint::generator(SELECTED_CURVE, false) * k.clone();
         let mut ux_bytes = big_to_bytes(u.x);
-        let h = kmac_xof(&mut ux_bytes, self.msg.borrow_mut(), 512, "T", d);
+        let h = kmac_xof(&mut ux_bytes, &self.msg, 512, "T", d);
         let h_big = bytes_to_big(h.clone());
         //(a % b + b) % b
         let z = ((k - (h_big * s)) % u.r.clone() + u.r.clone()) % u.r;
-        self.signature = Some(Signature { h, z })
+        self.sig = Some(Signature { h, z })
     }
     /// # Signature Verification
     /// Verifies a signature (h, 𝑍) for a byte array m under the (Schnorr/
@@ -344,55 +346,11 @@ impl Signable for Message {
     /// ## Usage
     /// ```
     /// ```
-    fn verify(&mut self, sig: &Signature, pub_key: EdCurvePoint, d: u64) {
-        let mut u = EdCurvePoint::generator(SELECTED_CURVE, false) * sig.z.clone();
-        let hv = pub_key * (bytes_to_big(sig.h.clone()));
+    fn verify(&mut self, pub_key: EdCurvePoint, d: u64) {
+        let mut u = EdCurvePoint::generator(SELECTED_CURVE, false) * self.sig.clone().unwrap().z;
+        let hv = pub_key * bytes_to_big(self.sig.clone().unwrap().h);
         u = u + &hv;
-        let h_p = kmac_xof(&mut big_to_bytes(u.x), self.msg.borrow_mut(), 512, "T", d);
-        self.op_result = Some(h_p == sig.h)
+        let h_p = kmac_xof(&mut big_to_bytes(u.x), &self.msg, 512, "T", d);
+        self.op_result = Some(h_p == self.sig.clone().unwrap().h)
     }
-}
-
-impl Message {
-    pub fn new(data: &mut Vec<u8>) -> Message {
-        Message {
-            msg: Box::new(data.to_owned()),
-            sym_nonce: None,
-            asym_nonce: None,
-            digest: None,
-            op_result: None,
-            signature: None,
-        }
-    }
-}
-
-#[derive(Debug)]
-/// Message type for which cryptographic traits are defined.
-pub struct Message {
-    pub msg: Box<Vec<u8>>,
-    pub sym_nonce: Option<Vec<u8>>,
-    pub asym_nonce: Option<EdCurvePoint>,
-    pub digest: Option<Vec<u8>>,
-    pub op_result: Option<bool>,
-    pub signature: Option<Signature>,
-}
-
-pub trait Hashable {
-    fn compute_sha3_hash(&mut self, d: u64);
-    fn compute_tagged_hash(&mut self, pw: &mut Vec<u8>, s: &mut str, d: u64);
-}
-
-pub trait PwEncryptable {
-    fn pw_encrypt(&mut self, pw: &[u8], d: u64);
-    fn pw_decrypt(&mut self, pw: &[u8], d: u64);
-}
-
-pub trait KeyEncryptable {
-    fn key_encrypt(&mut self, pub_key: EdCurvePoint, d: u64);
-    fn key_decrypt(&mut self, pw: &[u8], d: u64);
-}
-
-pub trait Signable {
-    fn sign(&mut self, pw: &mut Vec<u8>, d: u64);
-    fn verify(&mut self, sig: &Signature, pub_key: EdCurvePoint, d: u64);
 }

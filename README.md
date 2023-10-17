@@ -24,6 +24,13 @@ Add the following line to your `Cargo.toml` file:
 capycrypt = "0.3.1"
 ```
 
+### Note: Building the `rug` Crate
+
+This library uses an FFI to GMP by means of the rug crate. To successfully build the `rug` crate, please ensure that you have the `m4` library installed on your system. `m4` is a prerequisite for certain components of the build process. You can install it on debian-like systems with:
+```bash
+apt-get install m4
+```
+
 ## Benches
 This library uses the criterion crate for benches. Running:
 ```bash
