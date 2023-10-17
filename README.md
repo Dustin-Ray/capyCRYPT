@@ -21,7 +21,7 @@ A complete Rust cryptosystem implementing FIPS 202 paired with a variety of Edwa
 ## Installation
 Add the following line to your `Cargo.toml` file:
 ```toml
-capycrypt = "0.4.0"
+capycrypt = "0.4.1"
 ```
 
 ### Note: Building the `rug` Crate
