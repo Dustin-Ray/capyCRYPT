@@ -350,20 +350,20 @@ impl KeyEncryptable for Message {
 impl Signable for Message {
     /// # Schnorr Signatures
     /// Generates a signature for a byte array m under passphrase pw.
-    /// 
+    ///
     /// ## Algorithm:
     /// * `s` ← kmac_xof(pw, “”, 512, “K”); s ← 4s
     /// * `k` ← kmac_xof(s, m, 512, “N”); k ← 4k
     /// * `𝑈` ← k*𝑮;
     /// * `ℎ` ← kmac_xof(𝑈ₓ , m, 512, “T”); 𝑍 ← (𝑘 – ℎ𝑠) mod r
-    /// 
+    ///
     /// ## Arguments:
     /// * `key: &mut KeyPair, `: reference to KeyPair.
     /// * `d: u64>`: encryption security strength in bits. Can only be 224, 256, 384, or 512.
-    /// 
+    ///
     /// ## Assumes:
     /// * Some(key.priv_key)
-    /// 
+    ///
     /// ## Usage
     /// ```
     /// ```

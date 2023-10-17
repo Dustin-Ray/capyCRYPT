@@ -1,5 +1,4 @@
 use capycrypt::{Hashable, Message};
-
 /// Test cases for cSHAKE and KMAC functionality. All values labeled
 /// "exptected" in cshake and kmac tests are official test vectors supplied by NIST.
 #[cfg(test)]
@@ -157,7 +156,7 @@ mod sponge_tests {
 }
 #[test]
 fn test_shake_224() {
-    let mut data = Message::new(&mut Box::new("".as_bytes().to_owned()));
+    let mut data = Message::new(&mut vec![]);
     let expected = "6b4e03423667dbb73b6e15454f0eb1abd4597f9a1b078e3f5b5a6bc7";
     data.compute_sha3_hash(224);
     assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
@@ -170,7 +169,7 @@ fn test_shake_224() {
 
 #[test]
 fn test_shake_256() {
-    let mut data = Message::new(&mut Box::new("".as_bytes().to_owned()));
+    let mut data = Message::new(&mut vec![]);
     let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
     data.compute_sha3_hash(256);
     assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
