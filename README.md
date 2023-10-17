@@ -4,7 +4,7 @@
 [![Crates.io](https://img.shields.io/crates/v/capycrypt?style=flat-square)](https://crates.io/crates/capycrypt)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/drcapybara/capyCRYPT/blob/master/LICENSE.txt) 
 
-A complete Rust cryptosystem implementing FIPS 202 paired with a variety of Edwards curves. An academic exercise in cryptographic algorithm design.
+A complete Rust cryptosystem implementing [NIST FIPS 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf) paired with a variety of Edwards curves. An academic exercise in cryptographic algorithm design.
 
 ## Features
 - **SHA-3:** NIST-Compliant Secure Hash Algorithm 3 (SHA-3) implementation for generating cryptographic hash values.
@@ -79,7 +79,7 @@ let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), E448,
 
 // Encrypt the message
 msg.key_encrypt(&key_pair.pub_key, 512);
-//Decrypt the message
+// Decrypt the message
 msg.key_decrypt(&key_pair.priv_key, 512);
 // Verify
 assert!(msg.op_result.unwrap());
@@ -101,9 +101,9 @@ let pw = get_random_bytes(64);
 let key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
 // Sign with 512 bits of security
 msg.sign(&key_pair, 512);
-// verify signature
+// Verify signature
 msg.verify(&key_pair.pub_key, 512);
-// assert correctness
+// Assert correctness
 assert!(msg.op_result.unwrap());
 ```
 
