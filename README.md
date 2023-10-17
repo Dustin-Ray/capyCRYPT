@@ -71,12 +71,18 @@ use capycrypt::{
     Message,
     sha3::aux_functions::byte_utils::get_random_bytes,
     curves::EdCurves::E448};
+
 // Get 5mb random data
 let mut msg = Message::new(&mut get_random_bytes(5242880));
-// Generate the keypair
+// Create a new private/public keypair
 let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), E448, 512);
-// Encrypt with the public key
+
+// Encrypt the message
 msg.key_encrypt(&key_pair.pub_key, 512);
+//Decrypt the message
+msg.key_decrypt(&key_pair.priv_key, 512);
+// Verify
+assert!(msg.op_result.unwrap());
 ```
 
 ### Schnorr Signatures:
