@@ -46,54 +46,55 @@ assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
 
 ### Symmetric Encrypt/Decrypt:
 ```rust
-use capycrypt::{Message, PwEncryptable};
-use capycrypt::sha3::{aux_functions::{byte_utils::{get_random_bytes}}};
+use capycrypt::{
+    Message,
+    PwEncryptable,
+    sha3::{aux_functions::{byte_utils::{get_random_bytes}}}
+};
 // Get a random password
-let pw = get_random_bytes(64); 
+let pw = get_random_bytes(64);
 // Get 5mb random data
-let mut msg = Message::new(&mut get_random_bytes(5242880));  
-
+let mut msg = Message::new(&mut get_random_bytes(5242880));
 // Encrypt the data with 512 bits of security
-msg.pw_encrypt(&mut pw.clone(), 512); 
+msg.pw_encrypt(&mut pw.clone(), 512);
 // Decrypt the data
-msg.pw_decrypt(&mut pw.clone(), 512); 
+msg.pw_decrypt(&mut pw.clone(), 512);
 // Verify operation success
-assert!(msg.op_result.unwrap()); 
+assert!(msg.op_result.unwrap());
 ```
 
 ### Asymmetric Encrypt/Decrypt:
 ```rust
-use capycrypt::{Message, KeyEncryptable};
-use capycrypt::sha3::{aux_functions::{byte_utils::{get_random_bytes}}};
-// 5mb random data
+use capycrypt::{
+    KeyEncryptable,
+    KeyPair,
+    Message,
+    sha3::aux_functions::byte_utils::get_random_bytes,
+    curves::EdCurves::E448};
+// Get 5mb random data
 let mut msg = Message::new(&mut get_random_bytes(5242880));
-// Generate a private/public keypair
-let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), E448, 256);
-
-// Encrypt with public key with 256 bits of security
-msg.key_encrypt(&key_pair.pub_key, 256);
-// Decrypt with private key
-msg.key_decrypt(&key_pair.priv_key, 256);
-// Verify correct decryption
-assert!(msg.op_result.unwrap());
+// Generate the keypair
+let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), E448, 512);
+// Encrypt with the public key
+msg.key_encrypt(&key_pair.pub_key, 512);
 ```
 
 ### Schnorr Signatures:
 ```rust
-use capycrypt::{KeyPair, Message, Signable};
-use capycrypt::sha3::{aux_functions::{byte_utils::{get_random_bytes}}};
+use capycrypt::{
+    Signable,
+    KeyPair,
+    Message,
+    sha3::aux_functions::byte_utils::get_random_bytes,
+    curves::EdCurves::E448};
 // Get random 5mb
 let mut msg = Message::new(&mut get_random_bytes(5242880));
 // Get a random password
 let pw = get_random_bytes(64);
-// Generate a public/private keypair
-let mut key_pair = KeyPair::new(&pw, "Key Tester".to_string(), E448, 512);
-
-// Sign the message with the private key
+// Generate a signing keypair
+let key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
+// Sign with 512 bits of security
 msg.sign(&key_pair, 512);
-// Verify the message with the public key
-msg.verify(&key_pair.pub_key, 512);
-assert!(msg.op_result.unwrap());
 ```
 
 ## Benches

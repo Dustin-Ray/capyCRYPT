@@ -97,9 +97,6 @@ pub fn cshake(x: &mut Vec<u8>, l: u64, n: &str, s: &str, d: u64) -> Vec<u8> {
 ///
 /// ## Returns:
 /// * `return  -> Vec<u8>`: kmac_xof of `x` under `k`
-/// ## Usage:
-/// ```
-/// ```
 pub fn kmac_xof(k: &Vec<u8>, x: &Vec<u8>, l: u64, s: &str, d: u64) -> Vec<u8> {
     let mut encode_k = encode_string(k);
     let bytepad_w = match d {
@@ -327,10 +324,11 @@ impl KeyEncryptable for Message {
     ///     Message,
     ///     sha3::aux_functions::byte_utils::get_random_bytes,
     ///     curves::EdCurves::E448};
-    ///
+    /// // Get 5mb random data
     /// let mut msg = Message::new(&mut get_random_bytes(5242880));
+    /// // Generate the keypair
     /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), E448, 512);
-    ///
+    /// // Encrypt with the public key
     /// msg.key_encrypt(&key_pair.pub_key, 512);
     /// ```
     fn key_encrypt(&mut self, pub_key: &EdCurvePoint, d: u64) {
