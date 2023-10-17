@@ -1,24 +1,22 @@
-use crate::sha3::{
-    aux_functions::{
-        byte_utils::{
-            big_to_bytes, bytes_to_big, get_date_and_time_as_string, get_random_bytes, xor_bytes,
-        },
-        nist_800_185::{byte_pad, encode_string, right_encode},
-    },
-    sponge::{sponge_absorb, sponge_squeeze},
-};
 use crate::{
     curves::{
         order, EdCurvePoint,
         EdCurves::{self, E448},
         Generator,
     },
-    Hashable, KeyEncryptable, Message, PwEncryptable, Signable,
+    sha3::{
+        aux_functions::{
+            byte_utils::{
+                big_to_bytes, bytes_to_big, get_date_and_time_as_string, get_random_bytes,
+                xor_bytes,
+            },
+            nist_800_185::{byte_pad, encode_string, right_encode},
+        },
+        sponge::{sponge_absorb, sponge_squeeze},
+    },
+    Hashable, KeyEncryptable, KeyPair, Message, PwEncryptable, Signable, Signature,
 };
-use crate::{KeyPair, Signature};
-
 use rug::Integer;
-use std::borrow::{Borrow, BorrowMut};
 
 const SELECTED_CURVE: EdCurves = E448;
 /*
@@ -102,7 +100,7 @@ pub fn cshake(x: &mut Vec<u8>, l: u64, n: &str, s: &str, d: u64) -> Vec<u8> {
 /// ## Usage:
 /// ```
 /// ```
-pub fn kmac_xof(k: &mut Vec<u8>, x: &Vec<u8>, l: u64, s: &str, d: u64) -> Vec<u8> {
+pub fn kmac_xof(k: &Vec<u8>, x: &Vec<u8>, l: u64, s: &str, d: u64) -> Vec<u8> {
     let mut encode_k = encode_string(k);
     let bytepad_w = match d {
         256 => 168,
@@ -121,10 +119,18 @@ impl Hashable for Message {
     /// Computes SHA3-d hash of input. Does not consume input.
     /// Replaces `Message.digest` with result of operation.
     /// ## Arguments:
-    /// * `d: u64>`: requested security strength in bits. Supported
+    /// * `d: u64`: requested security strength in bits. Supported
     /// bitstrengths are 224, 256, 384, or 512.
     /// ## Usage:
     /// ```
+    /// use capycrypt::{Hashable, Message};
+    /// // Hash the empty string
+    /// let mut data = Message::new(&mut vec![]);
+    /// // Obtained from OpenSSL
+    /// let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
+    /// // Compute a SHA3 digest with 256 bits of security
+    /// data.compute_sha3_hash(256);
+    /// assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
     /// ```
     fn compute_sha3_hash(&mut self, d: u64) {
         self.digest = match d {
@@ -141,10 +147,16 @@ impl Hashable for Message {
     /// * `pw: &mut Vec<u8>`: symmetric encryption key, can be blank but shouldnt be
     /// * `message: &mut Vec<u8>`: message to encrypt
     /// * `s: &mut str`: domain seperation string
-    /// * `d: u64>`: requested security strength in bits. Supported
+    /// * `d: u64`: requested security strength in bits. Supported
     /// bitstrengths are 224, 256, 384, or 512.
     /// ## Usage:
     /// ```
+    /// use capycrypt::{Hashable, Message};
+    /// let mut pw = "test".as_bytes().to_vec();
+    /// let mut data = Message::new(&mut vec![]);
+    /// let expected = "0f9b5dcd47dc08e08a173bbe9a57b1a65784e318cf93cccb7f1f79f186ee1caeff11b12f8ca3a39db82a63f4ca0b65836f5261ee64644ce5a88456d3d30efbed";
+    /// data.compute_tagged_hash(&mut pw, &"", 512);
+    /// assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
     /// ```
     fn compute_tagged_hash(&mut self, pw: &mut Vec<u8>, s: &str, d: u64) {
         self.digest = match d {
@@ -157,12 +169,10 @@ impl Hashable for Message {
 impl PwEncryptable for Message {
     /// # Symmetric Encryption
     /// Encrypts a byte array m symmetrically under passphrase pw.
-    ///
     /// ## Replaces:
     /// * `Message.data` with result of encryption.
     /// * `Message.t` with keyed hash of plaintext.
     /// * `Message.sym_nonce` with z, as defined below.
-    ///
     /// SECURITY NOTE: ciphertext length == plaintext length
     /// ## Algorithm:
     /// * z ← Random(512)
@@ -171,11 +181,25 @@ impl PwEncryptable for Message {
     /// * t ← kmac_xof(ka, m, 512, “SKA”)
     /// ## Arguments:
     /// * `pw: &[u8]`: symmetric encryption key, can be blank but shouldnt be
-    /// * `d: u64>`: requested security strength in bits. Supported
+    /// * `d: u64`: requested security strength in bits. Supported
     /// bitstrengths are 224, 256, 384, or 512.
-    ///
     /// ## Usage:
     /// ```
+    /// use capycrypt::{
+    ///     Message,
+    ///     PwEncryptable,
+    ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}}
+    /// };
+    /// // Get a random password
+    /// let pw = get_random_bytes(64);
+    /// // Get 5mb random data
+    /// let mut msg = Message::new(&mut get_random_bytes(5242880));
+    /// // Encrypt the data with 512 bits of security
+    /// msg.pw_encrypt(&mut pw.clone(), 512);
+    /// // Decrypt the data
+    /// msg.pw_decrypt(&mut pw.clone(), 512);
+    /// // Verify operation success
+    /// assert!(msg.op_result.unwrap());
     /// ```
     fn pw_encrypt(&mut self, pw: &[u8], d: u64) {
         let z = get_random_bytes(512);
@@ -186,33 +210,43 @@ impl PwEncryptable for Message {
         let ka = &mut ke_ka[64..].to_vec();
         self.digest = Some(kmac_xof(ka, &self.msg, 512, "SKA", d));
         let c = kmac_xof(ke, &vec![], (self.msg.len() * 8) as u64, "SKE", d);
-        xor_bytes(self.msg.borrow_mut(), &c);
+        xor_bytes(&mut self.msg, &c);
         self.sym_nonce = Some(z);
     }
 
     /// # Symmetric Decryption
     /// Decrypts a symmetric cryptogram (z, c, t) under passphrase pw.
-    ///
     /// ## Assumes:
     /// * well-formed encryption
     /// * Some(Message.t)
     /// * Some(Message.z)
-    ///
     /// ## Replaces:
     /// * `Message.data` with result of decryption.
     /// * `Message.op_result` with result of comparision of `Message.t` == keyed hash of decryption.
-    ///
     /// ## Algorithm:
     /// * (ke || ka) ← kmac_xof(z || pw, “”, 1024, “S”)
     /// * m ← kmac_xof(ke, “”, |c|, “SKE”) ⊕ c
     /// * t’ ← kmac_xof(ka, m, 512, “SKA”)
-    ///
     /// ## Arguments:
     /// * `pw: &[u8]`: decryption password, can be blank
-    /// * `d: u64>`: encryption security strength in bits. Can only be 224, 256, 384, or 512.
-    ///
+    /// * `d: u64`: encryption security strength in bits. Can only be 224, 256, 384, or 512.
     /// ## Usage:
     /// ```
+    /// use capycrypt::{
+    ///     Message,
+    ///     PwEncryptable,
+    ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}}
+    /// };
+    /// // Get a random password
+    /// let pw = get_random_bytes(64);
+    /// // Get 5mb random data
+    /// let mut msg = Message::new(&mut get_random_bytes(5242880));
+    /// // Encrypt the data with 512 bits of security
+    /// msg.pw_encrypt(&mut pw.clone(), 512);
+    /// // Decrypt the data
+    /// msg.pw_decrypt(&mut pw.clone(), 512);
+    /// // Verify operation success
+    /// assert!(msg.op_result.unwrap());
     /// ```
     fn pw_decrypt(&mut self, pw: &[u8], d: u64) {
         let mut z_pw = self.sym_nonce.clone().unwrap();
@@ -245,6 +279,13 @@ impl KeyPair {
     /// and the nonce 𝑈: hash (𝑚, 𝑈, 𝑉) .
     /// ## Usage:
     /// ```  
+    /// use capycrypt::{
+    ///     curves::EdCurves::E448, KeyPair,
+    ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}}
+    /// };
+    /// // Get a random password
+    /// let pw = get_random_bytes(64);
+    /// let key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
     /// ```
     pub fn new(pw: &Vec<u8>, owner: String, curve: EdCurves, d: u64) -> KeyPair {
         let s: Integer = (bytes_to_big(kmac_xof(&mut pw.to_owned(), &vec![], 512, "K", d)) * 4)
@@ -265,25 +306,32 @@ impl KeyEncryptable for Message {
     /// Encrypts a byte array m in place under the (Schnorr/ECDHIES) public key 𝑉.
     /// Operates under Schnorr/ECDHIES principle in that shared symmetric key is
     /// exchanged with recipient. SECURITY NOTE: ciphertext length == plaintext length
-    ///
     /// ## Replaces:
     /// * `Message.data` with result of encryption.
     /// * `Message.t` with keyed hash of plaintext.
     /// * `Message.asym_nonce` with z, as defined below.
-    ///
     /// ## Algorithm:
     /// * k ← Random(512); k ← 4k
     /// * W ← kV; 𝑍 ← k*𝑮
     /// * (ke || ka) ← kmac_xof(W x , “”, 1024, “P”)
     /// * c ← kmac_xof(ke, “”, |m|, “PKE”) ⊕ m
     /// * t ← kmac_xof(ka, m, 512, “PKA”)
-    ///
     /// ## Arguments:
     /// * `pub_key: EdCurvePoint` : X coordinate of public key 𝑉
-    /// * `d: u64>`: Requested security strength in bits. Can only be 224, 256, 384, or 512.
-    ///
+    /// * `d: u64`: Requested security strength in bits. Can only be 224, 256, 384, or 512.
     /// ## Usage:
     /// ```
+    /// use capycrypt::{
+    ///     KeyEncryptable,
+    ///     KeyPair,
+    ///     Message,
+    ///     sha3::aux_functions::byte_utils::get_random_bytes,
+    ///     curves::EdCurves::E448};
+    ///
+    /// let mut msg = Message::new(&mut get_random_bytes(5242880));
+    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), E448, 512);
+    ///
+    /// msg.key_encrypt(&key_pair.pub_key, 512);
     /// ```
     fn key_encrypt(&mut self, pub_key: &EdCurvePoint, d: u64) {
         let k: Integer = (bytes_to_big(get_random_bytes(64)) * 4) % order(pub_key.curve);
@@ -294,7 +342,7 @@ impl KeyEncryptable for Message {
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
 
-        let t = kmac_xof(ka, self.msg.borrow(), 512, "PKA", d);
+        let t = kmac_xof(ka, &self.msg, 512, "PKA", d);
         let c = kmac_xof(ke, &vec![], (self.msg.len() * 8) as u64, "PKE", d);
         xor_bytes(&mut self.msg, &c);
 
@@ -325,10 +373,28 @@ impl KeyEncryptable for Message {
     ///
     /// ## Arguments:
     /// * `pw: &mut [u8]`: password used to generate ```CurvePoint``` encryption key.
-    /// * `d: u64>`: encryption security strength in bits. Can only be 224, 256, 384, or 512.
+    /// * `d: u64`: encryption security strength in bits. Can only be 224, 256, 384, or 512.
     ///
     /// ## Usage:
     /// ```
+    /// use capycrypt::{
+    ///     KeyEncryptable,
+    ///     KeyPair,
+    ///     Message,
+    ///     sha3::aux_functions::byte_utils::get_random_bytes,
+    ///     curves::EdCurves::E448};
+    ///
+    /// // Get 5mb random data
+    /// let mut msg = Message::new(&mut get_random_bytes(5242880));
+    /// // Create a new private/public keypair
+    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), E448, 512);
+    ///
+    /// // Encrypt the message
+    /// msg.key_encrypt(&key_pair.pub_key, 512);
+    /// //Decrypt the message
+    /// msg.key_decrypt(&key_pair.priv_key, 512);
+    /// // Verify
+    /// assert!(msg.op_result.unwrap());
     /// ```
     fn key_decrypt(&mut self, pw: &[u8], d: u64) {
         let z = self.asym_nonce.clone().unwrap();
@@ -359,16 +425,30 @@ impl Signable for Message {
     ///
     /// ## Arguments:
     /// * `key: &mut KeyPair, `: reference to KeyPair.
-    /// * `d: u64>`: encryption security strength in bits. Can only be 224, 256, 384, or 512.
+    /// * `d: u64`: encryption security strength in bits. Can only be 224, 256, 384, or 512.
     ///
     /// ## Assumes:
     /// * Some(key.priv_key)
     ///
     /// ## Usage
     /// ```
+    /// use capycrypt::{
+    ///     Signable,
+    ///     KeyPair,
+    ///     Message,
+    ///     sha3::aux_functions::byte_utils::get_random_bytes,
+    ///     curves::EdCurves::E448};
+    /// // Get random 5mb
+    /// let mut msg = Message::new(&mut get_random_bytes(5242880));
+    /// // Get a random password
+    /// let pw = get_random_bytes(64);
+    /// // Generate a signing keypair
+    /// let key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
+    /// // Sign with 512 bits of security
+    /// msg.sign(&key_pair, 512);
     /// ```
-    fn sign(&mut self, key: &mut KeyPair, d: u64) {
-        let s: Integer = bytes_to_big(kmac_xof(&mut key.priv_key, &vec![], 512, "K", d)) * 4;
+    fn sign(&mut self, key: &KeyPair, d: u64) {
+        let s: Integer = bytes_to_big(kmac_xof(&key.priv_key, &vec![], 512, "K", d)) * 4;
         let mut s_bytes = big_to_bytes(s.clone());
 
         let k: Integer = bytes_to_big(kmac_xof(&mut s_bytes, &self.msg, 512, "N", d)) * 4;
@@ -395,10 +475,27 @@ impl Signable for Message {
     /// * Some(Message.sig)
     /// ## Usage
     /// ```
+    /// use capycrypt::{
+    ///     Signable,
+    ///     KeyPair,
+    ///     Message,
+    ///     sha3::aux_functions::byte_utils::get_random_bytes,
+    ///     curves::EdCurves::E448};
+    /// // Get random 5mb
+    /// let mut msg = Message::new(&mut get_random_bytes(5242880));
+    /// // Get a random password
+    /// let pw = get_random_bytes(64);
+    /// // Generate a signing keypair
+    /// let key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
+    /// // Sign with 512 bits of security
+    /// msg.sign(&key_pair, 512);
+    /// // Verify
+    /// msg.verify(&key_pair.pub_key, 512);
+    /// assert!(msg.op_result.unwrap());
     /// ```
-    fn verify(&mut self, pub_key: EdCurvePoint, d: u64) {
+    fn verify(&mut self, pub_key: &EdCurvePoint, d: u64) {
         let mut u = EdCurvePoint::generator(pub_key.curve, false) * self.sig.clone().unwrap().z;
-        let hv = pub_key * bytes_to_big(self.sig.clone().unwrap().h);
+        let hv = pub_key.clone() * bytes_to_big(self.sig.clone().unwrap().h);
         u = u + &hv;
         let h_p = kmac_xof(&mut big_to_bytes(u.x), &self.msg, 512, "T", d);
         self.op_result = Some(h_p == self.sig.clone().unwrap().h)

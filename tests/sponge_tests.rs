@@ -213,10 +213,9 @@ fn test_compute_tagged_hash_256() {
 
 #[test]
 fn test_compute_tagged_hash_512() {
-    let s = "".to_owned();
     let mut pw = "test".as_bytes().to_vec();
-    let mut data = Message::new(&mut Box::new("".as_bytes().to_owned()));
+    let mut data = Message::new(&mut vec![]);
     let expected = "0f9b5dcd47dc08e08a173bbe9a57b1a65784e318cf93cccb7f1f79f186ee1caeff11b12f8ca3a39db82a63f4ca0b65836f5261ee64644ce5a88456d3d30efbed";
-    data.compute_tagged_hash(&mut pw, &s, 512);
+    data.compute_tagged_hash(&mut pw, &"", 512);
     assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
 }

@@ -24,7 +24,7 @@ fn key_gen_enc_dec(pw: &mut Vec<u8>, mut msg: Message) {
 /// Signature generation + verification roundtrip
 pub fn sign_verify(mut key_pair: KeyPair, mut msg: Message) {
     msg.sign(&mut key_pair, 512);
-    msg.verify(key_pair.pub_key, 512);
+    msg.verify(&key_pair.pub_key, 512);
 }
 
 fn bench_sign_verify(c: &mut Criterion) {

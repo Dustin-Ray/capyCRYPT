@@ -21,7 +21,7 @@ A complete Rust cryptosystem implementing FIPS 202 paired with a variety of Edwa
 ## Installation
 Add the following line to your `Cargo.toml` file:
 ```toml
-capycrypt = "0.3.1"
+capycrypt = "0.4.0"
 ```
 
 ### Note: Building the `rug` Crate
@@ -32,24 +32,6 @@ apt-get install m4
 ```
 
 ## Quick Start
-
-### Schnorr Signatures:
-```rust
-use capycrypt::{KeyPair, Message, Signable};
-// Get random 5mb
-let mut msg = Message::new(&mut get_random_bytes(5242880));
-// Get a random password
-let pw = get_random_bytes(64);
-// Generate a public/private keypair
-let mut key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
-
-// Sign the message with the private key
-msg.sign(&mut key_pair, 512);
-// Verify the message with the public key
-msg.verify(key_pair.pub_key, 512);
-assert!(msg.op_result.unwrap());
-```
-
 ### Compute Digest:
 ```rust
 use capycrypt::{Hashable, Message};
@@ -65,19 +47,24 @@ assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
 ### Symmetric Encrypt/Decrypt:
 ```rust
 use capycrypt::{Message, PwEncryptable};
+use capycrypt::sha3::{aux_functions::{byte_utils::{get_random_bytes}}};
+// Get a random password
+let pw = get_random_bytes(64); 
+// Get 5mb random data
+let mut msg = Message::new(&mut get_random_bytes(5242880));  
 
-let pw = get_random_bytes(64); // Get a random password
-let mut msg = Message::new(&mut get_random_bytes(5242880));  // Get 5mb random data
-
-msg.pw_encrypt(&mut pw.clone(), 512); // Encrypt the data with 512 bits of security
-msg.pw_decrypt(&mut pw.clone(), 512); // Decrypt the data
-
-assert!(msg.op_result.unwrap()); // Verify operation success
+// Encrypt the data with 512 bits of security
+msg.pw_encrypt(&mut pw.clone(), 512); 
+// Decrypt the data
+msg.pw_decrypt(&mut pw.clone(), 512); 
+// Verify operation success
+assert!(msg.op_result.unwrap()); 
 ```
 
 ### Asymmetric Encrypt/Decrypt:
 ```rust
 use capycrypt::{Message, KeyEncryptable};
+use capycrypt::sha3::{aux_functions::{byte_utils::{get_random_bytes}}};
 // 5mb random data
 let mut msg = Message::new(&mut get_random_bytes(5242880));
 // Generate a private/public keypair
@@ -91,7 +78,23 @@ msg.key_decrypt(&key_pair.priv_key, 256);
 assert!(msg.op_result.unwrap());
 ```
 
+### Schnorr Signatures:
+```rust
+use capycrypt::{KeyPair, Message, Signable};
+use capycrypt::sha3::{aux_functions::{byte_utils::{get_random_bytes}}};
+// Get random 5mb
+let mut msg = Message::new(&mut get_random_bytes(5242880));
+// Get a random password
+let pw = get_random_bytes(64);
+// Generate a public/private keypair
+let mut key_pair = KeyPair::new(&pw, "Key Tester".to_string(), E448, 512);
 
+// Sign the message with the private key
+msg.sign(&key_pair, 512);
+// Verify the message with the public key
+msg.verify(&key_pair.pub_key, 512);
+assert!(msg.op_result.unwrap());
+```
 
 ## Benches
 This library uses the criterion crate for benches. Running:

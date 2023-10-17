@@ -94,6 +94,6 @@ pub trait KeyEncryptable {
 }
 
 pub trait Signable {
-    fn sign(&mut self, key: &mut KeyPair, d: u64);
-    fn verify(&mut self, pub_key: EdCurvePoint, d: u64);
+    fn sign(&mut self, key: &KeyPair, d: u64);
+    fn verify(&mut self, pub_key: &EdCurvePoint, d: u64);
 }
