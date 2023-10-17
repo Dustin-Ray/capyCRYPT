@@ -101,6 +101,10 @@ let pw = get_random_bytes(64);
 let key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
 // Sign with 512 bits of security
 msg.sign(&key_pair, 512);
+// verify signature
+msg.verify(&key_pair.pub_key, 512);
+// assert correctness
+assert!(msg.op_result.unwrap());
 ```
 
 ## Benches
