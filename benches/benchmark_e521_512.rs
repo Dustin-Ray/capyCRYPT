@@ -23,7 +23,7 @@ fn key_gen_enc_dec(pw: &mut Vec<u8>, mut msg: Message) {
 
 /// Signature generation + verification roundtrip
 pub fn sign_verify(mut key_pair: KeyPair, mut msg: Message) {
-    msg.sign(&mut key_pair.priv_key, 512);
+    msg.sign(&mut key_pair, 512);
     msg.verify(key_pair.pub_key, 512);
 }
 
@@ -31,7 +31,12 @@ fn bench_sign_verify(c: &mut Criterion) {
     c.bench_function("Signature Generation + Verification Roundtrip", |b| {
         b.iter(|| {
             sign_verify(
-                KeyPair::new(&get_random_bytes(16), "test key".to_string(), SELECTED_CURVE, 512),
+                KeyPair::new(
+                    &get_random_bytes(16),
+                    "test key".to_string(),
+                    SELECTED_CURVE,
+                    512,
+                ),
                 Message::new(&mut get_random_bytes(5242880)),
             )
         });
@@ -53,7 +58,13 @@ fn bench_key_gen_enc_dec(c: &mut Criterion) {
     c.bench_function("Keygen + Asymmetric Encrypt + Decrypt Roundtrip", |b| {
         b.iter(|| {
             key_gen_enc_dec(
-                &mut KeyPair::new(&get_random_bytes(32), "test key".to_string(), SELECTED_CURVE, 512).priv_key,
+                &mut KeyPair::new(
+                    &get_random_bytes(32),
+                    "test key".to_string(),
+                    SELECTED_CURVE,
+                    512,
+                )
+                .priv_key,
                 Message::new(&mut get_random_bytes(5242880)),
             )
         });

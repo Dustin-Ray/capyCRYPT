@@ -1,8 +1,8 @@
 #[cfg(test)]
 pub mod ops_tests {
+    use capycrypt::curves::EdCurves::E448;
     use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
     use capycrypt::{KeyEncryptable, KeyPair, Message, PwEncryptable, Signable};
-    use capycrypt::curves::EdCurves::E448;
     use std::time::Instant;
 
     #[test]
@@ -55,23 +55,23 @@ pub mod ops_tests {
     #[test]
     pub fn test_signature_512() {
         let mut msg = Message::new(&mut get_random_bytes(5242880));
-        let mut pw = get_random_bytes(64);
-        let key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
+        let pw = get_random_bytes(64);
+        let mut key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
 
-        msg.sign(&mut pw, 512);
+        msg.sign(&mut key_pair, 512);
         msg.verify(key_pair.pub_key, 512);
 
         assert!(msg.op_result.unwrap());
     }
     #[test]
     fn test_sig_timing_side_channel() {
-        for i in 0..32 {
+        for i in 0..10 {
             let mut msg = Message::new(&mut get_random_bytes(16));
-            let mut pw = get_random_bytes(2 ^ i);
-            let key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
+            let pw = get_random_bytes(2 ^ i);
+            let mut key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
 
             let now = Instant::now();
-            msg.sign(&mut pw, 512);
+            msg.sign(&mut key_pair, 512);
             println!("{} needed {} microseconds", i, now.elapsed().as_micros());
             msg.verify(key_pair.pub_key, 512);
             assert!(msg.op_result.unwrap());

@@ -21,11 +21,24 @@ use rug::Integer;
 use std::borrow::{Borrow, BorrowMut};
 
 const SELECTED_CURVE: EdCurves = E448;
+/*
+============================================================
+The main components of the cryptosystem are defined here
+as trait implementations on specific types. The types and
+their traits are defined in lib.rs. The arguments to all
+operations mirror the notation from NIST FIPS 202 wherever
+possible.
+
+The Message type contains a data field. All operations are
+performed IN PLACE. Future improvements to this library
+will see computation moved off of the heap and batched.
+============================================================
+*/
 
 /// # SHA3-Keccak
 /// ref NIST FIPS 202.
 /// ## Arguments:
-/// * `n: &mut Vec<u8>`: pointer to message to be hashed.
+/// * `n: &mut Vec<u8>`: reference to message to be hashed.
 /// * `d: usize`: requested output length and security strength
 /// ## Returns:
 /// * `return  -> Vec<u8>`: SHA3-d message digest
@@ -105,44 +118,51 @@ pub fn kmac_xof(k: &mut Vec<u8>, x: &Vec<u8>, l: u64, s: &str, d: u64) -> Vec<u8
 
 impl Hashable for Message {
     /// # Message Digest
-    /// Computes SHA3-d hash of input
+    /// Computes SHA3-d hash of input. Does not consume input.
+    /// Replaces `Message.digest` with result of operation.
     /// ## Arguments:
-    /// * `data: &mut Vec<u8>`: representing any data requested to be hashed
-    /// ## Returns:
-    /// * `return  -> Vec<u8>`: containing result of shake operation of size 512 bits
+    /// * `d: u64>`: requested security strength in bits. Supported
+    /// bitstrengths are 224, 256, 384, or 512.
     /// ## Usage:
     /// ```
     /// ```
     fn compute_sha3_hash(&mut self, d: u64) {
         self.digest = match d {
             224 | 256 | 384 | 512 => Some(shake(&mut self.msg, d)),
-            _ => panic!("Value must be either 224, 256. 384, or 512"),
+            _ => panic!("Value must be either 224, 256, 384, or 512"),
         }
     }
 
     /// # Tagged Hash
-    /// Computes an authentication tag `t` of a byte array `m` under passphrase `pw`
+    /// Computes an authentication tag `t` of a byte array `m` under passphrase `pw`.
+    /// ## Replaces:
+    /// * `Message.t` with keyed hash of plaintext.
     /// ## Arguments:
     /// * `pw: &mut Vec<u8>`: symmetric encryption key, can be blank but shouldnt be
     /// * `message: &mut Vec<u8>`: message to encrypt
-    /// * `s: &mut str`: customization string
-    /// * `d: u64`: requested security strength
-    /// ## Returns:
-    /// * `return  -> Vec<u8>`: `t` ← kmac_xof(pw, m, 512, “T”) as ```Vec<u8>``` of size `l`
+    /// * `s: &mut str`: domain seperation string
+    /// * `d: u64>`: requested security strength in bits. Supported
+    /// bitstrengths are 224, 256, 384, or 512.
     /// ## Usage:
     /// ```
     /// ```
     fn compute_tagged_hash(&mut self, pw: &mut Vec<u8>, s: &str, d: u64) {
         self.digest = match d {
             224 | 256 | 384 | 512 => Some(kmac_xof(pw, &self.msg, d, s, d)),
-            _ => panic!("Value must be either 224, 256. 384, or 512"),
+            _ => panic!("Value must be either 224, 256, 384, or 512"),
         }
     }
 }
 
 impl PwEncryptable for Message {
     /// # Symmetric Encryption
-    /// Encrypts a byte array m symmetrically under passphrase pw:
+    /// Encrypts a byte array m symmetrically under passphrase pw.
+    ///
+    /// ## Replaces:
+    /// * `Message.data` with result of encryption.
+    /// * `Message.t` with keyed hash of plaintext.
+    /// * `Message.sym_nonce` with z, as defined below.
+    ///
     /// SECURITY NOTE: ciphertext length == plaintext length
     /// ## Algorithm:
     /// * z ← Random(512)
@@ -150,10 +170,9 @@ impl PwEncryptable for Message {
     /// * c ← kmac_xof(ke, “”, |m|, “SKE”) ⊕ m
     /// * t ← kmac_xof(ka, m, 512, “SKA”)
     /// ## Arguments:
-    /// * `pw: &mut Vec<u8>`: symmetric encryption key, can be blank but shouldnt be
-    /// * `msg: &mut Box<Vec<u8>>`: borrowed pointer to message to encrypt
-    /// ## Returns:
-    /// * `return -> SymmetricCryptogram`: SymmetricCryptogram(z, c, t)
+    /// * `pw: &[u8]`: symmetric encryption key, can be blank but shouldnt be
+    /// * `d: u64>`: requested security strength in bits. Supported
+    /// bitstrengths are 224, 256, 384, or 512.
     ///
     /// ## Usage:
     /// ```
@@ -173,19 +192,27 @@ impl PwEncryptable for Message {
 
     /// # Symmetric Decryption
     /// Decrypts a symmetric cryptogram (z, c, t) under passphrase pw.
-    /// Assumes that decryption is well-formed.
+    ///
+    /// ## Assumes:
+    /// * well-formed encryption
+    /// * Some(Message.t)
+    /// * Some(Message.z)
+    ///
+    /// ## Replaces:
+    /// * `Message.data` with result of decryption.
+    /// * `Message.op_result` with result of comparision of `Message.t` == keyed hash of decryption.
+    ///
     /// ## Algorithm:
     /// * (ke || ka) ← kmac_xof(z || pw, “”, 1024, “S”)
     /// * m ← kmac_xof(ke, “”, |c|, “SKE”) ⊕ c
     /// * t’ ← kmac_xof(ka, m, 512, “SKA”)
+    ///
     /// ## Arguments:
-    /// * `msg: &mut Box<SymmetricCryptogram>`: borrowed pointer to cryptogram to decrypt as `SymmetricCryptogram`, assumes valid format
-    /// * `pw: &mut Vec<u8>`: decryption password, can be blank
-    /// ## Returns:
-    /// * `return -> bool`: t` == t, result of tag verification
+    /// * `pw: &[u8]`: decryption password, can be blank
+    /// * `d: u64>`: encryption security strength in bits. Can only be 224, 256, 384, or 512.
+    ///
     /// ## Usage:
     /// ```
-    ///
     /// ```
     fn pw_decrypt(&mut self, pw: &[u8], d: u64) {
         let mut z_pw = self.sym_nonce.clone().unwrap();
@@ -202,7 +229,8 @@ impl PwEncryptable for Message {
 
 impl KeyPair {
     /// # Asymmetric Keypair Generation
-    /// Generates a (Schnorr/ECDHIES) key pair from passphrase pw:
+    /// Generates a (Schnorr/ECDHIES) key pair from passphrase pw.
+    ///
     /// ## Algorithm:
     /// * s ← kmac_xof(pw, “”, 512, “K”); s ← 4s
     /// * 𝑉 ← s*𝑮
@@ -210,6 +238,7 @@ impl KeyPair {
     /// ## Arguments:
     /// * `pw: &mut Vec<u8>` : password as bytes, can be blank but shouldnt be
     /// * `owner: String` : A label to indicate the owner of the key
+    /// * `curve: EdCurves` : The selected Edwards curve
     /// ## Returns:
     /// * `return  -> KeyObj`: Key object containing owner, private key, public key x and y coordinates, and timestamp.
     /// verification key 𝑉 is hashed together with the message 𝑚
@@ -220,40 +249,46 @@ impl KeyPair {
     pub fn new(pw: &Vec<u8>, owner: String, curve: EdCurves, d: u64) -> KeyPair {
         let s: Integer = (bytes_to_big(kmac_xof(&mut pw.to_owned(), &vec![], 512, "K", d)) * 4)
             % order(SELECTED_CURVE);
-        let pub_key = EdCurvePoint::generator(SELECTED_CURVE, false) * (s);
+        let pub_key = EdCurvePoint::generator(curve, false) * (s);
         KeyPair {
             owner,
             pub_key,
             priv_key: pw.to_vec(),
             date_created: get_date_and_time_as_string(),
-            curve
+            curve,
         }
     }
 }
 
 impl KeyEncryptable for Message {
     /// # Asymmetric Encryption
-    /// Encrypts a byte array m under the (Schnorr/ECDHIES) public key 𝑉.
+    /// Encrypts a byte array m in place under the (Schnorr/ECDHIES) public key 𝑉.
     /// Operates under Schnorr/ECDHIES principle in that shared symmetric key is
     /// exchanged with recipient. SECURITY NOTE: ciphertext length == plaintext length
+    ///
+    /// ## Replaces:
+    /// * `Message.data` with result of encryption.
+    /// * `Message.t` with keyed hash of plaintext.
+    /// * `Message.asym_nonce` with z, as defined below.
+    ///
     /// ## Algorithm:
     /// * k ← Random(512); k ← 4k
     /// * W ← kV; 𝑍 ← k*𝑮
     /// * (ke || ka) ← kmac_xof(W x , “”, 1024, “P”)
     /// * c ← kmac_xof(ke, “”, |m|, “PKE”) ⊕ m
     /// * t ← kmac_xof(ka, m, 512, “PKA”)
+    ///
     /// ## Arguments:
-    /// * `pub_key: CurvePoint` : X coordinate of public static key 𝑉, accepted as ```CurvePoint```
-    /// * `message: &mut Box<Vec<u8>>`: borrowed pointer to message of any length
-    /// ## Returns:
-    /// * `return -> ECCryptogram` : cryptogram: (𝑍, c, t) = 𝑍||c||t
+    /// * `pub_key: EdCurvePoint` : X coordinate of public key 𝑉
+    /// * `d: u64>`: Requested security strength in bits. Can only be 224, 256, 384, or 512.
+    ///
     /// ## Usage:
     /// ```
     /// ```
     fn key_encrypt(&mut self, pub_key: &EdCurvePoint, d: u64) {
-        let k: Integer = (bytes_to_big(get_random_bytes(64)) * 4) % order(SELECTED_CURVE);
+        let k: Integer = (bytes_to_big(get_random_bytes(64)) * 4) % order(pub_key.curve);
         let w = pub_key.clone() * k.clone();
-        let z = EdCurvePoint::generator(SELECTED_CURVE, false) * k;
+        let z = EdCurvePoint::generator(pub_key.curve, false) * k;
 
         let ke_ka = kmac_xof(&mut big_to_bytes(w.x), &vec![], 1024, "PK", d);
         let ke = &mut ke_ka[..64].to_vec();
@@ -268,20 +303,30 @@ impl KeyEncryptable for Message {
     }
 
     /// # Asymmetric Decryption
-    /// Decrypts a cryptogram in place under password. Assumes cryptogram is well-formed.
+    /// Decrypts a cryptogram in place under private key.
     /// Operates under Schnorr/ECDHIES principle in that shared symmetric key is
     /// derived from 𝑍.
+    ///
+    /// ## Assumes:
+    /// * well-formed encryption
+    /// * Some(Message.t)
+    /// * Some(Message.z)
+    ///
+    /// ## Replaces:
+    /// * `Message.data` with result of decryption.
+    /// * `Message.op_result` with result of comparision of `Message.t` == keyed hash of decryption.
+    ///
     /// ## Algorithm:
     /// * s ← KMACXOF256(pw, “”, 512, “K”); s ← 4s
     /// * W ← sZ
     /// * (ke || ka) ← KMACXOF256(W x , “”, 1024, “P”)
     /// * m ← KMACXOF256(ke, “”, |c|, “PKE”) ⊕ c
     /// * t’ ← KMACXOF256(ka, m, 512, “PKA”)
+    ///
     /// ## Arguments:
     /// * `pw: &mut [u8]`: password used to generate ```CurvePoint``` encryption key.
-    /// * `message: &mut ECCryptogram`: cryptogram of format ```(𝑍||c||t)```
-    /// ## Returns:
-    /// * `return  -> bool`: Decryption of cryptogram ```𝑍||c||t iff t` = t```
+    /// * `d: u64>`: encryption security strength in bits. Can only be 224, 256, 384, or 512.
+    ///
     /// ## Usage:
     /// ```
     /// ```
@@ -305,21 +350,25 @@ impl KeyEncryptable for Message {
 impl Signable for Message {
     /// # Schnorr Signatures
     /// Generates a signature for a byte array m under passphrase pw.
+    /// 
     /// ## Algorithm:
     /// * `s` ← kmac_xof(pw, “”, 512, “K”); s ← 4s
     /// * `k` ← kmac_xof(s, m, 512, “N”); k ← 4k
     /// * `𝑈` ← k*𝑮;
     /// * `ℎ` ← kmac_xof(𝑈ₓ , m, 512, “T”); 𝑍 ← (𝑘 – ℎ𝑠) mod r
+    /// 
     /// ## Arguments:
-    /// * `pw: &mut Vec<u8>, message`: pointer to passphrase of any length
-    /// * `message: &mut Box<Vec<u8>>`: borrowed pointer to message of any length
-    /// ## Returns:
-    /// * `return -> Signature`: signature: (`ℎ`, `𝑍`)
+    /// * `key: &mut KeyPair, `: reference to KeyPair.
+    /// * `d: u64>`: encryption security strength in bits. Can only be 224, 256, 384, or 512.
+    /// 
+    /// ## Assumes:
+    /// * Some(key.priv_key)
+    /// 
     /// ## Usage
     /// ```
     /// ```
-    fn sign(&mut self, pw: &mut Vec<u8>, d: u64) {
-        let s: Integer = bytes_to_big(kmac_xof(pw, &vec![], 512, "K", d)) * 4;
+    fn sign(&mut self, key: &mut KeyPair, d: u64) {
+        let s: Integer = bytes_to_big(kmac_xof(&mut key.priv_key, &vec![], 512, "K", d)) * 4;
         let mut s_bytes = big_to_bytes(s.clone());
 
         let k: Integer = bytes_to_big(kmac_xof(&mut s_bytes, &self.msg, 512, "N", d)) * 4;
@@ -334,20 +383,21 @@ impl Signable for Message {
     }
     /// # Signature Verification
     /// Verifies a signature (h, 𝑍) for a byte array m under the (Schnorr/
-    /// ECDHIES) public key 𝑉:
+    /// ECDHIES) public key 𝑉.
     /// ## Algorithm:
     /// * 𝑈 ← 𝑍*𝑮 + h𝑉
     /// ## Arguments:
     /// * `sig: &Signature`: Pointer to a signature object (h, 𝑍)
     /// * `pubKey: CurvePoint` key 𝑉 used to sign message m
     /// * `message: Vec<u8>` of message to verify
-    /// ## Returns:
-    /// * `return`: true if, and only if, kmac_xof(𝑈ₓ , m, 512, “T”) = h
+    /// ## Assumes:
+    /// * Some(key.pub_key)
+    /// * Some(Message.sig)
     /// ## Usage
     /// ```
     /// ```
     fn verify(&mut self, pub_key: EdCurvePoint, d: u64) {
-        let mut u = EdCurvePoint::generator(SELECTED_CURVE, false) * self.sig.clone().unwrap().z;
+        let mut u = EdCurvePoint::generator(pub_key.curve, false) * self.sig.clone().unwrap().z;
         let hv = pub_key * bytes_to_big(self.sig.clone().unwrap().h);
         u = u + &hv;
         let h_p = kmac_xof(&mut big_to_bytes(u.x), &self.msg, 512, "T", d);

@@ -51,7 +51,7 @@ pub struct KeyPair {
     /// Date key was generated
     pub date_created: String,
     /// Selected curve type
-    pub curve: EdCurves
+    pub curve: EdCurves,
 }
 
 impl Message {
@@ -94,6 +94,6 @@ pub trait KeyEncryptable {
 }
 
 pub trait Signable {
-    fn sign(&mut self, pw: &mut Vec<u8>, d: u64);
+    fn sign(&mut self, key: &mut KeyPair, d: u64);
     fn verify(&mut self, pub_key: EdCurvePoint, d: u64);
 }
