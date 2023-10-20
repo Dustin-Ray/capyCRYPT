@@ -39,7 +39,7 @@ use capycrypt::{Hashable, Message};
 let mut data = Message::new(&mut vec![]);
 // Obtained from OpenSSL
 let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
-// Compute a SHA3 digest with 256 bits of security
+// Compute a SHA3 digest with 128 bits of security
 data.compute_sha3_hash(256);
 assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
 ```
@@ -49,13 +49,13 @@ assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
 use capycrypt::{
     Message,
     PwEncryptable,
-    sha3::{aux_functions::{byte_utils::{get_random_bytes}}}
+    sha3::{aux_functions::byte_utils::get_random_bytes}
 };
 // Get a random password
 let pw = get_random_bytes(64);
 // Get 5mb random data
 let mut msg = Message::new(&mut get_random_bytes(5242880));
-// Encrypt the data with 512 bits of security
+// Encrypt the data with 256 bits of security
 msg.pw_encrypt(&mut pw.clone(), 512);
 // Decrypt the data
 msg.pw_decrypt(&mut pw.clone(), 512);
@@ -99,7 +99,7 @@ let mut msg = Message::new(&mut get_random_bytes(5242880));
 let pw = get_random_bytes(64);
 // Generate a signing keypair
 let key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
-// Sign with 512 bits of security
+// Sign with 256 bits of security
 msg.sign(&key_pair, 512);
 // Verify signature
 msg.verify(&key_pair.pub_key, 512);
