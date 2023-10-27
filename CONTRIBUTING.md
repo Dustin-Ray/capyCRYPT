@@ -16,13 +16,18 @@ Example prompts:
 
 ## Getting Started
 
-Before you begin, ensure you have a **[GitHub](https://github.com/)** account set up.
+Before you begin, ensure you have a **[GitHub](https://github.com/)** account set up. Next, check out the **[issues](https://github.com/drcapybara/capyCRYPT/issues)** page. There are several open issues that are waiting for you to tackle! Issues are labelled according to:
+-**Anticipated workload**: These labels range from something you could reasonably solve in an afternoon, to large-scale projects that add entirely new functionaltiy to the library.
+-**Good first issue**: These are issues that require minimal design work. Examples are provided to help you get started and can largely be built off of directly.
+-**Literature**: These are items that can help you gain experience implementing formal specifications (i.e. from journals) into code. They anticiapte an advanced understanding of cryptographic topics, but are still great for someone without industry experience.
+-**Feature vs. Fix**: Add new functionality to the library, or help us fix something! These labels are standard in industry and will give you a good sense of how issues are prioritized in industry.
+
+ASK QUESTIONS about topics you don't understand. Don't let your brain scare you away from denser looking issues! We are here to help at every step. When you find something you want to work on, proceed with the following steps:
 
 1. **Fork** the repository by clicking the "Fork" button at the top-right corner of the original repository page.
 2. **Clone** your forked version of the repository to your local machine:
    ```sh
    git clone https://github.com/your-username/capyCRYPT.git
-   cd capyCRYPT
    ```
 3. Open the repository in your IDE of choice. Assuming you've selected an issue to tackle, create a new branch by using this format:
     - Issues labeled "feature" should have the branch named "feature/issue-#" 
