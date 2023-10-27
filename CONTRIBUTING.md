@@ -9,18 +9,18 @@ Some things to remember as you go through the code:
 3. Generative AI is your friend. It is extremely adept at explaining code, writing boilerplate, and translating between programming languages. If you're stuck on something, write it in python and then convert it! There's nothing wrong with using sophisticated tools to help you gain experience and understanding.
 
 Example prompts: 
--"Show how to work with arrays in rust"
--"Explain the &mut keyword"
--"What is a trait and why should I use it?"
--"What are effective strategies to reduce memory usage when working with large data?"
+- "Show how to work with arrays in rust"
+- "Explain the &mut keyword"
+- "What is a trait and why should I use it?"
+- "What are effective strategies to reduce memory usage when working with large data?"
 
 ## Getting Started
 
 Before you begin, ensure you have a **[GitHub](https://github.com/)** account set up. Next, check out the **[issues](https://github.com/drcapybara/capyCRYPT/issues)** page. There are several open issues that are waiting for you to tackle! Issues are labelled according to:
--**Anticipated workload**: These labels range from something you could reasonably solve in an afternoon, to large-scale projects that add entirely new functionaltiy to the library.
--**Good first issue**: These are issues that require minimal design work. Examples are provided to help you get started and can largely be built off of directly.
--**Literature**: These are items that can help you gain experience implementing formal specifications (i.e. from journals) into code. They anticiapte an advanced understanding of cryptographic topics, but are still great for someone without industry experience.
--**Feature vs. Fix**: Add new functionality to the library, or help us fix something! These labels are standard in industry and will give you a good sense of how issues are prioritized in industry.
+- **Anticipated workload**: These labels range from something you could reasonably solve in an afternoon, to large-scale projects that add entirely new functionaltiy to the library.
+- **Good first issue**: These are issues that require minimal design work. Examples are provided to help you get started and can largely be built off of directly.
+- **Literature**: These are items that can help you gain experience implementing formal specifications (i.e. from journals) into code. They anticiapte an advanced understanding of cryptographic topics, but are still great for someone without industry experience.
+- **Feature vs. Fix**: Add new functionality to the library, or help us fix something! These labels are standard in industry and will give you a good sense of how issues are prioritized in industry.
 
 ASK QUESTIONS about topics you don't understand. Don't let your brain scare you away from denser looking issues! We are here to help at every step. When you find something you want to work on, proceed with the following steps:
 
