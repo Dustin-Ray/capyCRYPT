@@ -20,7 +20,7 @@ Before you begin, ensure you have a **[GitHub](https://github.com/)** account se
 - **Anticipated workload**: These labels range from something you could reasonably solve in an afternoon, to large-scale projects that add entirely new functionaltiy to the library.
 - **Good first issue**: These are issues that require minimal design work. Examples are provided to help you get started and can largely be built off of directly.
 - **Literature**: These are items that can help you gain experience implementing formal specifications (i.e. from journals) into code. They anticiapte an advanced understanding of cryptographic topics, but are still great for someone without industry experience.
-- **Feature vs. Fix**: Add new functionality to the library, or help us fix something! These labels are standard in industry and will give you a good sense of how issues are prioritized in industry.
+- **Feature vs. Fix**: Add new functionality to the library, or help us fix something! These labels are standard in industry and will give you a good sense of how issues are prioritized in large and complex projects.
 
 ASK QUESTIONS about topics you don't understand. Don't let your brain scare you away from denser looking issues! We are here to help at every step. When you find something you want to work on, proceed with the following steps:
 
@@ -35,23 +35,29 @@ ASK QUESTIONS about topics you don't understand. Don't let your brain scare you 
     - where "#"" is the number of the issue you are working on.
     - Ex: for issue "fix: Revert a failed decryption #26", the branch should be named fix/issue-26
 4. When you have a solution ready for review, make sure all of the tests built into the repo are passing by running: 
+
    ```bash
    cargo test
    ```
+
    This could take awhile to run all of them, but ensure they pass before proceeding. If any fail and you are unsure why or need help troubleshooting, ask for help! This is something you'll be expected to do in your job someday, so practice it here!
-5. If all tests are passing, run clippy: 
+6. If all tests are passing, run clippy: 
+
    ```bash
    cargo clippy
    ```
+
    Clippy is a great friend who helps you learn idiomatic rust. It will point you to all of the places in your code needing attention and will provide you with the best solutions to keep everything neat, clean, and readable.
-6. If all tests are passing, run the formatter next: 
+8. If all tests are passing, run the formatter next: 
+
     ```bash
     cargo fmt
     ```
+
    This is crucial to keep the code nice and clean. It fixes spacing and other small housekeeping items automatically.
    
-7. Make a pull request of your branch back into main/master. This step initates review with the maintainers. A review process is often a conversation between a maintainer and a developer. Don't always expect a merge on your first try. Be grateful for the experience to collaborate and learn the best practices to  follow. Larger issues can be merged in parts, so long as they are organized in a way that clearly tracks what is completed and what is left to do.
+10. Make a pull request of your branch back into main/master. This step initates review with the maintainers. A review process is often a conversation between a maintainer and a developer. Don't always expect a merge on your first try. Be grateful for the experience to collaborate and learn the best practices to  follow. Larger issues can be merged in parts, so long as they are organized in a way that clearly tracks what is completed and what is left to do.
 
-8. Log your progress on the issue page! Use it as a diary to help keep yourself and others organized. Maintainers can join the conversation with you and help move you along towards the finish line.
+11. Log your progress on the issue page! Use it as a diary to help keep yourself and others organized. Maintainers can join the conversation with you and help move you along towards the finish line.
 
 Merged PRs, even small ones, are awesome resume material. You can count it as freelancing job experience and it's always a great conversation piece during interviews (and sometimes on dates, with the right person). That's the end of this guide! You are constantly encouraged to ask questions and engage with the development process. This is a risk-free place to develop those skills early so you don't have to scramble to learn them on the job. Good luck!
