@@ -72,9 +72,11 @@ pub fn cshake(x: &mut Vec<u8>, l: u64, n: &str, s: &str, d: u64) -> Vec<u8> {
     encoded_n.extend_from_slice(&encoded_s);
 
     let bytepad_w = match d {
+        224 => 172,
         256 => 168,
+        384 => 152,
         512 => 136,
-        _ => panic!("Value must be either 256 or 512"),
+        _ => panic!("Unsupported security strength. Must be 224, 384, 256, or 512"),
     };
 
     let mut out = byte_pad(&mut encoded_n, bytepad_w);
@@ -100,9 +102,11 @@ pub fn cshake(x: &mut Vec<u8>, l: u64, n: &str, s: &str, d: u64) -> Vec<u8> {
 pub fn kmac_xof(k: &Vec<u8>, x: &Vec<u8>, l: u64, s: &str, d: u64) -> Vec<u8> {
     let mut encode_k = encode_string(k);
     let bytepad_w = match d {
+        224 => 172,
         256 => 168,
+        384 => 152,
         512 => 136,
-        _ => panic!("Value must be either 256 or 512"),
+        _ => panic!("Unsupported security strength. Must be 224, 384, 256, or 512"),
     };
     let mut bp = byte_pad(&mut encode_k, bytepad_w);
     bp.append(&mut x.to_owned());

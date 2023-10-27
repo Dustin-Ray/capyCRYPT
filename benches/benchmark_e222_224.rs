@@ -7,24 +7,25 @@ use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
 use criterion::{criterion_group, criterion_main, Criterion};
 
 const SELECTED_CURVE: EdCurves = E222;
+const BIT_SECURITY: u64 = 224;
 
 /// Symmetric encrypt and decrypt roundtrip
 fn sym_enc(pw: &mut Vec<u8>, mut msg: Message) {
-    msg.pw_encrypt(&mut pw.clone(), 256);
-    msg.pw_decrypt(&mut pw.clone(), 256);
+    msg.pw_encrypt(&mut pw.clone(), BIT_SECURITY);
+    msg.pw_decrypt(&mut pw.clone(), BIT_SECURITY);
 }
 
 /// Asymmetric encrypt and decrypt roundtrip + keygen
 fn key_gen_enc_dec(pw: &mut Vec<u8>, mut msg: Message) {
-    let key_pair = KeyPair::new(pw, "test key".to_string(), SELECTED_CURVE, 256);
-    msg.key_encrypt(&key_pair.pub_key, 256);
-    msg.key_decrypt(&key_pair.priv_key, 256);
+    let key_pair = KeyPair::new(pw, "test key".to_string(), SELECTED_CURVE, BIT_SECURITY);
+    msg.key_encrypt(&key_pair.pub_key, BIT_SECURITY);
+    msg.key_decrypt(&key_pair.priv_key, BIT_SECURITY);
 }
 
 /// Signature generation + verification roundtrip
 pub fn sign_verify(mut key_pair: KeyPair, mut msg: Message) {
-    msg.sign(&mut key_pair, 512);
-    msg.verify(&key_pair.pub_key, 512);
+    msg.sign(&mut key_pair, BIT_SECURITY);
+    msg.verify(&key_pair.pub_key, BIT_SECURITY);
 }
 
 fn bench_sign_verify(c: &mut Criterion) {
@@ -35,7 +36,7 @@ fn bench_sign_verify(c: &mut Criterion) {
                     &get_random_bytes(16),
                     "test key".to_string(),
                     SELECTED_CURVE,
-                    512,
+                    BIT_SECURITY,
                 ),
                 Message::new(&mut get_random_bytes(5242880)),
             )
@@ -62,7 +63,7 @@ fn bench_key_gen_enc_dec(c: &mut Criterion) {
                     &get_random_bytes(32),
                     "test key".to_string(),
                     SELECTED_CURVE,
-                    256,
+                    BIT_SECURITY,
                 )
                 .priv_key,
                 Message::new(&mut get_random_bytes(5242880)),
