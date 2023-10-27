@@ -69,3 +69,6 @@ ASK QUESTIONS about topics you don't understand. Don't let your brain scare you 
 11. Log your progress on the issue page! Use it as a diary to help keep yourself and others organized. Maintainers can join the conversation with you and help move you along towards the finish line.
 
 Merged PRs, even small ones, are awesome resume material. You can count it as freelancing job experience and it's always a great conversation piece during interviews (and sometimes on dates, with the right person). That's the end of this guide! You are constantly encouraged to ask questions and engage with the development process. This is a risk-free place to develop those skills early so you don't have to scramble to learn them on the job. Good luck!
+
+## Contact
+Communicating on the issues page will work fine in most cases. For questions and to learn more about cryptography, the fastest and easiest way to colloborate is with [discord](https://discord.gg/n8bxeaXP).
