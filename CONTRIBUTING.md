@@ -1,7 +1,13 @@
 # Contributing to capyCRYPT
 If you want to learn about rust, cryptography, high-performing software, and formal software design patterns, you're in the right place! This library is an academic excerise in cryptographic algorithm design and is a great place for anyone who is just getting started with their career in software development. 
 
-NO EXPERIENCE IS NECESSARY to contribute to this library. We gladly welcome anyone who wants to tackle any of the open issues. Cryptography is a dense subject. You might feel like you jumped into the deep end of the pool. And the pool isn't filled with water but gasoline instead. And it's on fire! But what better way is there to learn? 
+NO EXPERIENCE IS NECESSARY to contribute to this library. The assumtption is maybe you took a class on cryptography once and feel like you want to know more about it, or you're at the end of your degree and want to tackle some projects while searching for a job. We gladly welcome anyone who wants to tackle any of the open issues. Cryptography is a dense subject. You might feel like you jumped into the deep end of the pool. And the pool isn't filled with water but gasoline instead. And it's on fire! But what better way is there to learn? 
+
+Some good things to read about and understand before tackling open issues: 
+- How and why XOR is used for cryptography
+- Modular math if you want to work with the Elliptic Curve functions
+- Bitshifting and binary operations
+- Core cryptographic concepts like hashing, encrypting/decrypting, and the difference between symmetric and asymmetric cryptography.
 
 Some things to remember as you go through the code:
 1. If you haven't seen rust before, some of the syntax might look a little wild. Don't be intimidated! Rust is a wonderful, logical, and powerful language to have in your toolbox. The maintainers of this repo are here to help you whenever you need it, reach out with any question at any time!
@@ -13,6 +19,7 @@ Example prompts:
 - "Explain the &mut keyword"
 - "What is a trait and why should I use it?"
 - "What are effective strategies to reduce memory usage when working with large data?"
+- "Here's this java function. What would it look like in rust?"
 
 ## Getting Started
 
