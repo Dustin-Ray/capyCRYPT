@@ -92,7 +92,7 @@ mod e222_tests {
 
     #[test]
     // k*G = (k mod r)*G
-    fn k_g_equals_k_mod_r_times_g() { 
+    fn k_g_equals_k_mod_r_times_g() {
         let g = EdCurvePoint::generator(SELECTED_CURVE, false);
         let mut rng = thread_rng();
         let k_u128: u64 = rng.gen();
