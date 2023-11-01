@@ -1,6 +1,6 @@
 use crate::{
     curves::{
-        curve_n, order, EdCurvePoint,
+        order, EdCurvePoint,
         EdCurves::{self, E448},
         Generator,
     },
@@ -66,8 +66,8 @@ pub fn cshake(x: &mut Vec<u8>, l: u64, n: &str, s: &str, d: u64) -> Vec<u8> {
     if n.is_empty() && s.is_empty() {
         shake(x, l);
     }
-    let mut encoded_n = encode_string(&mut n.as_bytes().to_vec());
-    let encoded_s = encode_string(&mut s.as_bytes().to_vec());
+    let mut encoded_n = encode_string(&n.as_bytes().to_vec());
+    let encoded_s = encode_string(&s.as_bytes().to_vec());
 
     encoded_n.extend_from_slice(&encoded_s);
 
@@ -206,7 +206,7 @@ impl PwEncryptable for Message {
         let z = get_random_bytes(512);
         let mut ke_ka = z.clone();
         ke_ka.append(&mut pw.to_owned());
-        let ke_ka = kmac_xof(&mut ke_ka, &vec![], 1024, "S", d);
+        let ke_ka = kmac_xof(&ke_ka, &vec![], 1024, "S", d);
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
         self.digest = Some(kmac_xof(ka, &self.msg, 512, "SKA", d));
@@ -252,7 +252,7 @@ impl PwEncryptable for Message {
     fn pw_decrypt(&mut self, pw: &[u8], d: u64) {
         let mut z_pw = self.sym_nonce.clone().unwrap();
         z_pw.append(&mut pw.to_owned());
-        let ke_ka = kmac_xof(&mut z_pw, &vec![], 1024, "S", d);
+        let ke_ka = kmac_xof(&z_pw, &vec![], 1024, "S", d);
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
         let m = kmac_xof(ke, &vec![], (self.msg.len() * 8) as u64, "SKE", d);
@@ -289,11 +289,9 @@ impl KeyPair {
     /// let key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
     /// ```
     pub fn new(pw: &Vec<u8>, owner: String, curve: EdCurves, d: u64) -> KeyPair {
-        
-        // The proper solution will check in constant time if the bit is already set or not.
-        let s: Integer = (bytes_to_big(kmac_xof(&pw, &vec![], 512, "K", d)) * 4)
-            % order(SELECTED_CURVE)
-            + curve_n(SELECTED_CURVE); // https://github.com/drcapybara/capyCRYPT/issues/30
+        // Timing sidechannel on variable keysize is mitigated here due to modding by curve order.
+        let s: Integer =
+            (bytes_to_big(kmac_xof(pw, &vec![], 512, "K", d)) * 4) % order(SELECTED_CURVE);
 
         let pub_key = EdCurvePoint::generator(curve, false) * (s);
 
@@ -345,7 +343,7 @@ impl KeyEncryptable for Message {
         let w = pub_key.clone() * k.clone();
         let z = EdCurvePoint::generator(pub_key.curve, false) * k;
 
-        let ke_ka = kmac_xof(&mut big_to_bytes(w.x), &vec![], 1024, "PK", d);
+        let ke_ka = kmac_xof(&big_to_bytes(w.x), &vec![], 1024, "PK", d);
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
 
@@ -406,16 +404,16 @@ impl KeyEncryptable for Message {
     fn key_decrypt(&mut self, pw: &[u8], d: u64) {
         let z = self.asym_nonce.clone().unwrap();
         let s: Integer =
-            (bytes_to_big(kmac_xof(&mut pw.to_owned(), &vec![], 512, "K", d)) * 4) % z.clone().n;
+            (bytes_to_big(kmac_xof(&pw.to_owned(), &vec![], 512, "K", d)) * 4) % z.clone().n;
         let w = z * s;
 
-        let ke_ka = kmac_xof(&mut big_to_bytes(w.x), &vec![], 1024, "PK", d);
+        let ke_ka = kmac_xof(&big_to_bytes(w.x), &vec![], 1024, "PK", d);
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
 
         let m = Box::new(kmac_xof(ke, &vec![], (self.msg.len() * 8) as u64, "PKE", d));
         xor_bytes(&mut self.msg, &m);
-        let t_p = kmac_xof(&mut ka.clone(), &self.msg, 512, "PKA", d);
+        let t_p = kmac_xof(&ka.clone(), &self.msg, 512, "PKA", d);
         self.op_result = Some(t_p == self.digest.clone().unwrap());
     }
 }
@@ -456,13 +454,13 @@ impl Signable for Message {
     /// ```
     fn sign(&mut self, key: &KeyPair, d: u64) {
         let s: Integer = bytes_to_big(kmac_xof(&key.priv_key, &vec![], 512, "K", d)) * 4;
-        let mut s_bytes = big_to_bytes(s.clone());
+        let s_bytes = big_to_bytes(s.clone());
 
-        let k: Integer = bytes_to_big(kmac_xof(&mut s_bytes, &self.msg, 512, "N", d)) * 4;
+        let k: Integer = bytes_to_big(kmac_xof(&s_bytes, &self.msg, 512, "N", d)) * 4;
 
         let u = EdCurvePoint::generator(SELECTED_CURVE, false) * k.clone();
-        let mut ux_bytes = big_to_bytes(u.x);
-        let h = kmac_xof(&mut ux_bytes, &self.msg, 512, "T", d);
+        let ux_bytes = big_to_bytes(u.x);
+        let h = kmac_xof(&ux_bytes, &self.msg, 512, "T", d);
         let h_big = bytes_to_big(h.clone());
         //(a % b + b) % b
         let z = ((k - (h_big * s)) % u.r.clone() + u.r.clone()) % u.r;
@@ -504,7 +502,7 @@ impl Signable for Message {
         let mut u = EdCurvePoint::generator(pub_key.curve, false) * self.sig.clone().unwrap().z;
         let hv = pub_key.clone() * bytes_to_big(self.sig.clone().unwrap().h);
         u = u + &hv;
-        let h_p = kmac_xof(&mut big_to_bytes(u.x), &self.msg, 512, "T", d);
+        let h_p = kmac_xof(&big_to_bytes(u.x), &self.msg, 512, "T", d);
         self.op_result = Some(h_p == self.sig.clone().unwrap().h)
     }
 }

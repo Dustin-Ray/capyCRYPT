@@ -60,7 +60,6 @@ pub mod ops_tests {
     }
     #[test]
     fn test_sig_timing_side_channel() {
-    
         for i in 0..10 {
             let mut msg = Message::new(get_random_bytes(16));
             let pw = get_random_bytes(1 << i);
