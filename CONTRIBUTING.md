@@ -13,14 +13,15 @@ Some things to remember as you go through the code:
 1. If you haven't seen rust before, some of the syntax might look a little wild. Don't be intimidated! Rust is a wonderful, logical, and powerful language to have in your toolbox. The maintainers of this repo are here to help you whenever you need it, reach out with any question at any time!
 2. Contributing to open-source libraries is a fantastic item to add to your resume and can help give you a competitive advantage in an otherwise difficult job market.
 3. Generative AI is your friend. It is extremely adept at explaining code, writing boilerplate, and translating between programming languages. If you're stuck on something, write it in python and then convert it! There's nothing wrong with using sophisticated tools to help you gain experience and understanding.
-4. Some of the functions, particularly in ```src/ops.rs``` do stuff that that isn't immediately clear. In many cases, we are following conventions defined by NIST or published research. There is sound formal reasoning as to why certain formulas or constant values look the way that they do, but don't be intimated if the code looks dense and confusing at first. Many of the open issues don't require a complete formal understanding of the cryptography in use here, but there is plenty of opportunity for you to engage with the maintainers and learn more about why the things are doing what they do.
 
-Example prompts: 
+   Example prompts: 
 - "Show how to work with arrays in rust"
 - "Explain the &mut keyword"
 - "What is a trait and why should I use it?"
 - "What are effective strategies to reduce memory usage when working with large data?"
 - "Here's this java function. What would it look like in rust?"
+
+4. Some of the functions, particularly in ```src/ops.rs``` do stuff that that isn't immediately clear. In many cases, we are following conventions defined by NIST or published research. There is sound formal reasoning as to why certain formulas or constant values look the way that they do, but don't be intimated if the code looks dense and confusing at first. Many of the open issues don't require a complete formal understanding of the cryptography in use here, but there is plenty of opportunity for you to engage with the maintainers and learn more about why the things are doing what they do.
 
 ## Getting Started
 
