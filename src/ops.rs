@@ -17,8 +17,8 @@ use crate::{
     Hashable, KeyEncryptable, KeyPair, Message, PwEncryptable, Signable, Signature,
 };
 use rug::Integer;
-
 const SELECTED_CURVE: EdCurves = E448;
+
 /*
 ============================================================
 The main components of the cryptosystem are defined here

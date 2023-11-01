@@ -84,11 +84,11 @@ pub mod byte_utils {
     }
 
     /// Get a random big with size number of bits
-    pub fn get_random_big(size: u64) -> big {
+    pub fn get_random_big(size: u32) -> big {
         use rug::rand::RandState;
         use rug::Integer;
         let mut rand = RandState::new();
-        let i = Integer::random_bits(size.try_into().unwrap(), &mut rand).into();
+        let i = Integer::random_bits(size, &mut rand).into();
         i
     }
 
@@ -108,7 +108,7 @@ pub mod byte_utils {
         local.format("%Y-%m-%d %H:%M:%S").to_string()
     }
 
-    ///Encodes bytes to a hex string and then converts to GMP Integer.
+    /// Encodes bytes to a hex string and then converts to GMP Integer.
     pub fn bytes_to_big(in_bytes: Vec<u8>) -> big {
         big::from_digits(&in_bytes, LsfBe)
     }
