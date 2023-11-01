@@ -38,7 +38,7 @@ fn bench_sign_verify(c: &mut Criterion) {
                     SELECTED_CURVE,
                     BIT_SECURITY,
                 ),
-                Message::new(&mut get_random_bytes(5242880)),
+                Message::new(get_random_bytes(5242880)),
             )
         });
     });
@@ -49,7 +49,7 @@ fn bench_sym_enc(c: &mut Criterion) {
         b.iter(|| {
             sym_enc(
                 &mut get_random_bytes(64),
-                Message::new(&mut get_random_bytes(5242880)),
+                Message::new(get_random_bytes(5242880)),
             )
         });
     });
@@ -66,7 +66,7 @@ fn bench_key_gen_enc_dec(c: &mut Criterion) {
                     BIT_SECURITY,
                 )
                 .priv_key,
-                Message::new(&mut get_random_bytes(5242880)),
+                Message::new(get_random_bytes(5242880)),
             )
         });
     });

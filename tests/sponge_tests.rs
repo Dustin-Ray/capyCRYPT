@@ -156,12 +156,12 @@ mod sponge_tests {
 }
 #[test]
 fn test_shake_224() {
-    let mut data = Message::new(&mut vec![]);
+    let mut data = Message::new(vec![]);
     let expected = "6b4e03423667dbb73b6e15454f0eb1abd4597f9a1b078e3f5b5a6bc7";
     data.compute_sha3_hash(224);
     assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
 
-    let mut data = Message::new(&mut Box::new("test".as_bytes().to_owned()));
+    let mut data = Message::new("test".as_bytes().to_vec());
     let expected = "3797bf0afbbfca4a7bbba7602a2b552746876517a7f9b7ce2db0ae7b";
     data.compute_sha3_hash(224);
     assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
@@ -169,12 +169,12 @@ fn test_shake_224() {
 
 #[test]
 fn test_shake_256() {
-    let mut data = Message::new(&mut vec![]);
+    let mut data = Message::new(vec![]);
     let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
     data.compute_sha3_hash(256);
     assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
 
-    let mut data = Message::new(&mut Box::new("test".as_bytes().to_owned()));
+    let mut data = Message::new("test".as_bytes().to_vec());
     let expected = "36f028580bb02cc8272a9a020f4200e346e276ae664e45ee80745574e2f5ab80";
     data.compute_sha3_hash(256);
     assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
@@ -182,12 +182,12 @@ fn test_shake_256() {
 
 #[test]
 fn test_shake_384() {
-    let mut data = Message::new(&mut Box::new("".as_bytes().to_owned()));
+    let mut data = Message::new(vec![]);
     let expected = "0c63a75b845e4f7d01107d852e4c2485c51a50aaaa94fc61995e71bbee983a2ac3713831264adb47fb6bd1e058d5f004";
     data.compute_sha3_hash(384);
     assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
 
-    let mut data = Message::new(&mut Box::new("test".as_bytes().to_owned()));
+    let mut data = Message::new("test".as_bytes().to_vec());
     let expected = "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd";
     data.compute_sha3_hash(384);
     assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
@@ -195,7 +195,7 @@ fn test_shake_384() {
 
 #[test]
 fn test_shake_512() {
-    let mut data = Message::new(&mut Box::new("test".as_bytes().to_owned()));
+    let mut data = Message::new("test".as_bytes().to_vec());
     let expected = "9ece086e9bac491fac5c1d1046ca11d737b92a2b2ebd93f005d7b710110c0a678288166e7fbe796883a4f2e9b3ca9f484f521d0ce464345cc1aec96779149c14";
     data.compute_sha3_hash(512);
     assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
@@ -205,7 +205,7 @@ fn test_shake_512() {
 fn test_compute_tagged_hash_256() {
     let s = "".to_owned();
     let mut pw = "".as_bytes().to_vec();
-    let mut data = Message::new(&mut Box::new("".as_bytes().to_owned()));
+    let mut data = Message::new(vec![]);
     let expected = "3f9259e80b35e0719c26025f7e38a4a38172bf1142a6a9c1930e50df03904312";
     data.compute_tagged_hash(&mut pw, &s, 256);
     assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
@@ -214,7 +214,7 @@ fn test_compute_tagged_hash_256() {
 #[test]
 fn test_compute_tagged_hash_512() {
     let mut pw = "test".as_bytes().to_vec();
-    let mut data = Message::new(&mut vec![]);
+    let mut data = Message::new(vec![]);
     let expected = "0f9b5dcd47dc08e08a173bbe9a57b1a65784e318cf93cccb7f1f79f186ee1caeff11b12f8ca3a39db82a63f4ca0b65836f5261ee64644ce5a88456d3d30efbed";
     data.compute_tagged_hash(&mut pw, &"", 512);
     assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);

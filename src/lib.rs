@@ -55,9 +55,9 @@ pub struct KeyPair {
 }
 
 impl Message {
-    pub fn new(data: &mut Vec<u8>) -> Message {
+    pub fn new(data: Vec<u8>) -> Message {
         Message {
-            msg: Box::new(data.to_owned()),
+            msg: Box::new(data),
             sym_nonce: None,
             asym_nonce: None,
             digest: None,

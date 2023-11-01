@@ -1,6 +1,6 @@
 use crate::{
     curves::{
-        order, EdCurvePoint,
+        curve_n, order, EdCurvePoint,
         EdCurves::{self, E448},
         Generator,
     },
@@ -126,7 +126,7 @@ impl Hashable for Message {
     /// ```
     /// use capycrypt::{Hashable, Message};
     /// // Hash the empty string
-    /// let mut data = Message::new(&mut vec![]);
+    /// let mut data = Message::new(vec![]);
     /// // Obtained from OpenSSL
     /// let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
     /// // Compute a SHA3 digest with 256 bits of security
@@ -154,7 +154,7 @@ impl Hashable for Message {
     /// ```
     /// use capycrypt::{Hashable, Message};
     /// let mut pw = "test".as_bytes().to_vec();
-    /// let mut data = Message::new(&mut vec![]);
+    /// let mut data = Message::new(vec![]);
     /// let expected = "0f9b5dcd47dc08e08a173bbe9a57b1a65784e318cf93cccb7f1f79f186ee1caeff11b12f8ca3a39db82a63f4ca0b65836f5261ee64644ce5a88456d3d30efbed";
     /// data.compute_tagged_hash(&mut pw, &"", 512);
     /// assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
@@ -194,7 +194,7 @@ impl PwEncryptable for Message {
     /// // Get a random password
     /// let pw = get_random_bytes(64);
     /// // Get 5mb random data
-    /// let mut msg = Message::new(&mut get_random_bytes(5242880));
+    /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Encrypt the data with 512 bits of security
     /// msg.pw_encrypt(&mut pw.clone(), 512);
     /// // Decrypt the data
@@ -241,7 +241,7 @@ impl PwEncryptable for Message {
     /// // Get a random password
     /// let pw = get_random_bytes(64);
     /// // Get 5mb random data
-    /// let mut msg = Message::new(&mut get_random_bytes(5242880));
+    /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Encrypt the data with 512 bits of security
     /// msg.pw_encrypt(&mut pw.clone(), 512);
     /// // Decrypt the data
@@ -289,9 +289,14 @@ impl KeyPair {
     /// let key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
     /// ```
     pub fn new(pw: &Vec<u8>, owner: String, curve: EdCurves, d: u64) -> KeyPair {
-        let s: Integer = (bytes_to_big(kmac_xof(&mut pw.to_owned(), &vec![], 512, "K", d)) * 4)
-            % order(SELECTED_CURVE);
+        
+        // The proper solution will check in constant time if the bit is already set or not.
+        let s: Integer = (bytes_to_big(kmac_xof(&pw, &vec![], 512, "K", d)) * 4)
+            % order(SELECTED_CURVE)
+            + curve_n(SELECTED_CURVE); // https://github.com/drcapybara/capyCRYPT/issues/30
+
         let pub_key = EdCurvePoint::generator(curve, false) * (s);
+
         KeyPair {
             owner,
             pub_key,
@@ -329,7 +334,7 @@ impl KeyEncryptable for Message {
     ///     sha3::aux_functions::byte_utils::get_random_bytes,
     ///     curves::EdCurves::E448};
     /// // Get 5mb random data
-    /// let mut msg = Message::new(&mut get_random_bytes(5242880));
+    /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Generate the keypair
     /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), E448, 512);
     /// // Encrypt with the public key
@@ -387,7 +392,7 @@ impl KeyEncryptable for Message {
     ///     curves::EdCurves::E448};
     ///
     /// // Get 5mb random data
-    /// let mut msg = Message::new(&mut get_random_bytes(5242880));
+    /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Create a new private/public keypair
     /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), E448, 512);
     ///
@@ -441,7 +446,7 @@ impl Signable for Message {
     ///     sha3::aux_functions::byte_utils::get_random_bytes,
     ///     curves::EdCurves::E448};
     /// // Get random 5mb
-    /// let mut msg = Message::new(&mut get_random_bytes(5242880));
+    /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Get a random password
     /// let pw = get_random_bytes(64);
     /// // Generate a signing keypair
@@ -484,7 +489,7 @@ impl Signable for Message {
     ///     sha3::aux_functions::byte_utils::get_random_bytes,
     ///     curves::EdCurves::E448};
     /// // Get random 5mb
-    /// let mut msg = Message::new(&mut get_random_bytes(5242880));
+    /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Get a random password
     /// let pw = get_random_bytes(64);
     /// // Generate a signing keypair
