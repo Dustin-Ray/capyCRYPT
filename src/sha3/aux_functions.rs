@@ -1,7 +1,5 @@
 /// NIST 800-185 compliant functions.
 pub mod nist_800_185 {
-    use std::borrow::BorrowMut;
-
     use byteorder::{BigEndian, WriteBytesExt};
 
     /// # NIST SP 800-185 2.3.3
@@ -25,7 +23,7 @@ pub mod nist_800_185 {
     /// * `return`: left_encode(len(`s`)) + `s`
     pub fn encode_string(s: &Vec<u8>) -> Vec<u8> {
         let mut encoded = left_encode((s.len() * 8) as u64);
-        encoded.append(s.clone().borrow_mut());
+        encoded.append(&mut s.clone());
         encoded
     }
 

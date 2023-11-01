@@ -56,9 +56,9 @@ let pw = get_random_bytes(64);
 // Get 5mb random data
 let mut msg = Message::new(get_random_bytes(5242880));
 // Encrypt the data with 256 bits of security
-msg.pw_encrypt(&mut pw.clone(), 512);
+msg.pw_encrypt(&pw, 512);
 // Decrypt the data
-msg.pw_decrypt(&mut pw.clone(), 512);
+msg.pw_decrypt(&pw, 512);
 // Verify operation success
 assert!(msg.op_result.unwrap());
 ```

@@ -11,8 +11,8 @@ const BIT_SECURITY: u64 = 224;
 
 /// Symmetric encrypt and decrypt roundtrip
 fn sym_enc(pw: &mut Vec<u8>, mut msg: Message) {
-    msg.pw_encrypt(&mut pw.clone(), BIT_SECURITY);
-    msg.pw_decrypt(&mut pw.clone(), BIT_SECURITY);
+    msg.pw_encrypt(&pw, BIT_SECURITY);
+    msg.pw_decrypt(&pw, BIT_SECURITY);
 }
 
 /// Asymmetric encrypt and decrypt roundtrip + keygen

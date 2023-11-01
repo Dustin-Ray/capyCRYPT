@@ -56,19 +56,15 @@ fn shake(n: &mut Vec<u8>, d: u64) -> Vec<u8> {
 /// Implements FIPS 202 Section 3. Returns: customizable and
 /// domain-seperated length `L` SHA3XOF hash of input string.
 /// ## Arguments:
-/// * `x: &mut Vec<u8>`: input message as ```Vec<u8>```
+/// * `x: &Vec<u8>`: input message as ```Vec<u8>```
 /// * `l: u64`: requested output length
 /// * `n: &str`: optional function name string
 /// * `s: &str`: option customization string
 /// ## Returns:
 /// * `return -> Vec<u8>`: SHA3XOF hash of length `l` of input message `x`
-pub fn cshake(x: &mut Vec<u8>, l: u64, n: &str, s: &str, d: u64) -> Vec<u8> {
-    if n.is_empty() && s.is_empty() {
-        shake(x, l);
-    }
+pub fn cshake(x: &[u8], l: u64, n: &str, s: &str, d: u64) -> Vec<u8> {
     let mut encoded_n = encode_string(&n.as_bytes().to_vec());
     let encoded_s = encode_string(&s.as_bytes().to_vec());
-
     encoded_n.extend_from_slice(&encoded_s);
 
     let bytepad_w = match d {
@@ -80,17 +76,21 @@ pub fn cshake(x: &mut Vec<u8>, l: u64, n: &str, s: &str, d: u64) -> Vec<u8> {
     };
 
     let mut out = byte_pad(&mut encoded_n, bytepad_w);
-
-    out.append(x);
+    out.extend_from_slice(x);
     out.push(0x04);
+
+    if n.is_empty() && s.is_empty() {
+        shake(&mut out, l);
+    }
+
     sponge_squeeze(&mut sponge_absorb(&mut out, d), l, 1600 - d)
 }
 
 /// # Keyed Message Authtentication
 /// Generates keyed hash for given input as specified in NIST SP 800-185 section 4.
 /// ## Arguments:
-/// * `k: &mut Vec<u8>`: key. SP 800 185 8.4.1 KMAC Key Length requires key length >= d
-/// * `x: &mut Vec<u8>`: byte-oriented message
+/// * `k: &Vec<u8>`: key. SP 800 185 8.4.1 KMAC Key Length requires key length >= d
+/// * `x: &Vec<u8>`: byte-oriented message
 /// * `l: u64`: requested bit output length
 /// * `s: &str`: customization string
 /// * `d: u64`: the security parameter for the operation. NIST-standard values for d consist of the following:
@@ -99,7 +99,7 @@ pub fn cshake(x: &mut Vec<u8>, l: u64, n: &str, s: &str, d: u64) -> Vec<u8> {
 ///
 /// ## Returns:
 /// * `return  -> Vec<u8>`: kmac_xof of `x` under `k`
-pub fn kmac_xof(k: &Vec<u8>, x: &Vec<u8>, l: u64, s: &str, d: u64) -> Vec<u8> {
+pub fn kmac_xof(k: &Vec<u8>, x: &[u8], l: u64, s: &str, d: u64) -> Vec<u8> {
     let mut encode_k = encode_string(k);
     let bytepad_w = match d {
         224 => 172,
@@ -109,10 +109,12 @@ pub fn kmac_xof(k: &Vec<u8>, x: &Vec<u8>, l: u64, s: &str, d: u64) -> Vec<u8> {
         _ => panic!("Unsupported security strength. Must be 224, 384, 256, or 512"),
     };
     let mut bp = byte_pad(&mut encode_k, bytepad_w);
-    bp.append(&mut x.to_owned());
-    let mut right_enc = right_encode(0); // SP 800-185 4.3.1 KMAC with Arbitrary-Length Output
-    bp.append(&mut right_enc);
-    cshake(&mut bp, l, "KMAC", s, d)
+
+    // Extend bp with contents of x and right_encode(0)
+    bp.extend_from_slice(x);
+    bp.extend_from_slice(&right_encode(0)); // SP 800-185 4.3.1 KMAC with Arbitrary-Length Output
+
+    cshake(&bp, l, "KMAC", s, d)
 }
 
 impl Hashable for Message {
@@ -196,9 +198,9 @@ impl PwEncryptable for Message {
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Encrypt the data with 512 bits of security
-    /// msg.pw_encrypt(&mut pw.clone(), 512);
+    /// msg.pw_encrypt(&pw, 512);
     /// // Decrypt the data
-    /// msg.pw_decrypt(&mut pw.clone(), 512);
+    /// msg.pw_decrypt(&pw, 512);
     /// // Verify operation success
     /// assert!(msg.op_result.unwrap());
     /// ```
@@ -206,11 +208,11 @@ impl PwEncryptable for Message {
         let z = get_random_bytes(512);
         let mut ke_ka = z.clone();
         ke_ka.append(&mut pw.to_owned());
-        let ke_ka = kmac_xof(&ke_ka, &vec![], 1024, "S", d);
-        let ke = &mut ke_ka[..64].to_vec();
-        let ka = &mut ke_ka[64..].to_vec();
+        let ke_ka = kmac_xof(&ke_ka, &[], 1024, "S", d);
+        let ke = &ke_ka[..64].to_vec();
+        let ka = &ke_ka[64..].to_vec();
         self.digest = Some(kmac_xof(ka, &self.msg, 512, "SKA", d));
-        let c = kmac_xof(ke, &vec![], (self.msg.len() * 8) as u64, "SKE", d);
+        let c = kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "SKE", d);
         xor_bytes(&mut self.msg, &c);
         self.sym_nonce = Some(z);
     }
@@ -243,19 +245,19 @@ impl PwEncryptable for Message {
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Encrypt the data with 512 bits of security
-    /// msg.pw_encrypt(&mut pw.clone(), 512);
+    /// msg.pw_encrypt(&pw, 512);
     /// // Decrypt the data
-    /// msg.pw_decrypt(&mut pw.clone(), 512);
+    /// msg.pw_decrypt(&pw, 512);
     /// // Verify operation success
     /// assert!(msg.op_result.unwrap());
     /// ```
     fn pw_decrypt(&mut self, pw: &[u8], d: u64) {
         let mut z_pw = self.sym_nonce.clone().unwrap();
         z_pw.append(&mut pw.to_owned());
-        let ke_ka = kmac_xof(&z_pw, &vec![], 1024, "S", d);
+        let ke_ka = kmac_xof(&z_pw, &[], 1024, "S", d);
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
-        let m = kmac_xof(ke, &vec![], (self.msg.len() * 8) as u64, "SKE", d);
+        let m = kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "SKE", d);
         xor_bytes(&mut self.msg, &m);
         let new_t = &kmac_xof(ka, &self.msg, 512, "SKA", d);
         self.op_result = Some(self.digest.as_mut().unwrap() == new_t);
@@ -290,8 +292,7 @@ impl KeyPair {
     /// ```
     pub fn new(pw: &Vec<u8>, owner: String, curve: EdCurves, d: u64) -> KeyPair {
         // Timing sidechannel on variable keysize is mitigated here due to modding by curve order.
-        let s: Integer =
-            (bytes_to_big(kmac_xof(pw, &vec![], 512, "K", d)) * 4) % order(SELECTED_CURVE);
+        let s: Integer = (bytes_to_big(kmac_xof(pw, &[], 512, "K", d)) * 4) % order(SELECTED_CURVE);
 
         let pub_key = EdCurvePoint::generator(curve, false) * (s);
 
@@ -343,12 +344,12 @@ impl KeyEncryptable for Message {
         let w = pub_key.clone() * k.clone();
         let z = EdCurvePoint::generator(pub_key.curve, false) * k;
 
-        let ke_ka = kmac_xof(&big_to_bytes(w.x), &vec![], 1024, "PK", d);
+        let ke_ka = kmac_xof(&big_to_bytes(w.x), &[], 1024, "PK", d);
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
 
         let t = kmac_xof(ka, &self.msg, 512, "PKA", d);
-        let c = kmac_xof(ke, &vec![], (self.msg.len() * 8) as u64, "PKE", d);
+        let c = kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "PKE", d);
         xor_bytes(&mut self.msg, &c);
 
         self.digest = Some(t);
@@ -404,17 +405,17 @@ impl KeyEncryptable for Message {
     fn key_decrypt(&mut self, pw: &[u8], d: u64) {
         let z = self.asym_nonce.clone().unwrap();
         let s: Integer =
-            (bytes_to_big(kmac_xof(&pw.to_owned(), &vec![], 512, "K", d)) * 4) % z.clone().n;
+            (bytes_to_big(kmac_xof(&pw.to_owned(), &[], 512, "K", d)) * 4) % z.clone().n;
         let w = z * s;
 
-        let ke_ka = kmac_xof(&big_to_bytes(w.x), &vec![], 1024, "PK", d);
+        let ke_ka = kmac_xof(&big_to_bytes(w.x), &[], 1024, "PK", d);
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
 
-        let m = Box::new(kmac_xof(ke, &vec![], (self.msg.len() * 8) as u64, "PKE", d));
+        let m = Box::new(kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "PKE", d));
         xor_bytes(&mut self.msg, &m);
-        let t_p = kmac_xof(&ka.clone(), &self.msg, 512, "PKA", d);
-        self.op_result = Some(t_p == self.digest.clone().unwrap());
+        let t_p = kmac_xof(ka, &self.msg, 512, "PKA", d);
+        self.op_result = Some(t_p == self.digest.as_deref().unwrap());
     }
 }
 
@@ -453,7 +454,7 @@ impl Signable for Message {
     /// msg.sign(&key_pair, 512);
     /// ```
     fn sign(&mut self, key: &KeyPair, d: u64) {
-        let s: Integer = bytes_to_big(kmac_xof(&key.priv_key, &vec![], 512, "K", d)) * 4;
+        let s: Integer = bytes_to_big(kmac_xof(&key.priv_key, &[], 512, "K", d)) * 4;
         let s_bytes = big_to_bytes(s.clone());
 
         let k: Integer = bytes_to_big(kmac_xof(&s_bytes, &self.msg, 512, "N", d)) * 4;

@@ -11,8 +11,8 @@ pub mod ops_tests {
         let pw = get_random_bytes(64);
         let mut msg = Message::new(get_random_bytes(5242880));
 
-        msg.pw_encrypt(&mut pw.clone(), 512);
-        msg.pw_decrypt(&mut pw.clone(), 512);
+        msg.pw_encrypt(&pw, 256);
+        msg.pw_decrypt(&pw, 256);
 
         assert!(msg.op_result.unwrap());
     }
@@ -21,8 +21,8 @@ pub mod ops_tests {
         let pw = get_random_bytes(64);
         let mut msg = Message::new(get_random_bytes(5242880));
 
-        msg.pw_encrypt(&mut pw.clone(), 256);
-        msg.pw_decrypt(&mut pw.clone(), 256);
+        msg.pw_encrypt(&pw, 256);
+        msg.pw_decrypt(&pw, 256);
 
         assert!(msg.op_result.unwrap());
     }
