@@ -36,7 +36,7 @@ apt-get install m4
 ```rust
 use capycrypt::{Hashable, Message};
 // Hash the empty string
-let mut data = Message::new(&mut vec![]);
+let mut data = Message::new(vec![]);
 // Obtained from OpenSSL
 let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
 // Compute a SHA3 digest with 128 bits of security
@@ -54,7 +54,7 @@ use capycrypt::{
 // Get a random password
 let pw = get_random_bytes(64);
 // Get 5mb random data
-let mut msg = Message::new(&mut get_random_bytes(5242880));
+let mut msg = Message::new(get_random_bytes(5242880));
 // Encrypt the data with 256 bits of security
 msg.pw_encrypt(&mut pw.clone(), 512);
 // Decrypt the data
@@ -73,7 +73,7 @@ use capycrypt::{
     curves::EdCurves::E448};
 
 // Get 5mb random data
-let mut msg = Message::new(&mut get_random_bytes(5242880));
+let mut msg = Message::new(get_random_bytes(5242880));
 // Create a new private/public keypair
 let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), E448, 512);
 
@@ -94,7 +94,7 @@ use capycrypt::{
     sha3::aux_functions::byte_utils::get_random_bytes,
     curves::EdCurves::E448};
 // Get random 5mb
-let mut msg = Message::new(&mut get_random_bytes(5242880));
+let mut msg = Message::new(get_random_bytes(5242880));
 // Get a random password
 let pw = get_random_bytes(64);
 // Generate a signing keypair

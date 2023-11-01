@@ -9,7 +9,6 @@ use criterion::{criterion_group, criterion_main, Criterion};
 const SELECTED_CURVE: EdCurves = E521;
 const BIT_SECURITY: u64 = 512;
 
-
 /// Symmetric encrypt and decrypt roundtrip
 fn sym_enc(pw: &mut Vec<u8>, mut msg: Message) {
     msg.pw_encrypt(&mut pw.clone(), BIT_SECURITY);
@@ -39,7 +38,7 @@ fn bench_sign_verify(c: &mut Criterion) {
                     SELECTED_CURVE,
                     BIT_SECURITY,
                 ),
-                Message::new(&mut get_random_bytes(5242880)),
+                Message::new(get_random_bytes(5242880)),
             )
         });
     });
@@ -50,7 +49,7 @@ fn bench_sym_enc(c: &mut Criterion) {
         b.iter(|| {
             sym_enc(
                 &mut get_random_bytes(64),
-                Message::new(&mut get_random_bytes(5242880)),
+                Message::new(get_random_bytes(5242880)),
             )
         });
     });
@@ -67,7 +66,7 @@ fn bench_key_gen_enc_dec(c: &mut Criterion) {
                     BIT_SECURITY,
                 )
                 .priv_key,
-                Message::new(&mut get_random_bytes(5242880)),
+                Message::new(get_random_bytes(5242880)),
             )
         });
     });

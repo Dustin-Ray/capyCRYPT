@@ -66,8 +66,8 @@ pub fn cshake(x: &mut Vec<u8>, l: u64, n: &str, s: &str, d: u64) -> Vec<u8> {
     if n.is_empty() && s.is_empty() {
         shake(x, l);
     }
-    let mut encoded_n = encode_string(&mut n.as_bytes().to_vec());
-    let encoded_s = encode_string(&mut s.as_bytes().to_vec());
+    let mut encoded_n = encode_string(&n.as_bytes().to_vec());
+    let encoded_s = encode_string(&s.as_bytes().to_vec());
 
     encoded_n.extend_from_slice(&encoded_s);
 
@@ -126,7 +126,7 @@ impl Hashable for Message {
     /// ```
     /// use capycrypt::{Hashable, Message};
     /// // Hash the empty string
-    /// let mut data = Message::new(&mut vec![]);
+    /// let mut data = Message::new(vec![]);
     /// // Obtained from OpenSSL
     /// let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
     /// // Compute a SHA3 digest with 256 bits of security
@@ -154,7 +154,7 @@ impl Hashable for Message {
     /// ```
     /// use capycrypt::{Hashable, Message};
     /// let mut pw = "test".as_bytes().to_vec();
-    /// let mut data = Message::new(&mut vec![]);
+    /// let mut data = Message::new(vec![]);
     /// let expected = "0f9b5dcd47dc08e08a173bbe9a57b1a65784e318cf93cccb7f1f79f186ee1caeff11b12f8ca3a39db82a63f4ca0b65836f5261ee64644ce5a88456d3d30efbed";
     /// data.compute_tagged_hash(&mut pw, &"", 512);
     /// assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
@@ -194,7 +194,7 @@ impl PwEncryptable for Message {
     /// // Get a random password
     /// let pw = get_random_bytes(64);
     /// // Get 5mb random data
-    /// let mut msg = Message::new(&mut get_random_bytes(5242880));
+    /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Encrypt the data with 512 bits of security
     /// msg.pw_encrypt(&mut pw.clone(), 512);
     /// // Decrypt the data
@@ -206,7 +206,7 @@ impl PwEncryptable for Message {
         let z = get_random_bytes(512);
         let mut ke_ka = z.clone();
         ke_ka.append(&mut pw.to_owned());
-        let ke_ka = kmac_xof(&mut ke_ka, &vec![], 1024, "S", d);
+        let ke_ka = kmac_xof(&ke_ka, &vec![], 1024, "S", d);
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
         self.digest = Some(kmac_xof(ka, &self.msg, 512, "SKA", d));
@@ -241,7 +241,7 @@ impl PwEncryptable for Message {
     /// // Get a random password
     /// let pw = get_random_bytes(64);
     /// // Get 5mb random data
-    /// let mut msg = Message::new(&mut get_random_bytes(5242880));
+    /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Encrypt the data with 512 bits of security
     /// msg.pw_encrypt(&mut pw.clone(), 512);
     /// // Decrypt the data
@@ -252,7 +252,7 @@ impl PwEncryptable for Message {
     fn pw_decrypt(&mut self, pw: &[u8], d: u64) {
         let mut z_pw = self.sym_nonce.clone().unwrap();
         z_pw.append(&mut pw.to_owned());
-        let ke_ka = kmac_xof(&mut z_pw, &vec![], 1024, "S", d);
+        let ke_ka = kmac_xof(&z_pw, &vec![], 1024, "S", d);
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
         let m = kmac_xof(ke, &vec![], (self.msg.len() * 8) as u64, "SKE", d);
@@ -289,9 +289,12 @@ impl KeyPair {
     /// let key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
     /// ```
     pub fn new(pw: &Vec<u8>, owner: String, curve: EdCurves, d: u64) -> KeyPair {
-        let s: Integer = (bytes_to_big(kmac_xof(&mut pw.to_owned(), &vec![], 512, "K", d)) * 4)
-            % order(SELECTED_CURVE);
+        // Timing sidechannel on variable keysize is mitigated here due to modding by curve order.
+        let s: Integer =
+            (bytes_to_big(kmac_xof(pw, &vec![], 512, "K", d)) * 4) % order(SELECTED_CURVE);
+
         let pub_key = EdCurvePoint::generator(curve, false) * (s);
+
         KeyPair {
             owner,
             pub_key,
@@ -329,7 +332,7 @@ impl KeyEncryptable for Message {
     ///     sha3::aux_functions::byte_utils::get_random_bytes,
     ///     curves::EdCurves::E448};
     /// // Get 5mb random data
-    /// let mut msg = Message::new(&mut get_random_bytes(5242880));
+    /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Generate the keypair
     /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), E448, 512);
     /// // Encrypt with the public key
@@ -340,7 +343,7 @@ impl KeyEncryptable for Message {
         let w = pub_key.clone() * k.clone();
         let z = EdCurvePoint::generator(pub_key.curve, false) * k;
 
-        let ke_ka = kmac_xof(&mut big_to_bytes(w.x), &vec![], 1024, "PK", d);
+        let ke_ka = kmac_xof(&big_to_bytes(w.x), &vec![], 1024, "PK", d);
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
 
@@ -387,7 +390,7 @@ impl KeyEncryptable for Message {
     ///     curves::EdCurves::E448};
     ///
     /// // Get 5mb random data
-    /// let mut msg = Message::new(&mut get_random_bytes(5242880));
+    /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Create a new private/public keypair
     /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), E448, 512);
     ///
@@ -401,16 +404,16 @@ impl KeyEncryptable for Message {
     fn key_decrypt(&mut self, pw: &[u8], d: u64) {
         let z = self.asym_nonce.clone().unwrap();
         let s: Integer =
-            (bytes_to_big(kmac_xof(&mut pw.to_owned(), &vec![], 512, "K", d)) * 4) % z.clone().n;
+            (bytes_to_big(kmac_xof(&pw.to_owned(), &vec![], 512, "K", d)) * 4) % z.clone().n;
         let w = z * s;
 
-        let ke_ka = kmac_xof(&mut big_to_bytes(w.x), &vec![], 1024, "PK", d);
+        let ke_ka = kmac_xof(&big_to_bytes(w.x), &vec![], 1024, "PK", d);
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
 
         let m = Box::new(kmac_xof(ke, &vec![], (self.msg.len() * 8) as u64, "PKE", d));
         xor_bytes(&mut self.msg, &m);
-        let t_p = kmac_xof(&mut ka.clone(), &self.msg, 512, "PKA", d);
+        let t_p = kmac_xof(&ka.clone(), &self.msg, 512, "PKA", d);
         self.op_result = Some(t_p == self.digest.clone().unwrap());
     }
 }
@@ -441,7 +444,7 @@ impl Signable for Message {
     ///     sha3::aux_functions::byte_utils::get_random_bytes,
     ///     curves::EdCurves::E448};
     /// // Get random 5mb
-    /// let mut msg = Message::new(&mut get_random_bytes(5242880));
+    /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Get a random password
     /// let pw = get_random_bytes(64);
     /// // Generate a signing keypair
@@ -451,13 +454,13 @@ impl Signable for Message {
     /// ```
     fn sign(&mut self, key: &KeyPair, d: u64) {
         let s: Integer = bytes_to_big(kmac_xof(&key.priv_key, &vec![], 512, "K", d)) * 4;
-        let mut s_bytes = big_to_bytes(s.clone());
+        let s_bytes = big_to_bytes(s.clone());
 
-        let k: Integer = bytes_to_big(kmac_xof(&mut s_bytes, &self.msg, 512, "N", d)) * 4;
+        let k: Integer = bytes_to_big(kmac_xof(&s_bytes, &self.msg, 512, "N", d)) * 4;
 
         let u = EdCurvePoint::generator(SELECTED_CURVE, false) * k.clone();
-        let mut ux_bytes = big_to_bytes(u.x);
-        let h = kmac_xof(&mut ux_bytes, &self.msg, 512, "T", d);
+        let ux_bytes = big_to_bytes(u.x);
+        let h = kmac_xof(&ux_bytes, &self.msg, 512, "T", d);
         let h_big = bytes_to_big(h.clone());
         //(a % b + b) % b
         let z = ((k - (h_big * s)) % u.r.clone() + u.r.clone()) % u.r;
@@ -484,7 +487,7 @@ impl Signable for Message {
     ///     sha3::aux_functions::byte_utils::get_random_bytes,
     ///     curves::EdCurves::E448};
     /// // Get random 5mb
-    /// let mut msg = Message::new(&mut get_random_bytes(5242880));
+    /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Get a random password
     /// let pw = get_random_bytes(64);
     /// // Generate a signing keypair
@@ -499,7 +502,7 @@ impl Signable for Message {
         let mut u = EdCurvePoint::generator(pub_key.curve, false) * self.sig.clone().unwrap().z;
         let hv = pub_key.clone() * bytes_to_big(self.sig.clone().unwrap().h);
         u = u + &hv;
-        let h_p = kmac_xof(&mut big_to_bytes(u.x), &self.msg, 512, "T", d);
+        let h_p = kmac_xof(&big_to_bytes(u.x), &self.msg, 512, "T", d);
         self.op_result = Some(h_p == self.sig.clone().unwrap().h)
     }
 }
