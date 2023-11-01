@@ -1,14 +1,6 @@
 use curves::{EdCurvePoint, EdCurves};
 use rug::Integer;
 
-/*
-    TODO:
-    - refactor z, z_x, z_y into message
-    - fix tag authentication failure
-    - update usage examples in docs
-    - Fix benches
-*/
-
 /// Module for all EC operations.
 pub mod curves;
 /// Module for sha3 primitives.
