@@ -310,17 +310,6 @@ pub fn curve_r(curve: EdCurves) -> Integer {
     }
 }
 
-/// Initializes r value for curve.
-/// <https://eprint.iacr.org/2013/647.pdf>
-pub fn curve_n(curve: EdCurves) -> Integer {
-    match curve {
-        EdCurves::E222 => Integer::from_str_radix(ed_curve_constants::N_222, 16).unwrap(),
-        EdCurves::E382 => Integer::from_str_radix(ed_curve_constants::N_382, 16).unwrap(),
-        EdCurves::E448 => Integer::from_str_radix(ed_curve_constants::N_448, 16).unwrap(),
-        EdCurves::E521 => Integer::from_str_radix(ed_curve_constants::N_521, 16).unwrap(),
-    }
-}
-
 /// Solves for y in curve equation 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦²
 fn solve_for_y(x: &Integer, p: Integer, d: Integer, msb: bool) -> Integer {
     let mut sq = x.clone();
