@@ -58,7 +58,7 @@ let mut msg = Message::new(get_random_bytes(5242880));
 // Encrypt the data with 256 bits of security
 msg.pw_encrypt(&pw, 512);
 // Decrypt the data
-msg.pw_decrypt(&pw, 512);
+msg.pw_decrypt(&pw);
 // Verify operation success
 assert!(msg.op_result.unwrap());
 ```
@@ -80,7 +80,7 @@ let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), E448,
 // Encrypt the message
 msg.key_encrypt(&key_pair.pub_key, 512);
 // Decrypt the message
-msg.key_decrypt(&key_pair.priv_key, 512);
+msg.key_decrypt(&key_pair.priv_key);
 // Verify
 assert!(msg.op_result.unwrap());
 ```
@@ -102,7 +102,7 @@ let key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
 // Sign with 256 bits of security
 msg.sign(&key_pair, 512);
 // Verify signature
-msg.verify(&key_pair.pub_key, 512);
+msg.verify(&key_pair.pub_key);
 // Assert correctness
 assert!(msg.op_result.unwrap());
 ```

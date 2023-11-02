@@ -12,20 +12,20 @@ const BIT_SECURITY: u64 = 512;
 /// Symmetric encrypt and decrypt roundtrip
 fn sym_enc(pw: &mut Vec<u8>, mut msg: Message) {
     msg.pw_encrypt(&pw, BIT_SECURITY);
-    msg.pw_decrypt(&pw, BIT_SECURITY);
+    msg.pw_decrypt(&pw);
 }
 
 /// Asymmetric encrypt and decrypt roundtrip + keygen
 fn key_gen_enc_dec(pw: &mut Vec<u8>, mut msg: Message) {
     let key_pair = KeyPair::new(pw, "test key".to_string(), SELECTED_CURVE, BIT_SECURITY);
     msg.key_encrypt(&key_pair.pub_key, BIT_SECURITY);
-    msg.key_decrypt(&key_pair.priv_key, BIT_SECURITY);
+    msg.key_decrypt(&key_pair.priv_key);
 }
 
 /// Signature generation + verification roundtrip
 pub fn sign_verify(mut key_pair: KeyPair, mut msg: Message) {
     msg.sign(&mut key_pair, BIT_SECURITY);
-    msg.verify(&key_pair.pub_key, BIT_SECURITY);
+    msg.verify(&key_pair.pub_key);
 }
 
 fn bench_sign_verify(c: &mut Criterion) {

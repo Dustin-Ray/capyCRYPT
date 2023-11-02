@@ -12,7 +12,7 @@ pub mod ops_tests {
         let mut msg = Message::new(get_random_bytes(5242880));
 
         msg.pw_encrypt(&pw, 256);
-        msg.pw_decrypt(&pw, 256);
+        msg.pw_decrypt(&pw);
 
         assert!(msg.op_result.unwrap());
     }
@@ -22,7 +22,7 @@ pub mod ops_tests {
         let mut msg = Message::new(get_random_bytes(5242880));
 
         msg.pw_encrypt(&pw, 256);
-        msg.pw_decrypt(&pw, 256);
+        msg.pw_decrypt(&pw);
 
         assert!(msg.op_result.unwrap());
     }
@@ -32,7 +32,7 @@ pub mod ops_tests {
         let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), E448, 256);
 
         msg.key_encrypt(&key_pair.pub_key, 256);
-        msg.key_decrypt(&key_pair.priv_key, 256);
+        msg.key_decrypt(&key_pair.priv_key);
 
         assert!(msg.op_result.unwrap());
     }
@@ -43,7 +43,7 @@ pub mod ops_tests {
         let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), E448, 512);
 
         msg.key_encrypt(&key_pair.pub_key, 512);
-        msg.key_decrypt(&key_pair.priv_key, 512);
+        msg.key_decrypt(&key_pair.priv_key);
 
         assert!(msg.op_result.unwrap());
     }
@@ -54,7 +54,7 @@ pub mod ops_tests {
         let key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
 
         msg.sign(&key_pair, 512);
-        msg.verify(&key_pair.pub_key, 512);
+        msg.verify(&key_pair.pub_key);
 
         assert!(msg.op_result.unwrap());
     }
@@ -68,7 +68,7 @@ pub mod ops_tests {
             let now = Instant::now();
             msg.sign(&mut key_pair, 512);
             println!("{} needed {} microseconds", i, now.elapsed().as_micros());
-            msg.verify(&key_pair.pub_key, 512);
+            msg.verify(&key_pair.pub_key);
             assert!(msg.op_result.unwrap());
         }
     }
