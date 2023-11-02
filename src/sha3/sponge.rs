@@ -24,7 +24,7 @@ pub fn sponge_squeeze(s: &mut [u64; 25], bit_length: u64, rate: u64) -> Vec<u8> 
     let mut out: Vec<u8> = Vec::new(); //FIPS 202 Algorithm 8 Step 8
     let block_size: usize = (rate / 64) as usize;
     while out.len() * 8 < bit_length as usize {
-        out.extend_from_slice(&state_to_byte_array(&s[0..block_size]));
+        out.append(&mut state_to_byte_array(&s[0..block_size]));
         keccakf_1600(s); //FIPS 202 Algorithm 8 Step 10
     }
     out.truncate((bit_length / 8) as usize);
@@ -89,5 +89,5 @@ fn pad_ten_one(m: &mut Vec<u8>, rate_in_bytes: usize) {
 
     let mut padded = vec![0; q];
     padded[q - 1] = 0x80;
-    m.extend_from_slice(&padded);
+    m.append(&mut padded);
 }
