@@ -50,6 +50,7 @@ impl Message {
     pub fn new(data: Vec<u8>) -> Message {
         Message {
             msg: Box::new(data),
+            d: None,
             sym_nonce: None,
             asym_nonce: None,
             digest: None,
@@ -63,6 +64,7 @@ impl Message {
 /// Message type for which cryptographic traits are defined.
 pub struct Message {
     pub msg: Box<Vec<u8>>,
+    pub d: Option<u64>,
     pub sym_nonce: Option<Vec<u8>>,
     pub asym_nonce: Option<EdCurvePoint>,
     pub digest: Option<Vec<u8>>,
@@ -77,15 +79,15 @@ pub trait Hashable {
 
 pub trait PwEncryptable {
     fn pw_encrypt(&mut self, pw: &[u8], d: u64);
-    fn pw_decrypt(&mut self, pw: &[u8], d: u64);
+    fn pw_decrypt(&mut self, pw: &[u8]);
 }
 
 pub trait KeyEncryptable {
     fn key_encrypt(&mut self, pub_key: &EdCurvePoint, d: u64);
-    fn key_decrypt(&mut self, pw: &[u8], d: u64);
+    fn key_decrypt(&mut self, pw: &[u8]);
 }
 
 pub trait Signable {
     fn sign(&mut self, key: &KeyPair, d: u64);
-    fn verify(&mut self, pub_key: &EdCurvePoint, d: u64);
+    fn verify(&mut self, pub_key: &EdCurvePoint);
 }

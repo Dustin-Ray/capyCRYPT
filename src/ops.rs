@@ -200,11 +200,12 @@ impl PwEncryptable for Message {
     /// // Encrypt the data with 512 bits of security
     /// msg.pw_encrypt(&pw, 512);
     /// // Decrypt the data
-    /// msg.pw_decrypt(&pw, 512);
+    /// msg.pw_decrypt(&pw);
     /// // Verify operation success
     /// assert!(msg.op_result.unwrap());
     /// ```
     fn pw_encrypt(&mut self, pw: &[u8], d: u64) {
+        self.d = Some(d);
         let z = get_random_bytes(512);
         let mut ke_ka = z.clone();
         ke_ka.append(&mut pw.to_owned());
@@ -247,19 +248,19 @@ impl PwEncryptable for Message {
     /// // Encrypt the data with 512 bits of security
     /// msg.pw_encrypt(&pw, 512);
     /// // Decrypt the data
-    /// msg.pw_decrypt(&pw, 512);
+    /// msg.pw_decrypt(&pw);
     /// // Verify operation success
     /// assert!(msg.op_result.unwrap());
     /// ```
-    fn pw_decrypt(&mut self, pw: &[u8], d: u64) {
+    fn pw_decrypt(&mut self, pw: &[u8]) {
         let mut z_pw = self.sym_nonce.clone().unwrap();
         z_pw.append(&mut pw.to_owned());
-        let ke_ka = kmac_xof(&z_pw, &[], 1024, "S", d);
+        let ke_ka = kmac_xof(&z_pw, &[], 1024, "S", self.d.unwrap());
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
-        let m = kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "SKE", d);
+        let m = kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "SKE", self.d.unwrap());
         xor_bytes(&mut self.msg, &m);
-        let new_t = &kmac_xof(ka, &self.msg, 512, "SKA", d);
+        let new_t = &kmac_xof(ka, &self.msg, 512, "SKA", self.d.unwrap());
         self.op_result = Some(self.digest.as_mut().unwrap() == new_t);
     }
 }
@@ -340,6 +341,7 @@ impl KeyEncryptable for Message {
     /// msg.key_encrypt(&key_pair.pub_key, 512);
     /// ```
     fn key_encrypt(&mut self, pub_key: &EdCurvePoint, d: u64) {
+        self.d = Some(d);
         let k: Integer = (bytes_to_big(get_random_bytes(64)) * 4) % order(pub_key.curve);
         let w = pub_key.clone() * k.clone();
         let z = EdCurvePoint::generator(pub_key.curve, false) * k;
@@ -398,23 +400,30 @@ impl KeyEncryptable for Message {
     /// // Encrypt the message
     /// msg.key_encrypt(&key_pair.pub_key, 512);
     /// //Decrypt the message
-    /// msg.key_decrypt(&key_pair.priv_key, 512);
+    /// msg.key_decrypt(&key_pair.priv_key);
     /// // Verify
     /// assert!(msg.op_result.unwrap());
     /// ```
-    fn key_decrypt(&mut self, pw: &[u8], d: u64) {
+    fn key_decrypt(&mut self, pw: &[u8]) {
         let z = self.asym_nonce.clone().unwrap();
-        let s: Integer =
-            (bytes_to_big(kmac_xof(&pw.to_owned(), &[], 512, "K", d)) * 4) % z.clone().n;
+        let s: Integer = (bytes_to_big(kmac_xof(&pw.to_owned(), &[], 512, "K", self.d.unwrap()))
+            * 4)
+            % z.clone().n;
         let w = z * s;
 
-        let ke_ka = kmac_xof(&big_to_bytes(w.x), &[], 1024, "PK", d);
+        let ke_ka = kmac_xof(&big_to_bytes(w.x), &[], 1024, "PK", self.d.unwrap());
         let ke = &mut ke_ka[..64].to_vec();
         let ka = &mut ke_ka[64..].to_vec();
 
-        let m = Box::new(kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "PKE", d));
+        let m = Box::new(kmac_xof(
+            ke,
+            &[],
+            (self.msg.len() * 8) as u64,
+            "PKE",
+            self.d.unwrap(),
+        ));
         xor_bytes(&mut self.msg, &m);
-        let t_p = kmac_xof(ka, &self.msg, 512, "PKA", d);
+        let t_p = kmac_xof(ka, &self.msg, 512, "PKA", self.d.unwrap());
         self.op_result = Some(t_p == self.digest.as_deref().unwrap());
     }
 }
@@ -454,6 +463,7 @@ impl Signable for Message {
     /// msg.sign(&key_pair, 512);
     /// ```
     fn sign(&mut self, key: &KeyPair, d: u64) {
+        self.d = Some(d);
         let s: Integer = bytes_to_big(kmac_xof(&key.priv_key, &[], 512, "K", d)) * 4;
         let s_bytes = big_to_bytes(s.clone());
 
@@ -496,14 +506,14 @@ impl Signable for Message {
     /// // Sign with 512 bits of security
     /// msg.sign(&key_pair, 512);
     /// // Verify
-    /// msg.verify(&key_pair.pub_key, 512);
+    /// msg.verify(&key_pair.pub_key);
     /// assert!(msg.op_result.unwrap());
     /// ```
-    fn verify(&mut self, pub_key: &EdCurvePoint, d: u64) {
+    fn verify(&mut self, pub_key: &EdCurvePoint) {
         let mut u = EdCurvePoint::generator(pub_key.curve, false) * self.sig.clone().unwrap().z;
         let hv = pub_key.clone() * bytes_to_big(self.sig.clone().unwrap().h);
         u = u + &hv;
-        let h_p = kmac_xof(&big_to_bytes(u.x), &self.msg, 512, "T", d);
+        let h_p = kmac_xof(&big_to_bytes(u.x), &self.msg, 512, "T", self.d.unwrap());
         self.op_result = Some(h_p == self.sig.clone().unwrap().h)
     }
 }
