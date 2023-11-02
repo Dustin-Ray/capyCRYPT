@@ -171,7 +171,7 @@ impl Hashable for Message {
 
 impl PwEncryptable for Message {
     /// # Symmetric Encryption
-    /// Encrypts a byte array m symmetrically under passphrase pw.
+    /// Encrypts a [`Message`] m symmetrically under passphrase pw.
     /// ## Replaces:
     /// * `Message.data` with result of encryption.
     /// * `Message.t` with keyed hash of plaintext.
@@ -219,7 +219,7 @@ impl PwEncryptable for Message {
     }
 
     /// # Symmetric Decryption
-    /// Decrypts a symmetric cryptogram (z, c, t) under passphrase pw.
+    /// Decrypts a [`Message`] (z, c, t) under passphrase pw.
     /// ## Assumes:
     /// * well-formed encryption
     /// * Some(Message.t)
@@ -233,7 +233,6 @@ impl PwEncryptable for Message {
     /// * t’ ← kmac_xof(ka, m, 512, “SKA”)
     /// ## Arguments:
     /// * `pw: &[u8]`: decryption password, can be blank
-    /// * `d: u64`: encryption security strength in bits. Can only be 224, 256, 384, or 512.
     /// ## Usage:
     /// ```
     /// use capycrypt::{
@@ -266,7 +265,7 @@ impl PwEncryptable for Message {
 }
 
 impl KeyPair {
-    /// # Asymmetric Keypair Generation
+    /// # Asymmetric [`KeyPair`] Generation
     /// Generates a (Schnorr/ECDHIES) key pair from passphrase pw.
     ///
     /// ## Algorithm:
@@ -274,11 +273,11 @@ impl KeyPair {
     /// * 𝑉 ← s*𝑮
     /// * key pair: (s, 𝑉)
     /// ## Arguments:
-    /// * `pw: &mut Vec<u8>` : password as bytes, can be blank but shouldnt be
-    /// * `owner: String` : A label to indicate the owner of the key
-    /// * `curve: EdCurves` : The selected Edwards curve
+    /// * pw: &Vec<u8> : password as bytes, can be blank but shouldnt be
+    /// * owner: String : A label to indicate the owner of the key
+    /// * curve: [`EdCurves`] : The selected Edwards curve
     /// ## Returns:
-    /// * `return  -> KeyObj`: Key object containing owner, private key, public key x and y coordinates, and timestamp.
+    /// * return  -> [`KeyPair`]: Key object containing owner, private key, public key x and y coordinates, and timestamp.
     /// verification key 𝑉 is hashed together with the message 𝑚
     /// and the nonce 𝑈: hash (𝑚, 𝑈, 𝑉) .
     /// ## Usage:
@@ -309,7 +308,7 @@ impl KeyPair {
 
 impl KeyEncryptable for Message {
     /// # Asymmetric Encryption
-    /// Encrypts a byte array m in place under the (Schnorr/ECDHIES) public key 𝑉.
+    /// Encrypts a [`Message`] in place under the (Schnorr/ECDHIES) public key 𝑉.
     /// Operates under Schnorr/ECDHIES principle in that shared symmetric key is
     /// exchanged with recipient. SECURITY NOTE: ciphertext length == plaintext length
     /// ## Replaces:
@@ -323,8 +322,8 @@ impl KeyEncryptable for Message {
     /// * c ← kmac_xof(ke, “”, |m|, “PKE”) ⊕ m
     /// * t ← kmac_xof(ka, m, 512, “PKA”)
     /// ## Arguments:
-    /// * `pub_key: EdCurvePoint` : X coordinate of public key 𝑉
-    /// * `d: u64`: Requested security strength in bits. Can only be 224, 256, 384, or 512.
+    /// * pub_key: [`EdCurvePoint`] : X coordinate of public key 𝑉
+    /// * d: u64: Requested security strength in bits. Can only be 224, 256, 384, or 512.
     /// ## Usage:
     /// ```
     /// use capycrypt::{
@@ -359,7 +358,7 @@ impl KeyEncryptable for Message {
     }
 
     /// # Asymmetric Decryption
-    /// Decrypts a cryptogram in place under private key.
+    /// Decrypts a [`Message`] in place under private key.
     /// Operates under Schnorr/ECDHIES principle in that shared symmetric key is
     /// derived from 𝑍.
     ///
@@ -380,8 +379,8 @@ impl KeyEncryptable for Message {
     /// * t’ ← KMACXOF256(ka, m, 512, “PKA”)
     ///
     /// ## Arguments:
-    /// * `pw: &mut [u8]`: password used to generate ```CurvePoint``` encryption key.
-    /// * `d: u64`: encryption security strength in bits. Can only be 224, 256, 384, or 512.
+    /// * pw: &[u8]: password used to generate ```CurvePoint``` encryption key.
+    /// * d: u64: encryption security strength in bits. Can only be 224, 256, 384, or 512.
     ///
     /// ## Usage:
     /// ```
@@ -430,7 +429,7 @@ impl KeyEncryptable for Message {
 
 impl Signable for Message {
     /// # Schnorr Signatures
-    /// Generates a signature for a byte array m under passphrase pw.
+    /// Signs a [`Message`] under passphrase pw.
     ///
     /// ## Algorithm:
     /// * `s` ← kmac_xof(pw, “”, 512, “K”); s ← 4s
@@ -439,8 +438,8 @@ impl Signable for Message {
     /// * `ℎ` ← kmac_xof(𝑈ₓ , m, 512, “T”); 𝑍 ← (𝑘 – ℎ𝑠) mod r
     ///
     /// ## Arguments:
-    /// * `key: &mut KeyPair, `: reference to KeyPair.
-    /// * `d: u64`: encryption security strength in bits. Can only be 224, 256, 384, or 512.
+    /// * key: &[`KeyPair`], : reference to KeyPair.
+    /// * d: u64: encryption security strength in bits. Can only be 224, 256, 384, or 512.
     ///
     /// ## Assumes:
     /// * Some(key.priv_key)
@@ -478,17 +477,17 @@ impl Signable for Message {
         self.sig = Some(Signature { h, z })
     }
     /// # Signature Verification
-    /// Verifies a signature (h, 𝑍) for a byte array m under the (Schnorr/
+    /// Verifies a [`Signature`] (h, 𝑍) for a byte array m under the (Schnorr/
     /// ECDHIES) public key 𝑉.
     /// ## Algorithm:
     /// * 𝑈 ← 𝑍*𝑮 + h𝑉
     /// ## Arguments:
-    /// * `sig: &Signature`: Pointer to a signature object (h, 𝑍)
-    /// * `pubKey: CurvePoint` key 𝑉 used to sign message m
-    /// * `message: Vec<u8>` of message to verify
+    /// * sig: &[`Signature`]: Pointer to a signature object (h, 𝑍)
+    /// * pubKey: CurvePoint key 𝑉 used to sign message m
+    /// * message: Vec<u8> of message to verify
     /// ## Assumes:
     /// * Some(key.pub_key)
-    /// * Some(Message.sig)
+    /// * Some([`Message`].sig)
     /// ## Usage
     /// ```
     /// use capycrypt::{
