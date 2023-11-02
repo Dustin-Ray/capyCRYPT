@@ -29,7 +29,7 @@ pub fn sign_verify(mut key_pair: KeyPair, mut msg: Message) {
 }
 
 fn bench_sign_verify(c: &mut Criterion) {
-    c.bench_function("Signature Generation + Verification Roundtrip", |b| {
+    c.bench_function("e222 + SHA3-224 Sign + Verify Roundtrip", |b| {
         b.iter(|| {
             sign_verify(
                 KeyPair::new(
@@ -45,7 +45,7 @@ fn bench_sign_verify(c: &mut Criterion) {
 }
 
 fn bench_sym_enc(c: &mut Criterion) {
-    c.bench_function("Symmetric Encrypt + Decrypt Roundtrip", |b| {
+    c.bench_function("SHA3-224 Symmetric enc + dec", |b| {
         b.iter(|| {
             sym_enc(
                 &mut get_random_bytes(64),
@@ -56,7 +56,7 @@ fn bench_sym_enc(c: &mut Criterion) {
 }
 
 fn bench_key_gen_enc_dec(c: &mut Criterion) {
-    c.bench_function("Keygen + Asymmetric Encrypt + Decrypt Roundtrip", |b| {
+    c.bench_function("e222 + SHA3-224 Asymmetric enc + dec", |b| {
         b.iter(|| {
             key_gen_enc_dec(
                 &mut KeyPair::new(
