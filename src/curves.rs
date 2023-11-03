@@ -106,17 +106,16 @@ impl Add<&EdCurvePoint> for EdCurvePoint {
         let d = self.d.clone();
 
         // (x₁y₂ + y₁x₂)
-        let x1y2 = (x1.clone() * y2.clone()) % p.clone();
-        let y1x2 = (y1.clone() * x2.clone()) % p.clone();
-        let x1y2y1x2_sum = (x1y2 + y1x2) % p.clone();
+        let x1y2 = x1.clone() * y2.clone();
+        let y1x2 = y1.clone() * x2.clone();
+        let x1y2y1x2_sum = x1y2 + y1x2;
         // 1 / (1 + dx₁x₂y₁y₂)
         let one_plus_dx1x2y1y2 = (Integer::from(1)
             + (d.clone() * x1.clone() * x2.clone() * y1.clone() * y2.clone()))
             % p.clone();
         let one_plus_dx1x2y1y2inv = mod_inv(&one_plus_dx1x2y1y2, &p);
         // (y₁y₂ − x₁x₂)
-        let y1y2x1x2_difference =
-            ((y1.clone() * y2.clone()) - (x1.clone() * x2.clone())) % p.clone();
+        let y1y2x1x2_difference = (y1.clone() * y2.clone()) - (x1.clone() * x2.clone());
         // 1 / (1 − dx₁x₂y₁y₂)
         let one_minus_dx1x2y1y2 = (Integer::from(1) - (d * x1 * x2 * y1 * y2)) % p.clone();
         let one_minus_dx1x2y1y2inv = mod_inv(&one_minus_dx1x2y1y2, &p);

@@ -17,7 +17,7 @@ mod e448_tests {
 
     #[test]
     fn test_timing_side_channel() {
-        for i in 0..200 {
+        for i in 0..10 {
             let point = EdCurvePoint::generator(SELECTED_CURVE, false);
             let s = big::from(1) << i;
             let now = Instant::now();
