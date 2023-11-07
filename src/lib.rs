@@ -3,6 +3,7 @@ use rug::Integer;
 
 /// Module for all EC operations.
 pub mod curves;
+mod twisted_projective;
 /// Module for sha3 primitives.
 pub mod sha3 {
     pub mod aux_functions;

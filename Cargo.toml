@@ -21,6 +21,7 @@ chrono = {version = "0.4.23"}
 rug = {version = "1.18.0"}
 gmp-mpfr-sys = "1.4.12"
 criterion = "0.3"
+crypto-bigint = "0.5.3"
 
 [[bench]]
 name = "benchmark_e222_224"
