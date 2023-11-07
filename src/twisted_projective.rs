@@ -29,7 +29,6 @@ impl EdCurves {
     pub const N_222: &str = "3FFFFFFFFFFFFFFFFFFFFFFFFFFFDC32F257A4CBE00BCC508D6632FC";
     pub const P_222: &str = "3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF8B";
     pub const R_222: &str = "FFFFFFFFFFFFFFFFFFFFFFFFFFFF70CBC95E932F802F31423598CBF";
-
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -210,42 +209,45 @@ impl FieldElement {
     }
 }
 
-
-
-
-
 #[test]
 fn test_generator() {
     let g_x = FieldElement {
         val: U448::from(8_u64),
     };
+
+    let ghat_x = g_x.mul(&FieldElement { val: U448::from_be_hex("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")});
+
     let g_y = FieldElement{val: U448::from_be_hex("C66F6F0565E6D0B5F2BB263CEBB9F8540EB046F40ED0FFF7F84D84653B428D989AABFF93B6BF700801228094E3DD0C2D1C600E3B0BCCFC32")};
 
+    let ghat_y = g_y.mul(&FieldElement { val: U448::from_be_hex("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")});
 
     let g_d = FieldElement {
         val: Modulus::MODULUS.sub_mod(&U448::from(EdCurves::D_448), &Modulus::MODULUS),
     };
-    let r0 = EdwardsPoint::id_point(EdCurves::E448);
+
+    let d_hat = g_d.mul(&FieldElement { val: U448::from_be_hex("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")});
+
+    let z_hat = FieldElement { val: U448::ONE }.mul(&FieldElement { val: U448::from_be_hex("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")});
+
+    // let r0 = EdwardsPoint::id_point(EdCurves::E448);
     let g = EdwardsPoint {
-        x: g_x,
-        y: g_y,
-        d: g_d,
-        z: FieldElement { val: U448::ONE },
+        x: ghat_x,
+        y: ghat_y,
+        d: d_hat,
+        z: z_hat,
         curve: EdCurves::E448,
     };
 
-    println!("g x val: {:}", g.x.val);
-    println!("g y val: {:}", g.y.val);
+    println!("ghat_x val: {:}", ghat_x.val);
+    println!("ghat_y val: {:}", ghat_y.val);
 
-    let g_inv = -g;
-
-    println!("g_inv x val: {:}", g_inv.x.val);
-    println!("g_inv y val: {:}", g_inv.y.val);
-
-    let res = g + &g_inv;
-
+    let res = g * U448::from(2_u64);
     println!("res x val: {:}", res.x.val);
     println!("res y val: {:}", res.y.val);
+    let g_plus_g = g + &g;
+
+    println!("g + g x val: {:}", g_plus_g.x.val);
+    println!("g + g y val: {:}", g_plus_g.y.val);
 }
 
 #[test]
