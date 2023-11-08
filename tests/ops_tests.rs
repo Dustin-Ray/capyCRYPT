@@ -1,8 +1,8 @@
 #[cfg(test)]
 pub mod ops_tests {
     use capycrypt::{
-        curves::EdCurves::E448, sha3::aux_functions::byte_utils::get_random_bytes, KeyEncryptable,
-        KeyPair, Message, PwEncryptable, Signable,
+        curve::edwards::EdCurves::E448, sha3::aux_functions::byte_utils::get_random_bytes,
+        KeyEncryptable, KeyPair, Message, PwEncryptable, Signable,
     };
     use std::time::Instant;
 

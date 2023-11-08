@@ -60,6 +60,7 @@ dependencies = [
  "chrono",
  "criterion",
  "crypto-bigint",
+ "fiat-crypto",
  "gmp-mpfr-sys",
  "hex",
  "num",
@@ -286,6 +287,12 @@ name = "either"
 version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
+
+[[package]]
+name = "fiat-crypto"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a481586acf778f1b1455424c343f71124b048ffa5f4fc3f8f6ae9dc432dcb3c7"
 
 [[package]]
 name = "getrandom"

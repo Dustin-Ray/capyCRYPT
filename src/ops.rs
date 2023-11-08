@@ -1,5 +1,5 @@
 use crate::{
-    curves::{
+    curve::edwards::{
         order, EdCurvePoint,
         EdCurves::{self, E448},
         Generator,

@@ -1,12 +1,12 @@
 use capycrypt::{
-    curves::EdCurves::{self, E521},
+    curve::edwards::EdCurves::{self, E448},
     KeyEncryptable, KeyPair, Message, PwEncryptable, Signable,
 };
 
 use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
 use criterion::{criterion_group, criterion_main, Criterion};
 
-const SELECTED_CURVE: EdCurves = E521;
+const SELECTED_CURVE: EdCurves = E448;
 const BIT_SECURITY: u64 = 512;
 
 /// Symmetric encrypt and decrypt roundtrip

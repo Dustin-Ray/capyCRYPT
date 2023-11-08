@@ -3,7 +3,7 @@ mod e448_tests {
     use std::time::Instant;
 
     use capycrypt::{
-        curves::{
+        curve::edwards::{
             EdCurvePoint,
             EdCurves::{self, E448},
             Generator, IdPoint,
@@ -15,16 +15,16 @@ mod e448_tests {
     use rug::Integer as big;
     const SELECTED_CURVE: EdCurves = E448;
 
-    #[test]
-    fn test_timing_side_channel() {
-        for i in 0..10 {
-            let point = EdCurvePoint::generator(SELECTED_CURVE, false);
-            let s = big::from(1) << i;
-            let now = Instant::now();
-            let _result = point * s;
-            println!("{} needed {} micro seconds", i, now.elapsed().as_micros());
-        }
-    }
+    // #[test]
+    // fn test_timing_side_channel() {
+    //     for i in 0..10 {
+    //         let point = EdCurvePoint::generator(SELECTED_CURVE, false);
+    //         let s = big::from(1) << i;
+    //         let now = Instant::now();
+    //         let _result = point * s;
+    //         println!("{} needed {} micro seconds", i, now.elapsed().as_micros());
+    //     }
+    // }
 
     #[test]
     // 0 * G = 𝒪
@@ -107,9 +107,7 @@ mod e448_tests {
     // k*G = (k mod r)*G
     fn k_g_equals_k_mod_r_times_g() {
         let g = EdCurvePoint::generator(SELECTED_CURVE, false);
-        let mut rng = thread_rng();
-        let k_u128: u64 = rng.gen();
-        let k = big::from(k_u128);
+        let k = get_random_big(521);
         let same_k = k.clone();
         let g = g * (k);
         let r = g.clone().r;

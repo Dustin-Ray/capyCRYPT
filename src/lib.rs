@@ -1,9 +1,17 @@
-use curves::{EdCurvePoint, EdCurves};
+use curve::edwards::{EdCurvePoint, EdCurves};
 use rug::Integer;
 
 /// Module for all EC operations.
-pub mod curves;
-mod twisted_projective;
+pub mod curve {
+    pub mod edwards;
+    pub mod extended_edwards;
+    
+    pub mod field {
+        pub mod field_element;
+        pub mod scalar;
+    }
+}
+
 /// Module for sha3 primitives.
 pub mod sha3 {
     pub mod aux_functions;
