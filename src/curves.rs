@@ -1,6 +1,8 @@
-extern crate rug;
-use rug::ops::{Pow, PowAssign};
-use rug::Integer;
+use num::Integer as big;
+use num::Num;
+use num::Signed;
+use num::Zero;
+use num_bigint::BigInt as Integer;
 use std::ops::Add;
 use std::ops::Mul;
 use std::ops::Neg;
@@ -212,8 +214,8 @@ impl Mul<Integer> for EdCurvePoint {
         let mut r0 = EdCurvePoint::id_point(self.curve);
         let mut r1 = self.clone();
 
-        for i in (0..=s.significant_bits()).rev() {
-            if s.get_bit(i) {
+        for i in (0..=s.bits()).rev() {
+            if s.bit(i) {
                 r0 = r0 + &r1;
                 r1 = r1.clone() + &r1;
             } else {
@@ -245,21 +247,21 @@ impl PartialEq for EdCurvePoint {
 /// * `n`: Integer value to mod
 /// * `p`: modulus
 fn mod_inv(n: &Integer, p: &Integer) -> Integer {
-    if p.eq(&Integer::ZERO) {
-        return Integer::ZERO;
+    if p.eq(&Integer::zero()) {
+        return Integer::zero();
     }
-    let (mut a, mut m, mut x, mut inv) = (n.clone(), p.clone(), Integer::ZERO, Integer::from(1));
-    while a < Integer::ZERO {
+    let (mut a, mut m, mut x, mut inv) = (n.clone(), p.clone(), Integer::zero(), Integer::from(1));
+    while a < Integer::zero() {
         a += p
     }
-    while a > 1 {
-        let (div, rem) = a.div_rem(m.clone());
+    while a > Integer::from(1) {
+        let (div, rem) = a.div_rem(&m.clone());
         inv -= div * &x;
         a = rem;
         std::mem::swap(&mut a, &mut m);
         std::mem::swap(&mut x, &mut inv);
     }
-    if inv < Integer::ZERO {
+    if inv < Integer::zero() {
         inv += p
     }
     inv
@@ -312,7 +314,7 @@ pub fn curve_r(curve: EdCurves) -> Integer {
 /// Solves for y in curve equation 𝑥² + 𝑦² = 1 + 𝑑𝑥²𝑦²
 fn solve_for_y(x: &Integer, p: Integer, d: Integer, msb: bool) -> Integer {
     let mut sq = x.clone();
-    sq.pow_assign(2);
+    sq = sq.pow(2);
     let num = Integer::from(1) - sq.clone();
     let num = num % p.clone();
     let denom = -d * sq + Integer::from(1);
@@ -328,16 +330,16 @@ fn solve_for_y(x: &Integer, p: Integer, d: Integer, msb: bool) -> Integer {
 /// * `p`: Integer curve modulus
 /// * `lsb`: each x has 2 `y` values on curve, lsb selects which `y` value to use
 fn sqrt(v: &Integer, p: Integer, lsb: bool) -> Integer {
-    if v.clone().signum() == 0 {
+    if v.clone().signum() == Integer::zero() {
         return Integer::from(0);
     }
-    let r = v.clone().secure_pow_mod(&((p.clone() >> 2) + 1), &p);
-    if !r.get_bit(0).eq(&lsb) {
+    let r = v.clone().modpow(&((p.clone() >> 2) + 1), &p);
+    if !r.bit(0).eq(&lsb) {
         let new_r = &p - r; // correct the lsb
         let borrowed_r = new_r.clone();
         let return_r = new_r.clone();
         let bi = (new_r * borrowed_r - v) % p;
-        if bi.signum() == 0 {
+        if bi.signum() == Integer::zero() {
             return return_r;
         } else {
             return Integer::from(0);

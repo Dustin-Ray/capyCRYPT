@@ -69,10 +69,10 @@ pub mod nist_800_185 {
 }
 
 pub mod byte_utils {
+    use num_bigint::{BigInt as big, RandBigInt, Sign};
     /// Aux methods for byte operations.
     use rand::prelude::*;
-    use rug::integer::Order::LsfBe;
-    use rug::Integer as big;
+    use rand::thread_rng;
 
     /// Gets size number of random bytes.
     /// * `size`: number of bytes requested
@@ -84,12 +84,14 @@ pub mod byte_utils {
     }
 
     /// Get a random big with size number of bits
-    pub fn get_random_big(size: u32) -> big {
-        use rug::rand::RandState;
-        use rug::Integer;
-        let mut rand = RandState::new();
-        let i = Integer::random_bits(size, &mut rand).into();
-        i
+    pub fn get_random_big(bits: usize) -> big {
+        let mut rng = thread_rng();
+
+        // The `gen_bigint` method takes the number of bits as argument to generate
+        // a random `BigInt`. If you want a non-negative number, make sure the most
+        // significant bit is not set, which will effectively give you a number with
+        // one bit less than the specified size.
+        rng.gen_bigint(bits as u64)
     }
 
     /// XORs byte streams in place using iterators
@@ -110,11 +112,11 @@ pub mod byte_utils {
 
     /// Encodes bytes to a hex string and then converts to GMP Integer.
     pub fn bytes_to_big(in_bytes: Vec<u8>) -> big {
-        big::from_digits(&in_bytes, LsfBe)
+        big::from_bytes_be(Sign::Plus, &in_bytes)
     }
 
     /// Converts rug::Integer into `Vec<u8>` of form Least significant digit first, with big endian digits.
     pub fn big_to_bytes(in_val: big) -> Vec<u8> {
-        big::to_digits(&in_val, LsfBe)
+        in_val.to_signed_bytes_be()
     }
 }

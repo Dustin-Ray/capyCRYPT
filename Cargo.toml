@@ -13,14 +13,14 @@ repository = "https://github.com/drcapybara/capyCRYPT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+num-bigint = { version = "0.4", features = ["rand"] }
 rand = "0.8"
 num = {version = "0.4.0"}
 hex = {version = "0.4.3"}
 byteorder = {version = "1.4.3"}
 chrono = {version = "0.4.23"}
-rug = {version = "1.18.0"}
-gmp-mpfr-sys = "1.4.12"
 criterion = "0.3"
+
 
 [[bench]]
 name = "benchmark_e222_224"

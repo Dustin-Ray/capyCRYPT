@@ -9,8 +9,9 @@ mod e222_tests {
         sha3::aux_functions::byte_utils::get_random_big,
     };
 
+    use num::Signed;
+    use num_bigint::BigInt as big;
     use rand::{thread_rng, Rng};
-    use rug::Integer as big;
     const SELECTED_CURVE: EdCurves = E222;
 
     #[test]
@@ -146,11 +147,11 @@ mod e222_tests {
     fn test_ktp() {
         let g = EdCurvePoint::generator(SELECTED_CURVE, false);
         let r = EdCurvePoint::generator(SELECTED_CURVE, false).r;
-        let k = get_random_big(256);
+        let k = get_random_big(256).abs();
         let k_2 = k.clone();
         let k_3 = k.clone();
 
-        let t = get_random_big(256);
+        let t = get_random_big(256).abs();
         let t_2 = t.clone();
         let t_3 = t.clone();
 
