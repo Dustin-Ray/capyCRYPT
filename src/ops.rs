@@ -16,7 +16,7 @@ use crate::{
     },
     Hashable, KeyEncryptable, KeyPair, Message, PwEncryptable, Signable, Signature,
 };
-use rug::Integer;
+use num_bigint::BigInt as Integer;
 const SELECTED_CURVE: EdCurves = E448;
 
 /*

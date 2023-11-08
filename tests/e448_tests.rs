@@ -12,7 +12,7 @@ mod e448_tests {
     };
 
     use rand::{thread_rng, Rng};
-    use rug::Integer as big;
+    use num_bigint::BigInt as big;
     const SELECTED_CURVE: EdCurves = E448;
 
     // #[test]

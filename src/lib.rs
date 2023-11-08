@@ -1,5 +1,5 @@
 use curve::edwards::{EdCurvePoint, EdCurves};
-use rug::Integer;
+use num_bigint::BigInt as Integer;
 
 /// Module for all EC operations.
 pub mod curve {

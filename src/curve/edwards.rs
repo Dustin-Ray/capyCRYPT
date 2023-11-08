@@ -1,5 +1,5 @@
-use rug::ops::Pow;
-use rug::Integer;
+use num::Num;
+use num_bigint::BigInt as Integer;
 use std::ops::Add;
 use std::ops::Mul;
 use std::ops::Neg;
@@ -191,8 +191,8 @@ impl Mul<Integer> for EdCurvePoint {
         let mut result = EdCurvePoint::id_point(self.curve);
         let mut base = self;
 
-        for i in (0..s.significant_bits()).rev() {
-            if s.get_bit(i) {
+        for i in (0..s.bits()).rev() {
+            if s.bit(i) {
                 result = result + &base; // Add the current base if the bit is set.
             }
             base = base.clone() + &base; // Always double the base.
