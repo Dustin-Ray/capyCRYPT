@@ -58,18 +58,4 @@ pub mod ops_tests {
 
         assert!(msg.op_result.unwrap());
     }
-    #[test]
-    fn test_sig_timing_side_channel() {
-        for i in 0..10 {
-            let mut msg = Message::new(get_random_bytes(16));
-            let pw = get_random_bytes(1 << i);
-            let mut key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
-
-            let now = Instant::now();
-            msg.sign(&mut key_pair, 512);
-            println!("{} needed {} microseconds", i, now.elapsed().as_micros());
-            msg.verify(&key_pair.pub_key);
-            assert!(msg.op_result.unwrap());
-        }
-    }
 }

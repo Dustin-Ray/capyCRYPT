@@ -1,7 +1,5 @@
 #[cfg(test)]
 mod e448_tests {
-    use std::time::Instant;
-
     use capycrypt::{
         curves::{
             EdCurvePoint,
@@ -11,20 +9,10 @@ mod e448_tests {
         sha3::aux_functions::byte_utils::get_random_big,
     };
 
+    use num::Signed;
+    use num_bigint::BigInt as big;
     use rand::{thread_rng, Rng};
-    use rug::Integer as big;
     const SELECTED_CURVE: EdCurves = E448;
-
-    #[test]
-    fn test_timing_side_channel() {
-        for i in 0..10 {
-            let point = EdCurvePoint::generator(SELECTED_CURVE, false);
-            let s = big::from(1) << i;
-            let now = Instant::now();
-            let _result = point * s;
-            println!("{} needed {} micro seconds", i, now.elapsed().as_micros());
-        }
-    }
 
     #[test]
     // 0 * G = 𝒪
@@ -159,11 +147,11 @@ mod e448_tests {
     fn test_ktp() {
         let g = EdCurvePoint::generator(SELECTED_CURVE, false);
         let r = EdCurvePoint::generator(SELECTED_CURVE, false).r;
-        let k = get_random_big(256);
+        let k = get_random_big(256).abs();
         let k_2 = k.clone();
         let k_3 = k.clone();
 
-        let t = get_random_big(256);
+        let t = get_random_big(256).abs();
         let t_2 = t.clone();
         let t_3 = t.clone();
 
