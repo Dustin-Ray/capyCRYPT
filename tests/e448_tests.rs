@@ -1,7 +1,5 @@
 #[cfg(test)]
 mod e448_tests {
-    use std::time::Instant;
-
     use capycrypt::{
         curve::edwards::{
             EdCurvePoint,

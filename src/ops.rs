@@ -12,7 +12,7 @@ use crate::{
             },
             nist_800_185::{byte_pad, encode_string, right_encode},
         },
-        sponge::{sponge_absorb, sponge_squeeze},
+        sponge::{update, finalize},
     },
     Hashable, KeyEncryptable, KeyPair, Message, PwEncryptable, Signable, Signature,
 };
@@ -36,10 +36,10 @@ will see computation moved off of the heap and batched.
 /// # SHA3-Keccak
 /// ref NIST FIPS 202.
 /// ## Arguments:
-/// * `n: &mut Vec<u8>`: reference to message to be hashed.
-/// * `d: usize`: requested output length and security strength
+/// * n: reference to message to be hashed.
+/// * d: requested output length and security strength
 /// ## Returns:
-/// * `return  -> Vec<u8>`: SHA3-d message digest
+/// * SHA3-d message digest
 fn shake(n: &mut Vec<u8>, d: u64) -> Vec<u8> {
     let bytes_to_pad = 136 - n.len() % 136; // SHA3-256 r = 1088 / 8 = 136
     if bytes_to_pad == 1 {
@@ -49,19 +49,19 @@ fn shake(n: &mut Vec<u8>, d: u64) -> Vec<u8> {
         //delim suffix
         n.extend_from_slice(&[0x06]);
     }
-    sponge_squeeze(&mut sponge_absorb(n, 2 * d), d, 1600 - (2 * d))
+    finalize(&mut update(n, 2 * d), d, 1600 - (2 * d))
 }
 
 /// # Customizable SHAKE
 /// Implements FIPS 202 Section 3. Returns: customizable and
 /// domain-seperated length `L` SHA3XOF hash of input string.
 /// ## Arguments:
-/// * `x: &Vec<u8>`: input message as ```Vec<u8>```
-/// * `l: u64`: requested output length
-/// * `n: &str`: optional function name string
-/// * `s: &str`: option customization string
+/// * x: input message
+/// * l: requested output length
+/// * n: optional function name string
+/// * s: option customization string
 /// ## Returns:
-/// * `return -> Vec<u8>`: SHA3XOF hash of length `l` of input message `x`
+/// * SHA3XOF hash of length `l` of input message `x`
 pub fn cshake(x: &[u8], l: u64, n: &str, s: &str, d: u64) -> Vec<u8> {
     let mut encoded_n = encode_string(&n.as_bytes().to_vec());
     let encoded_s = encode_string(&s.as_bytes().to_vec());
@@ -83,22 +83,22 @@ pub fn cshake(x: &[u8], l: u64, n: &str, s: &str, d: u64) -> Vec<u8> {
         shake(&mut out, l);
     }
 
-    sponge_squeeze(&mut sponge_absorb(&mut out, d), l, 1600 - d)
+    finalize(&mut update(&mut out, d), l, 1600 - d)
 }
 
 /// # Keyed Message Authtentication
 /// Generates keyed hash for given input as specified in NIST SP 800-185 section 4.
 /// ## Arguments:
-/// * `k: &Vec<u8>`: key. SP 800 185 8.4.1 KMAC Key Length requires key length >= d
-/// * `x: &Vec<u8>`: byte-oriented message
-/// * `l: u64`: requested bit output length
-/// * `s: &str`: customization string
-/// * `d: u64`: the security parameter for the operation. NIST-standard values for d consist of the following:
-/// d = 512; 256 bits of security
-/// d = 256; 128 bits of security
+/// * k: key. SP 800 185 8.4.1 KMAC Key Length requires key length >= d
+/// * x: byte-oriented message
+/// * l: requested bit output length
+/// * s: customization string
+/// * d: the security parameter for the operation. NIST-standard values for d consist of the following:
+/// - * d = 512; 256 bits of security
+/// - * d = 256; 128 bits of security
 ///
 /// ## Returns:
-/// * `return  -> Vec<u8>`: kmac_xof of `x` under `k`
+/// * kmac_xof of `x` under `k`
 pub fn kmac_xof(k: &Vec<u8>, x: &[u8], l: u64, s: &str, d: u64) -> Vec<u8> {
     let mut encode_k = encode_string(k);
     let bytepad_w = match d {
@@ -122,7 +122,7 @@ impl Hashable for Message {
     /// Computes SHA3-d hash of input. Does not consume input.
     /// Replaces `Message.digest` with result of operation.
     /// ## Arguments:
-    /// * `d: u64`: requested security strength in bits. Supported
+    /// * d: requested security strength in bits. Supported
     /// bitstrengths are 224, 256, 384, or 512.
     /// ## Usage:
     /// ```
@@ -147,10 +147,10 @@ impl Hashable for Message {
     /// ## Replaces:
     /// * `Message.t` with keyed hash of plaintext.
     /// ## Arguments:
-    /// * `pw: &mut Vec<u8>`: symmetric encryption key, can be blank but shouldnt be
-    /// * `message: &mut Vec<u8>`: message to encrypt
-    /// * `s: &mut str`: domain seperation string
-    /// * `d: u64`: requested security strength in bits. Supported
+    /// * pw: symmetric encryption key, can be blank but shouldnt be
+    /// * message: message to encrypt
+    /// * s: domain seperation string
+    /// * d: requested security strength in bits. Supported
     /// bitstrengths are 224, 256, 384, or 512.
     /// ## Usage:
     /// ```
@@ -183,8 +183,8 @@ impl PwEncryptable for Message {
     /// * c ← kmac_xof(ke, “”, |m|, “SKE”) ⊕ m
     /// * t ← kmac_xof(ka, m, 512, “SKA”)
     /// ## Arguments:
-    /// * `pw: &[u8]`: symmetric encryption key, can be blank but shouldnt be
-    /// * `d: u64`: requested security strength in bits. Supported
+    /// * pw: symmetric encryption key, can be blank but shouldnt be
+    /// * d: requested security strength in bits. Supported
     /// bitstrengths are 224, 256, 384, or 512.
     /// ## Usage:
     /// ```
@@ -232,7 +232,7 @@ impl PwEncryptable for Message {
     /// * m ← kmac_xof(ke, “”, |c|, “SKE”) ⊕ c
     /// * t’ ← kmac_xof(ka, m, 512, “SKA”)
     /// ## Arguments:
-    /// * `pw: &[u8]`: decryption password, can be blank
+    /// * pw: decryption password, can be blank
     /// ## Usage:
     /// ```
     /// use capycrypt::{
@@ -273,9 +273,9 @@ impl KeyPair {
     /// * 𝑉 ← s*𝑮
     /// * key pair: (s, 𝑉)
     /// ## Arguments:
-    /// * pw: &Vec<u8> : password as bytes, can be blank but shouldnt be
-    /// * owner: String : A label to indicate the owner of the key
-    /// * curve: [`EdCurves`] : The selected Edwards curve
+    /// * pw: password as bytes, can be blank but shouldnt be
+    /// * owner: A label to indicate the owner of the key
+    /// * curve: The selected Edwards curve
     /// ## Returns:
     /// * return  -> [`KeyPair`]: Key object containing owner, private key, public key x and y coordinates, and timestamp.
     /// verification key 𝑉 is hashed together with the message 𝑚
@@ -291,7 +291,8 @@ impl KeyPair {
     /// let key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
     /// ```
     pub fn new(pw: &Vec<u8>, owner: String, curve: EdCurves, d: u64) -> KeyPair {
-        // Timing sidechannel on variable keysize is mitigated here due to modding by curve order.
+        // Timing sidechannel on variable keysize is mitigated here due to mul 4 and modding by curve order,
+        // ensuring top bits are always set.
         let s: Integer = (bytes_to_big(kmac_xof(pw, &[], 512, "K", d)) * 4) % order(SELECTED_CURVE);
 
         let pub_key = EdCurvePoint::generator(curve, false) * (s);
@@ -323,7 +324,7 @@ impl KeyEncryptable for Message {
     /// * t ← kmac_xof(ka, m, 512, “PKA”)
     /// ## Arguments:
     /// * pub_key: [`EdCurvePoint`] : X coordinate of public key 𝑉
-    /// * d: u64: Requested security strength in bits. Can only be 224, 256, 384, or 512.
+    /// * d: Requested security strength in bits. Can only be 224, 256, 384, or 512.
     /// ## Usage:
     /// ```
     /// use capycrypt::{
@@ -379,8 +380,8 @@ impl KeyEncryptable for Message {
     /// * t’ ← KMACXOF256(ka, m, 512, “PKA”)
     ///
     /// ## Arguments:
-    /// * pw: &[u8]: password used to generate ```CurvePoint``` encryption key.
-    /// * d: u64: encryption security strength in bits. Can only be 224, 256, 384, or 512.
+    /// * pw: password used to generate ```CurvePoint``` encryption key.
+    /// * d: encryption security strength in bits. Can only be 224, 256, 384, or 512.
     ///
     /// ## Usage:
     /// ```
@@ -438,8 +439,8 @@ impl Signable for Message {
     /// * `ℎ` ← kmac_xof(𝑈ₓ , m, 512, “T”); 𝑍 ← (𝑘 – ℎ𝑠) mod r
     ///
     /// ## Arguments:
-    /// * key: &[`KeyPair`], : reference to KeyPair.
-    /// * d: u64: encryption security strength in bits. Can only be 224, 256, 384, or 512.
+    /// * key: reference to KeyPair.
+    /// * d: encryption security strength in bits. Can only be 224, 256, 384, or 512.
     ///
     /// ## Assumes:
     /// * Some(key.priv_key)

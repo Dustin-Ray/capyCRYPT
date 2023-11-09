@@ -69,11 +69,10 @@ pub mod nist_800_185 {
 }
 
 pub mod byte_utils {
-    use num::Integer;
     use num_bigint::{BigInt as big, RandBigInt, Sign};
     /// Aux methods for byte operations.
     use rand::prelude::*;
-    use rand::{thread_rng, RngCore};
+    use rand::thread_rng;
 
     /// Gets size number of random bytes.
     /// * `size`: number of bytes requested
@@ -96,7 +95,7 @@ pub mod byte_utils {
     }
 
     /// XORs byte streams in place using iterators
-    /// * `a`: mut references to `Vec<u8>`, will be replaced with result of XOR
+    /// * `a`: reference to `Vec<u8>`, will be replaced with result of XOR
     /// * `b`: immut ref to `Vec<u8>`, dropped after function returns
     /// * `Remark`: Probable bottleneck unless impl with SIMD.
     pub fn xor_bytes(a: &mut Vec<u8>, b: &Vec<u8>) {
