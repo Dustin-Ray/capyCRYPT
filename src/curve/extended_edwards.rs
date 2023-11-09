@@ -1,5 +1,5 @@
-use fiat_crypto::p448_solinas_64::*;
 use super::field::field_element::FieldElement;
+use fiat_crypto::p448_solinas_64::*;
 
 /// All curves defined here:
 /// <https://csrc.nist.gov/publications/detail/fips/186/5/final>
@@ -29,7 +29,7 @@ impl EdwardsPoint {
     }
 
     pub fn generator() -> EdwardsPoint {
-        EdwardsPoint {  
+        EdwardsPoint {
             X: FieldElement(fiat_p448_tight_field_element([
                 10880955091566686,
                 36276784145337894,
@@ -62,7 +62,5 @@ impl EdwardsPoint {
                 56117654178374172,
             ])),
         }
-
     }
-
 }

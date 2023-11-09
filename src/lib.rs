@@ -5,7 +5,7 @@ use num_bigint::BigInt as Integer;
 pub mod curve {
     pub mod edwards;
     pub mod extended_edwards;
-    
+
     pub mod field {
         pub mod field_element;
         pub mod scalar;

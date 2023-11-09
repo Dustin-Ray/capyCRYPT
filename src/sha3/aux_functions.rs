@@ -70,9 +70,9 @@ pub mod nist_800_185 {
 
 pub mod byte_utils {
     use num::Integer;
+    use num_bigint::{BigInt as big, RandBigInt, Sign};
     /// Aux methods for byte operations.
     use rand::prelude::*;
-    use num_bigint::{BigInt as big, RandBigInt, Sign};
     use rand::{thread_rng, RngCore};
 
     /// Gets size number of random bytes.
@@ -87,7 +87,7 @@ pub mod byte_utils {
     /// Get a random big with size number of bits
     pub fn get_random_big(bits: usize) -> big {
         let mut rng = thread_rng();
-    
+
         // The `gen_bigint` method takes the number of bits as argument to generate
         // a random `BigInt`. If you want a non-negative number, make sure the most
         // significant bit is not set, which will effectively give you a number with

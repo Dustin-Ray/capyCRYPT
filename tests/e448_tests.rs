@@ -11,8 +11,8 @@ mod e448_tests {
         sha3::aux_functions::byte_utils::get_random_big,
     };
 
-    use rand::{thread_rng, Rng};
     use num_bigint::BigInt as big;
+    use rand::{thread_rng, Rng};
     const SELECTED_CURVE: EdCurves = E448;
 
     // #[test]

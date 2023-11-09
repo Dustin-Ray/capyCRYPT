@@ -1,5 +1,5 @@
-use std::ops::Add;
 use fiat_crypto::p448_solinas_64::*;
+use std::ops::Add;
 
 #[derive(Copy, Clone)]
 pub struct FieldElement(pub(crate) fiat_p448_tight_field_element);
@@ -9,7 +9,6 @@ impl std::fmt::Debug for FieldElement {
         f.debug_tuple("FieldElement56").field(&self.0 .0).finish()
     }
 }
-
 
 impl Add<FieldElement> for FieldElement {
     type Output = FieldElement;
