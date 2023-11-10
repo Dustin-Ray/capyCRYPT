@@ -1,4 +1,4 @@
-use crypto_bigint::subtle::{ConstantTimeEq, ConditionallySelectable};
+use crypto_bigint::subtle::{ConditionallySelectable, ConstantTimeEq};
 
 use crate::curve::{extended_edwards::ExtendedCurvePoint, projective_niels::ProjectiveNielsPoint};
 

@@ -1,8 +1,8 @@
 #![allow(non_snake_case)]
 
-use crypto_bigint::subtle::{ConditionallySelectable, Choice, ConditionallyNegatable};
+use crypto_bigint::subtle::{Choice, ConditionallyNegatable, ConditionallySelectable};
 
-use super::{field::field_element::FieldElement, extensible_edwards::ExtensibleCurvePoint};
+use super::{extensible_edwards::ExtensibleCurvePoint, field::field_element::FieldElement};
 
 // Its a variant of Niels, where a Z coordinate is added for unmixed readdition
 // ((y+x)/2, (y-x)/2, dxy, Z)
@@ -15,11 +15,9 @@ pub struct ProjectiveNielsPoint {
 }
 
 impl ProjectiveNielsPoint {
-
     pub fn id_point() -> ProjectiveNielsPoint {
         ExtensibleCurvePoint::identity().to_projective_niels()
     }
-
 }
 
 impl ConditionallySelectable for ProjectiveNielsPoint {

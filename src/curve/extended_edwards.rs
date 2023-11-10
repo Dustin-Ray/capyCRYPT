@@ -5,8 +5,9 @@ use super::{
     extensible_edwards::ExtensibleCurvePoint,
     field::{field_element::FieldElement, lookup_table::LookupTable, scalar::Scalar},
 };
+use criterion::measurement::Measurement;
 use crypto_bigint::{
-    subtle::{Choice, ConditionallySelectable, ConditionallyNegatable},
+    subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq},
     Limb,
 };
 use fiat_crypto::p448_solinas_64::*;
@@ -44,64 +45,34 @@ pub struct AffineEdwards {
 }
 
 impl ExtendedCurvePoint {
-    pub fn id_point() -> ExtendedCurvePoint {
-        ExtendedCurvePoint {
-            X: FieldElement::zero(),
-            Y: FieldElement::one(),
-            Z: FieldElement::one(),
-            T: FieldElement::zero(),
-        }
-    }
-
-    //https://iacr.org/archive/asiacrypt2008/53500329/53500329.pdf (3.1)
-    // These formulas are unified, so for now we can use it for doubling. Will refactor later for speed
-    pub fn add(&self, other: &ExtendedCurvePoint) -> ExtendedCurvePoint {
-        let aXX = self.X * other.X; // aX1X2
-        let dTT = EDWARDS_D * self.T * other.T; // dT1T2
-        let ZZ = self.Z * other.Z; // Z1Z2
-        let YY = self.Y * other.Y;
-
-        let X = {
-            let x_1 = (self.X * other.Y) + (self.Y * other.X);
-            let x_2 = ZZ - dTT;
-            x_1 * x_2
-        };
-        let Y = {
-            let y_1 = YY - aXX;
-            let y_2 = ZZ + dTT;
-            y_1 * y_2
-        };
-
-        let T = {
-            let t_1 = YY - aXX;
-            let t_2 = (self.X * other.Y) + (self.Y * other.X);
-            t_1 * t_2
-        };
-
-        let Z = { (ZZ - dTT) * (ZZ + dTT) };
-
-        ExtendedCurvePoint { X, Y, Z, T }
-    }
+    /// ------------------------------
+    /// ISOGENY OPERATIONS
+    /// ------------------------------
 
     /// Edwards_Isogeny is derived from the doubling formula
-    /// XXX: There is a duplicate method in the twisted edwards module to compute the dual isogeny
-    /// XXX: Not much point trying to make it generic I think. So what we can do is optimise each respective isogeny method for a=1 or a = -1 (currently, I just made it really slow and simple)
     fn edwards_isogeny(&self, a: FieldElement) -> ExtendedCurvePoint {
         // Convert to affine now, then derive extended version later
         let affine = self.to_affine();
         let x = affine.X;
         let y = affine.Y;
 
+        // Common computations
+        let x_squared = x.square();
+        let y_squared = y.square();
+        let a_x_squared = a * x_squared;
+
+        // Compute common denominator
+        let common_denom = (FieldElement::one() + FieldElement::one()) - y_squared - a_x_squared;
+        let inverted_common_denom = common_denom.invert();
+
         // Compute x
         let xy = x * y;
         let x_numerator = xy + xy;
-        let x_denom = y.square() - (a * x.square());
-        let new_x = x_numerator * x_denom.invert();
+        let new_x = x_numerator * inverted_common_denom;
 
         // Compute y
-        let y_numerator = y.square() + (a * x.square());
-        let y_denom = (FieldElement::one() + FieldElement::one()) - y.square() - (a * x.square());
-        let new_y = y_numerator * y_denom.invert();
+        let y_numerator = y_squared + a_x_squared;
+        let new_y = y_numerator * inverted_common_denom;
 
         ExtendedCurvePoint {
             X: new_x,
@@ -111,31 +82,7 @@ impl ExtendedCurvePoint {
         }
     }
 
-    pub fn to_twisted(&self) -> ExtendedCurvePoint {
-        self.edwards_isogeny(FieldElement::one())
-    }
-
-    /// Uses a 2-isogeny to map the point to the Ed448-Goldilocks
-    pub fn to_untwisted(&self) -> ExtendedCurvePoint {
-        self.edwards_isogeny(FieldElement::minus_one())
-    }
-
-    pub fn to_affine(&self) -> AffineEdwards {
-        let INV_Z = self.Z.invert();
-
-        let mut X = self.X * INV_Z;
-        X.strong_reduce();
-
-        let mut Y = self.Y * INV_Z;
-        Y.strong_reduce();
-
-        AffineEdwards { X, Y }
-    }
-
-    pub fn double(&self) -> ExtendedCurvePoint {
-        self.add(&self)
-    }
-
+    // Variable-base scalar multiplication with lookup table
     pub fn variable_base(point: &ExtendedCurvePoint, s: &Scalar) -> ExtendedCurvePoint {
         let mut result = ExtensibleCurvePoint::identity();
 
@@ -165,6 +112,33 @@ impl ExtendedCurvePoint {
         result.to_extended()
     }
 
+    /// ------------------------------
+    /// CURVE POINT COERCION
+    /// ------------------------------
+
+    /// Lifts extended to twisted extended
+    pub fn to_twisted(&self) -> ExtendedCurvePoint {
+        self.edwards_isogeny(FieldElement::one())
+    }
+
+    /// Uses a 2-isogeny to map the point to the Ed448-Goldilocks
+    pub fn to_untwisted(&self) -> ExtendedCurvePoint {
+        self.edwards_isogeny(FieldElement::minus_one())
+    }
+
+    /// Brings an extended Edwards down to affine x, y
+    pub fn to_affine(&self) -> AffineEdwards {
+        let INV_Z = self.Z.invert();
+
+        let mut X = self.X * INV_Z;
+        X.strong_reduce();
+
+        let mut Y = self.Y * INV_Z;
+        Y.strong_reduce();
+
+        AffineEdwards { X, Y }
+    }
+
     /// Converts an ExtendedPoint to an ExtensiblePoint
     pub fn to_extensible(&self) -> ExtensibleCurvePoint {
         ExtensibleCurvePoint {
@@ -187,7 +161,74 @@ impl ExtendedCurvePoint {
         }
     }
 
-    // Generates the curve
+    /// ------------------------------
+    /// CURVE POINT ARITHMETIC
+    /// ------------------------------
+
+    // https://iacr.org/archive/asiacrypt2008/53500329/53500329.pdf (3.1)
+    pub fn add(&self, other: &ExtendedCurvePoint) -> ExtendedCurvePoint {
+        let aXX = self.X * other.X;
+        let dTT = EDWARDS_D * self.T * other.T;
+        let ZZ = self.Z * other.Z;
+        let YY = self.Y * other.Y;
+        let X1Y2_plus_Y1X2 = (self.X * other.Y) + (self.Y * other.X);
+
+        let X = X1Y2_plus_Y1X2 * (ZZ - dTT);
+        let Y = (YY - aXX) * (ZZ + dTT);
+        let T = (YY - aXX) * X1Y2_plus_Y1X2;
+        let Z = (ZZ - dTT) * (ZZ + dTT);
+
+        ExtendedCurvePoint { X, Y, Z, T }
+    }
+
+    pub fn double(&self) -> ExtendedCurvePoint {
+        self.add(&self)
+    }
+
+    /// Returns (scalar mod 4) * P in constant time
+    pub fn scalar_mod_four(&self, scalar: &Scalar) -> ExtendedCurvePoint {
+        // Compute compute (scalar mod 4)
+        let mut val_copy = scalar.val.clone();
+        let s_mod_four = val_copy.as_limbs_mut()[0] & crypto_bigint::Limb(3);
+
+        // Compute all possible values of (scalar mod 4) * P
+        let zero_p = ExtendedCurvePoint::id_point();
+        let one_p = self.clone();
+        let two_p = one_p.double();
+        let three_p = two_p.add(self);
+
+        // Under the reasonable assumption that `==` is constant time
+        // Then the whole function is constant time.
+        // This should be cheaper than calling double_and_add or a scalar mul operation
+        // as the number of possibilities are so small.
+        // XXX: This claim has not been tested (although it sounds intuitive to me)
+        let mut result = ExtendedCurvePoint::id_point();
+        result.conditional_assign(&zero_p, Choice::from((s_mod_four == Limb(0)) as u8));
+        result.conditional_assign(&one_p, Choice::from((s_mod_four == Limb(1)) as u8));
+        result.conditional_assign(&two_p, Choice::from((s_mod_four == Limb(2)) as u8));
+        result.conditional_assign(&three_p, Choice::from((s_mod_four == Limb(3)) as u8));
+
+        result
+    }
+
+    /// Generic scalar multiplication to compute s*P
+    pub fn scalar_mul(&self, scalar: &Scalar) -> ExtendedCurvePoint {
+        // Compute floor(s/4)
+        let mut scalar_div_four = scalar.clone();
+        scalar_div_four.div_four();
+
+        // Use isogeny and dual isogeny to compute phi^-1((s/4) * phi(P))
+        let partial_result =
+            Self::variable_base(&self.to_twisted(), &scalar_div_four).to_untwisted();
+        // Add partial result to (scalar mod 4) * P
+        partial_result.add(&self.scalar_mod_four(scalar))
+    }
+
+    /// ------------------------------
+    /// GROUP OPERATIONS
+    /// ------------------------------
+
+    /// Generates the curve
     pub fn generator() -> ExtendedCurvePoint {
         ExtendedCurvePoint {
             X: FieldElement(fiat_p448_tight_field_element([
@@ -224,45 +265,18 @@ impl ExtendedCurvePoint {
         }
     }
 
-    /// Returns (scalar mod 4) * P in constant time
-    pub fn scalar_mod_four(&self, scalar: &Scalar) -> ExtendedCurvePoint {
-        // Compute compute (scalar mod 4)
-        let mut val_copy = scalar.val.clone();
-        let s_mod_four = val_copy.as_limbs_mut()[0] & crypto_bigint::Limb(3);
-
-        // Compute all possible values of (scalar mod 4) * P
-        let zero_p = ExtendedCurvePoint::id_point();
-        let one_p = self.clone();
-        let two_p = one_p.double();
-        let three_p = two_p.add(self);
-
-        // Under the reasonable assumption that `==` is constant time
-        // Then the whole function is constant time.
-        // This should be cheaper than calling double_and_add or a scalar mul operation
-        // as the number of possibilities are so small.
-        // XXX: This claim has not been tested (although it sounds intuitive to me)
-        let mut result = ExtendedCurvePoint::id_point();
-        result.conditional_assign(&zero_p, Choice::from((s_mod_four == Limb(0)) as u8));
-        result.conditional_assign(&one_p, Choice::from((s_mod_four == Limb(1)) as u8));
-        result.conditional_assign(&two_p, Choice::from((s_mod_four == Limb(2)) as u8));
-        result.conditional_assign(&three_p, Choice::from((s_mod_four == Limb(3)) as u8));
-
-        result
-    }
-
-    /// Generic scalar multiplication to compute s*P
-    pub fn scalar_mul(&self, scalar: &Scalar) -> ExtendedCurvePoint {
-        // Compute floor(s/4)
-        let mut scalar_div_four = scalar.clone();
-        scalar_div_four.div_four();
-
-        // Use isogeny and dual isogeny to compute phi^-1((s/4) * phi(P))
-        let partial_result = Self::variable_base(&self.to_twisted(), &scalar_div_four).to_untwisted();
-        // Add partial result to (scalar mod 4) * P
-        partial_result.add(&self.scalar_mod_four(scalar))
+    /// Neutral curve point
+    pub fn id_point() -> ExtendedCurvePoint {
+        ExtendedCurvePoint {
+            X: FieldElement::zero(),
+            Y: FieldElement::one(),
+            Z: FieldElement::one(),
+            T: FieldElement::zero(),
+        }
     }
 }
 
+/// Select a point in fixed time
 impl ConditionallySelectable for ExtendedCurvePoint {
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
         ExtendedCurvePoint {
@@ -280,4 +294,65 @@ impl Mul<&Scalar> for &ExtendedCurvePoint {
     fn mul(self, scalar: &Scalar) -> ExtendedCurvePoint {
         self.scalar_mul(&scalar)
     }
+}
+
+impl Mul<Scalar> for ExtendedCurvePoint {
+    type Output = ExtendedCurvePoint;
+    /// Scalar multiplication: compute `scalar * self`.
+    fn mul(self, scalar: Scalar) -> ExtendedCurvePoint {
+        self.scalar_mul(&scalar)
+    }
+}
+
+impl ConstantTimeEq for ExtendedCurvePoint {
+    fn ct_eq(&self, other: &Self) -> Choice {
+        let XZ = self.X * other.Z;
+        let ZX = self.Z * other.X;
+
+        let YZ = self.Y * other.Z;
+        let ZY = self.Z * other.Y;
+
+        (XZ.ct_eq(&ZX)) & (YZ.ct_eq(&ZY))
+    }
+}
+
+impl PartialEq for ExtendedCurvePoint {
+    fn eq(&self, other: &ExtendedCurvePoint) -> bool {
+        self.ct_eq(other).into()
+    }
+}
+impl Eq for ExtendedCurvePoint {}
+
+
+#[test]
+pub fn test_g_times_zero_id() {
+
+    let p = ExtendedCurvePoint::generator();
+    let zero = Scalar::from(0_u64);
+    let res = p * zero;
+    let id = ExtendedCurvePoint::id_point();
+
+    assert!(res == id)
+
+}
+
+#[test]
+pub fn test_g_times_one_g() {
+
+    let p = ExtendedCurvePoint::generator();
+    let one = Scalar::from(1_u64);
+    let res = p * one;
+    let id = ExtendedCurvePoint::generator();
+
+    assert!(res == id)
+
+}
+
+#[test]
+pub fn test_g_times_two_g_plus_g() {
+    let p = ExtendedCurvePoint::generator();
+    let two = Scalar::from(2_u64);
+    let res = p * two;
+    let res2 = p.add(&p);
+    assert!(res == res2)
 }

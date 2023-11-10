@@ -1,6 +1,9 @@
 use fiat_crypto::p448_solinas_64::fiat_p448_tight_field_element;
 
-use super::{field::field_element::FieldElement, projective_niels::ProjectiveNielsPoint, extended_edwards::ExtendedCurvePoint};
+use super::{
+    extended_edwards::ExtendedCurvePoint, field::field_element::FieldElement,
+    projective_niels::ProjectiveNielsPoint,
+};
 
 /// This is the representation that we will do most of the group operations on.
 // In affine (x,y) is the extensible point (X, Y, Z, T1, T2)
@@ -46,7 +49,7 @@ impl ExtensibleCurvePoint {
         }
     }
 
-        /// Adds an extensible point to a ProjectiveNiels point
+    /// Adds an extensible point to a ProjectiveNiels point
     /// Returns an extensible point
     /// (3.1)[Last set of formulas] https://iacr.org/archive/asiacrypt2008/53500329/53500329.pdf
     /// This differs from the formula above by a factor of 2. Saving 1 Double
@@ -71,7 +74,7 @@ impl ExtensibleCurvePoint {
         }
     }
 
-     /// Doubles a point
+    /// Doubles a point
     /// (3.3) https://iacr.org/archive/asiacrypt2008/53500329/53500329.pdf
     pub fn double(&self) -> ExtensibleCurvePoint {
         let A = self.X.square();

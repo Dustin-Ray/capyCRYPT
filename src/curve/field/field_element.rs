@@ -1,4 +1,6 @@
-use crypto_bigint::subtle::{Choice, ConditionallySelectable, ConditionallyNegatable};
+use crypto_bigint::subtle::{
+    Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq,
+};
 use fiat_crypto::p448_solinas_64::*;
 use std::ops::{Add, Mul, Sub};
 
@@ -42,8 +44,29 @@ impl FieldElement {
         ]))
     }
 
+    // We encode the Field element by storing each consecutive into a u64
+    pub(crate) fn to_bytes(&self) -> [u8; 56] {
+        let mut res = [0u8; 56];
+        fiat_p448_to_bytes(&mut res, &self.0);
+        res
+    }
+
+    /// Helper function for internally constructing a field element
+    pub const fn from_raw_slice(slice: [u64; 8]) -> FieldElement {
+        FieldElement(fiat_p448_tight_field_element(slice))
+    }
+
+    /// This does not check if the encoding is canonical (ie if the input is reduced)
+    /// We parse in chunks of 56 bytes, the first 28 bytes will contain the i'th limb
+    /// and the second 28 bytes will contain the (2i+1)'th limb
+    pub fn from_bytes(bytes: &[u8; 56]) -> FieldElement {
+        let mut res = FieldElement::zero();
+        fiat_p448_from_bytes(&mut res.0, bytes);
+        res
+    }
+
     /// Negates a field element
-    pub(crate) fn negate(&self) -> FieldElement {
+    pub fn negate(&self) -> FieldElement {
         let mut result_loose = fiat_p448_loose_field_element([0; 8]);
         fiat_p448_opp(&mut result_loose, &self.0);
         let mut result = FieldElement::zero();
@@ -106,6 +129,12 @@ impl FieldElement {
         let mut self_loose = fiat_p448_loose_field_element([0; 8]);
         fiat_p448_relax(&mut self_loose, &self.0);
         fiat_p448_carry(&mut self.0, &self_loose);
+    }
+}
+
+impl ConstantTimeEq for FieldElement {
+    fn ct_eq(&self, other: &Self) -> Choice {
+        self.to_bytes().ct_eq(&other.to_bytes())
     }
 }
 
