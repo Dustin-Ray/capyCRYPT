@@ -7,7 +7,7 @@
 A complete Rust cryptosystem implementing [NIST FIPS 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf) paired with a variety of Edwards curves.
 
 ## Security
-This library is built with love as an acedemic excercise in cryptographic algorithm design. Despite how awesome and cool it is, it probably shouldn't be used for anything serious. If you find ways to make it even better, open an issue or PR and we'll gladly engage.
+This library is built with love as an academic excercise in cryptographic algorithm design. Despite how awesome and cool it is, it probably shouldn't be used for anything serious. If you find ways to make it even better, open an issue or PR and we'll gladly engage.
 
 ## Features
 - **SHA-3:** NIST-Compliant Secure Hash Algorithm 3 (SHA-3) implementation for generating cryptographic hash values.
@@ -24,7 +24,7 @@ This library is built with love as an acedemic excercise in cryptographic algori
 ## Installation
 Add the following line to your `Cargo.toml` file:
 ```toml
-capycrypt = "0.4.5"
+capycrypt = "0.4.7"
 ```
 
 ## Quick Start
