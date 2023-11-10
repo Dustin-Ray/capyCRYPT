@@ -23,6 +23,10 @@ criterion = "0.3"
 
 
 [[bench]]
+name = "benchmark_sha3"
+harness = false
+
+[[bench]]
 name = "benchmark_e222_224"
 harness = false
 
