@@ -5,22 +5,20 @@ use fiat_crypto::p448_solinas_64::*;
 /// <https://csrc.nist.gov/publications/detail/fips/186/5/final>
 #[derive(Debug, Clone, Copy)]
 pub enum EdCurves {
-    E222,
-    E382,
     E448,
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct EdwardsPoint {
+pub struct ExtendedEdwardsPoint {
     pub X: FieldElement,
     pub Y: FieldElement,
     pub Z: FieldElement,
     pub T: FieldElement,
 }
 
-impl EdwardsPoint {
-    pub fn id_point() -> EdwardsPoint {
-        EdwardsPoint {
+impl ExtendedEdwardsPoint {
+    pub fn id_point() -> ExtendedEdwardsPoint {
+        ExtendedEdwardsPoint {
             X: FieldElement::zero(),
             Y: FieldElement::one(),
             Z: FieldElement::one(),
@@ -28,8 +26,8 @@ impl EdwardsPoint {
         }
     }
 
-    pub fn generator() -> EdwardsPoint {
-        EdwardsPoint {
+    pub fn generator() -> ExtendedEdwardsPoint {
+        ExtendedEdwardsPoint {
             X: FieldElement(fiat_p448_tight_field_element([
                 10880955091566686,
                 36276784145337894,
@@ -63,4 +61,17 @@ impl EdwardsPoint {
             ])),
         }
     }
+
+    // pub fn scalar_mul(&self, scalar: &Scalar) -> ExtendedEdwardsPoint {
+
+    //     // Compute floor(s/4)
+
+
+
+
+    // }
+
+
+
+
 }

@@ -11,9 +11,8 @@ pub enum EdCurves {
     E448,
 }
 
-/// d, n, p, and r values for each curve
+/// d, n, p, and r values for curve
 mod ed_curve_constants {
-
     pub const D_448: i32 = -39081;
     pub const N_448: &str = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFDF3288FA7113B6D26BB58DA4085B309CA37163D548DE30A4AAD6113CC";
     pub const P_448: &str = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
@@ -33,10 +32,10 @@ mod ed_curve_constants {
 /// ## Supported Edward Curves:
 /// This library supports multiple curves of Edwards form which can be used interchangebly
 /// with supported model functionality. Current supported curves are:
-/// * E222
-/// * E382
+/// * ~~E222~~
+/// * ~~E382~~
 /// * E448
-/// * E521
+/// * ~~E521~~
 /// ## Security claims
 /// An analysis of security and performance provided by each curve is made in <https://eprint.iacr.org/2013/647.pdf>
 pub struct EdCurvePoint {
@@ -183,10 +182,6 @@ impl Mul<Integer> for EdCurvePoint {
     /// Fixed-time point multiplication. NOTE: not memory safe.
     /// * `s`: scalar value to multiply by
     /// * multiplication is defined to be P₀ + P₁ + ... Pₛ
-    /// ## Remark:
-    /// excessive cloning in this function is a consequence of the
-    /// Rug Integer GMP FFI which does not implement ```copy``` trait. Observed complexity
-    /// impact appears minimal.
     fn mul(self, s: Integer) -> EdCurvePoint {
         let mut result = EdCurvePoint::id_point(self.curve);
         let mut base = self;
