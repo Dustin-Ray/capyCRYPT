@@ -12,7 +12,7 @@ use crate::{
             },
             nist_800_185::{byte_pad, encode_string, right_encode},
         },
-        sponge::{update, finalize},
+        sponge::{finalize, update},
     },
     Hashable, KeyEncryptable, KeyPair, Message, PwEncryptable, Signable, Signature,
 };

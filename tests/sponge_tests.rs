@@ -5,7 +5,7 @@ use capycrypt::{Hashable, Message};
 mod sponge_tests {
     use capycrypt::ops::{cshake, kmac_xof};
     use capycrypt::sha3::aux_functions::nist_800_185::{byte_pad, left_encode, right_encode};
-    use capycrypt::sha3::sponge::{update, finalize};
+    use capycrypt::sha3::sponge::{finalize, update};
     use hex::ToHex;
 
     #[test]
@@ -143,11 +143,7 @@ mod sponge_tests {
 
     #[test]
     fn test_sponge() {
-        let res = finalize(
-            &mut update(&mut "test".as_bytes().to_vec(), 256),
-            512,
-            136,
-        );
+        let res = finalize(&mut update(&mut "test".as_bytes().to_vec(), 256), 512, 136);
         let s = res.encode_hex::<String>();
 
         let expected = "8ee1f95dfe959e1d5e8188df176516b25de2d1c5ebf8f3312a588fba9f0a23e7437379c2035a8208df6ab2b68a9327c7e42e13bdd7fc2222dd611f0f755d8808";
