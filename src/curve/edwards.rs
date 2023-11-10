@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use num::Num;
 use num_bigint::BigInt as Integer;
 use std::ops::Add;
@@ -73,7 +75,7 @@ impl Add<&EdCurvePoint> for EdCurvePoint {
     /// * Because d is not square in Z/pZ, the strongly
     /// unified Edwards point addition formulas apply. ref:
     /// <https://csrc.nist.gov/publications/detail/fips/186/5/final>
-    fn add(mut self, p2: &EdCurvePoint) -> EdCurvePoint {
+    fn add(self, p2: &EdCurvePoint) -> EdCurvePoint {
         let A = (self.z.clone() * p2.z.clone()) % self.p.clone();
         let B = (A.clone() * A.clone()) % self.p.clone();
         let C = (self.x.clone() * p2.x.clone()) % self.p.clone();

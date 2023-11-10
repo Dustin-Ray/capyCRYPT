@@ -45,7 +45,7 @@ impl FieldElement {
     }
 
     // We encode the Field element by storing each consecutive into a u64
-    pub(crate) fn to_bytes(&self) -> [u8; 56] {
+    pub fn to_bytes(&self) -> [u8; 56] {
         let mut res = [0u8; 56];
         fiat_p448_to_bytes(&mut res, &self.0);
         res
@@ -85,27 +85,29 @@ impl FieldElement {
 
     /// Inverts a field element
     /// Previous chain length: 462, new length 460
+    /// Addition chain taken from https://github.com/mmcloughlin/addchain
+
     pub fn invert(&self) -> FieldElement {
-        // Addition chain taken from https://github.com/mmcloughlin/addchain
-        let _1 = self;
-        let _10 = _1.square();
-        let _11 = *_1 * _10;
-        let _110 = _11.square();
-        let _111 = *_1 * _110;
-        let _111000 = _111.square_n(3);
-        let _111111 = _111 * _111000;
+        let base = self;
+        let base_square = base.square();
+        let base_cubed = *base * base_square;
+        let base_sextupled = base_cubed.square();
+        let base_septupled = *base * base_sextupled;
+        let base_56 = base_septupled.square_n(3); // Represents base^56
+        let base_63 = base_septupled * base_56; // Represents base^63
 
-        let x12 = _111111.square_n(6) * _111111;
-        let x24 = x12.square_n(12) * x12;
-        let i34 = x24.square_n(6);
-        let x30 = _111111 * i34;
-        let x48 = i34.square_n(18) * x24;
-        let x96 = x48.square_n(48) * x48;
-        let x192 = x96.square_n(96) * x96;
-        let x222 = x192.square_n(30) * x30;
-        let x223 = x222.square() * *_1;
+        // Additional steps with more descriptive variable names
+        let step1 = base_63.square_n(6) * base_63;
+        let step2 = step1.square_n(12) * step1;
+        let step3 = step2.square_n(6);
+        let step4 = base_63 * step3;
+        let step5 = step3.square_n(18) * step2;
+        let step6 = step5.square_n(48) * step5;
+        let step7 = step6.square_n(96) * step6;
+        let step8 = step7.square_n(30) * step4;
+        let step9 = step8.square() * *base;
 
-        (x223.square_n(223) * x222).square_n(2) * *_1
+        (step9.square_n(223) * step8).square_n(2) * *base
     }
 
     /// Squares a field element  `n` times
@@ -113,7 +115,7 @@ impl FieldElement {
         let mut result = self.square();
 
         // Decrease value by 1 since we just did a squaring
-        n = n - 1;
+        n -= 1;
 
         for _ in 0..n {
             result = result.square();

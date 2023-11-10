@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use crypto_bigint::subtle::{ConditionallySelectable, ConstantTimeEq};
 
 use crate::curve::{extended_edwards::ExtendedCurvePoint, projective_niels::ProjectiveNielsPoint};

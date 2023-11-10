@@ -34,7 +34,7 @@ impl Scalar {
         }
     }
 
-    pub(crate) fn to_radix_16(&self) -> [i8; 113] {
+    pub fn to_radix_16(&self) -> [i8; 113] {
         let bytes = self.val.to_be_bytes();
         let mut output = [0i8; 113];
 

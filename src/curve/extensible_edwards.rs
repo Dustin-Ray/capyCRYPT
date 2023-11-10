@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use fiat_crypto::p448_solinas_64::fiat_p448_tight_field_element;
 
 use super::{

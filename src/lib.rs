@@ -1,3 +1,4 @@
+#![warn(clippy::just_underscores_and_digits)]
 use curve::edwards::{EdCurvePoint, EdCurves};
 use num_bigint::BigInt as Integer;
 

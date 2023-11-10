@@ -5,7 +5,6 @@ use super::{
     extensible_edwards::ExtensibleCurvePoint,
     field::{field_element::FieldElement, lookup_table::LookupTable, scalar::Scalar},
 };
-use criterion::measurement::Measurement;
 use crypto_bigint::{
     subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq},
     Limb,
@@ -182,18 +181,18 @@ impl ExtendedCurvePoint {
     }
 
     pub fn double(&self) -> ExtendedCurvePoint {
-        self.add(&self)
+        self.add(self)
     }
 
     /// Returns (scalar mod 4) * P in constant time
     pub fn scalar_mod_four(&self, scalar: &Scalar) -> ExtendedCurvePoint {
         // Compute compute (scalar mod 4)
-        let mut val_copy = scalar.val.clone();
+        let mut val_copy = scalar.val;
         let s_mod_four = val_copy.as_limbs_mut()[0] & crypto_bigint::Limb(3);
 
         // Compute all possible values of (scalar mod 4) * P
         let zero_p = ExtendedCurvePoint::id_point();
-        let one_p = self.clone();
+        let one_p = *self;
         let two_p = one_p.double();
         let three_p = two_p.add(self);
 
@@ -214,7 +213,7 @@ impl ExtendedCurvePoint {
     /// Generic scalar multiplication to compute s*P
     pub fn scalar_mul(&self, scalar: &Scalar) -> ExtendedCurvePoint {
         // Compute floor(s/4)
-        let mut scalar_div_four = scalar.clone();
+        let mut scalar_div_four = *scalar;
         scalar_div_four.div_four();
 
         // Use isogeny and dual isogeny to compute phi^-1((s/4) * phi(P))
@@ -292,7 +291,7 @@ impl Mul<&Scalar> for &ExtendedCurvePoint {
     type Output = ExtendedCurvePoint;
     /// Scalar multiplication: compute `scalar * self`.
     fn mul(self, scalar: &Scalar) -> ExtendedCurvePoint {
-        self.scalar_mul(&scalar)
+        self.scalar_mul(scalar)
     }
 }
 
@@ -323,29 +322,24 @@ impl PartialEq for ExtendedCurvePoint {
 }
 impl Eq for ExtendedCurvePoint {}
 
-
 #[test]
 pub fn test_g_times_zero_id() {
-
     let p = ExtendedCurvePoint::generator();
     let zero = Scalar::from(0_u64);
     let res = p * zero;
     let id = ExtendedCurvePoint::id_point();
 
     assert!(res == id)
-
 }
 
 #[test]
 pub fn test_g_times_one_g() {
-
     let p = ExtendedCurvePoint::generator();
     let one = Scalar::from(1_u64);
     let res = p * one;
     let id = ExtendedCurvePoint::generator();
 
     assert!(res == id)
-
 }
 
 #[test]
