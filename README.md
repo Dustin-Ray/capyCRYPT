@@ -30,7 +30,7 @@ capycrypt = "0.4.5"
 use capycrypt::{Hashable, Message};
 // Hash the empty string
 let mut data = Message::new(vec![]);
-// Obtained from OpenSSL
+// Obtained from echo -n "" | openssl dgst -sha3-256
 let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
 // Compute a SHA3 digest with 128 bits of security
 data.compute_sha3_hash(256);
