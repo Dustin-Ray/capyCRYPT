@@ -1,4 +1,4 @@
-use crypto_bigint::{impl_modulus, modular::constant_mod::ResidueParams, NonZero, U448};
+use crypto_bigint::{impl_modulus, modular::constant_mod::ResidueParams, Encoding, NonZero, U448};
 
 pub const R_448: &str = "3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7CCA23E9C44EDB49AED63690216CC2728DC58F552378C292AB5844F3";
 
@@ -8,6 +8,7 @@ impl_modulus!(
     "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
 );
 
+#[derive(Debug, Clone, Copy)]
 pub struct Scalar {
     pub val: U448,
 }
@@ -21,6 +22,36 @@ impl Scalar {
             .val
             .div_rem(&NonZero::new(U448::from(4_u64)).unwrap())
             .0;
+    }
+
+    pub fn invert(&mut self) {
+        self.val.inv_mod(&U448::from_be_hex(R_448));
+    }
+
+    pub fn from(val: u64) -> Self {
+        Scalar {
+            val: U448::from(val),
+        }
+    }
+
+    pub(crate) fn to_radix_16(&self) -> [i8; 113] {
+        let bytes = self.val.to_be_bytes();
+        let mut output = [0i8; 113];
+
+        // Convert from radix 256 (bytes) to radix 16 (nibbles)
+        for i in 0..56 {
+            output[2 * i] = (bytes[i] & 15) as i8; // Lower nibble
+            output[2 * i + 1] = ((bytes[i] >> 4) & 15) as i8; // Upper nibble
+        }
+
+        // Re-center coefficients to be between [-8, 8)
+        for i in 0..112 {
+            let carry = (output[i] + 8) >> 4;
+            output[i] -= carry << 4;
+            output[i + 1] += carry;
+        }
+
+        output
     }
 }
 
