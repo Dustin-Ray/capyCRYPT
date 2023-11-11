@@ -6,7 +6,7 @@ use crate::sha3::keccakf::keccakf_1600;
 /// * m: message to be absorbed
 /// * capacity: security parameter which determines rate = bit_width - capacity
 /// * return: a state consisting of 25 words of 64 bits each.
-pub fn update(m: &mut Vec<u8>, capacity: u64) -> [u64; 25] {
+pub fn sponge_absorb(m: &mut Vec<u8>, capacity: u64) -> [u64; 25] {
     let r = (1600 - capacity) / 8;
     if (m.len() % r as usize) != 0 {
         pad_ten_one(m, r as usize);
@@ -20,7 +20,7 @@ pub fn update(m: &mut Vec<u8>, capacity: u64) -> [u64; 25] {
 /// * bit_length: requested output length in bits
 /// * rate: security parameter
 /// * return: digest of permuted states of length `bit_length`.
-pub fn finalize(s: &mut [u64; 25], bit_length: u64, rate: u64) -> Vec<u8> {
+pub fn sponge_squeeze(s: &mut [u64; 25], bit_length: u64, rate: u64) -> Vec<u8> {
     let mut out: Vec<u8> = Vec::new(); //FIPS 202 Algorithm 8 Step 8
     let block_size: usize = (rate / 64) as usize;
     while out.len() * 8 < bit_length as usize {

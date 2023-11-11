@@ -45,7 +45,6 @@ pub struct ExtensibleCurvePoint {
 }
 
 impl ExtensibleCurvePoint {
-    
     /// ------------------------------
     /// GROUP OPERATIONS
     /// ------------------------------

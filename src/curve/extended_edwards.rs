@@ -1,24 +1,15 @@
 #![allow(non_snake_case)]
-use std::ops::{Mul, Neg};
 use super::{
     extensible_edwards::ExtensibleCurvePoint,
-    field::{
-        field_element::FieldElement, 
-        lookup_table::LookupTable, 
-        scalar::Scalar
-    },
+    field::{field_element::FieldElement, lookup_table::LookupTable, scalar::Scalar},
 };
 use crypto_bigint::{
     impl_modulus,
-    subtle::{
-        Choice, 
-        ConditionallyNegatable, 
-        ConditionallySelectable, 
-        ConstantTimeEq},
-    Limb, 
-    U448,
+    subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq},
+    Limb, U448,
 };
 use fiat_crypto::p448_solinas_64::*;
+use std::ops::{Mul, Neg};
 
 /// Edwards `d`, equals to -39081
 pub const EDWARDS_D: FieldElement = FieldElement(fiat_p448_tight_field_element([
@@ -46,7 +37,6 @@ pub struct AffineEdwards {
 }
 
 impl ExtendedCurvePoint {
-    
     /// ------------------------------
     /// ISOGENY OPERATIONS
     /// ------------------------------
@@ -316,7 +306,6 @@ impl Mul<Scalar> for ExtendedCurvePoint {
         self.scalar_mul(&scalar)
     }
 }
-
 
 impl Neg for ExtendedCurvePoint {
     type Output = Self;

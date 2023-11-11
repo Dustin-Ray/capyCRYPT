@@ -4,7 +4,10 @@
 [![Crates.io](https://img.shields.io/crates/v/capycrypt?style=flat-square)](https://crates.io/crates/capycrypt)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/drcapybara/capyCRYPT/blob/master/LICENSE.txt) 
 
-A complete Rust cryptosystem implementing [NIST FIPS 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf) paired with a variety of Edwards curves. An academic exercise in cryptographic algorithm design.
+A complete Rust cryptosystem implementing [NIST FIPS 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf) paired with a variety of Edwards curves.
+
+## Security
+This library is built with love as an academic excercise in cryptographic algorithm design. Despite how awesome and cool it is, it probably shouldn't be used for anything serious. If you find ways to make it even better, open an issue or PR and we'll gladly engage.
 
 ## Features
 - **SHA-3:** NIST-Compliant Secure Hash Algorithm 3 (SHA-3) implementation for generating cryptographic hash values.
@@ -21,14 +24,7 @@ A complete Rust cryptosystem implementing [NIST FIPS 202](https://nvlpubs.nist.g
 ## Installation
 Add the following line to your `Cargo.toml` file:
 ```toml
-capycrypt = "0.4.5"
-```
-
-### Note: Building the `rug` Crate
-
-This library uses an FFI to GMP by means of the rug crate. To successfully build the `rug` crate, please ensure that you have the `m4` library installed on your system. `m4` is a prerequisite for certain components of the build process. You can install it on debian-like systems with:
-```bash
-apt-get install m4
+capycrypt = "0.4.7"
 ```
 
 ## Quick Start
@@ -37,7 +33,7 @@ apt-get install m4
 use capycrypt::{Hashable, Message};
 // Hash the empty string
 let mut data = Message::new(vec![]);
-// Obtained from OpenSSL
+// Obtained from echo -n "" | openssl dgst -sha3-256
 let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
 // Compute a SHA3 digest with 128 bits of security
 data.compute_sha3_hash(256);
@@ -107,11 +103,11 @@ msg.verify(&key_pair.pub_key);
 assert!(msg.op_result.unwrap());
 ```
 
-## Benches
+## Performance
 This library uses the criterion crate for benches. Running:
 ```bash
 cargo bench
 ```
 conducts benchmarks in order from lowest security to highest. For example, the lowest security configuration available in this library is the pairing of E222 with cSHAKE256, while the highest security offered is E521 paired with cSHAKE512.
 
-I make no claims as to the security of this library. It probably shouldn't be used for anything serious. If you find cool ways to make it better, open a PR and I'll gladly engage.
+Symmetric operations compare well to openSSL. On an Intel® Core™ i7-10710U × 12, our adaption of in-place keccak from the [XKCP](https://github.com/XKCP/XKCP) achieves a runtime of approximately 20 ms to digest 5mb of random data, vs approximately 17 ms in openSSL.

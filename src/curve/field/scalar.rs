@@ -1,10 +1,4 @@
-use crypto_bigint::{
-    impl_modulus, 
-    modular::constant_mod::ResidueParams, 
-    Encoding, 
-    NonZero, 
-    U448
-};
+use crypto_bigint::{impl_modulus, modular::constant_mod::ResidueParams, Encoding, NonZero, U448};
 
 pub const R_448: &str = "3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7CCA23E9C44EDB49AED63690216CC2728DC58F552378C292AB5844F3";
 
