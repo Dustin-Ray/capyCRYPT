@@ -372,7 +372,6 @@ pub fn test_g_times_one_g() {
     let one = Scalar::from(1_u64);
     let res = p * one;
     let id = ExtendedCurvePoint::generator();
-
     assert!(res == id)
 }
 
@@ -398,7 +397,6 @@ pub fn test_g_times_two_g_plus_g() {
 fn test_four_g_not_id() {
     let four_g = ExtendedCurvePoint::generator();
     let four_g = four_g * Scalar::from(4_u64);
-
     let id = ExtendedCurvePoint::id_point();
     assert!(!(&four_g == &id))
 }
@@ -409,7 +407,6 @@ fn r_times_g_id() {
     use crate::curve::field::scalar::R_448;
     let mut g = ExtendedCurvePoint::generator();
     g = g * Scalar::from_uint(U448::from_be_hex(R_448));
-
     let id = ExtendedCurvePoint::id_point();
     assert!(!(&g == &id))
 }
