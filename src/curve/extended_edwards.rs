@@ -5,11 +5,18 @@ use super::{
 };
 use crypto_bigint::{
     impl_modulus,
+    modular::constant_mod::ResidueParams,
     subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq},
-    Limb, U448,
+    U448,
 };
 use fiat_crypto::p448_solinas_64::*;
 use std::ops::{Mul, Neg};
+
+impl_modulus!(
+    Modulus,
+    U448,
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+);
 
 /// Edwards `d`, equals to -39081
 pub const EDWARDS_D: FieldElement = FieldElement(fiat_p448_tight_field_element([
@@ -190,8 +197,8 @@ impl ExtendedCurvePoint {
     /// Returns (scalar mod 4) * P in constant time
     pub fn scalar_mod_four(&self, scalar: &Scalar) -> ExtendedCurvePoint {
         // Compute compute (scalar mod 4)
-        let mut val_copy = scalar.val;
-        let s_mod_four = val_copy.as_limbs_mut()[0] & crypto_bigint::Limb(3);
+        let val_copy = scalar.val;
+        let s_mod_four = val_copy.const_rem(&U448::from(4_u64)).0;
 
         // Compute all possible values of (scalar mod 4) * P
         let zero_p = ExtendedCurvePoint::id_point();
@@ -202,10 +209,22 @@ impl ExtendedCurvePoint {
         // This should be cheaper than calling double_and_add or a scalar mul operation
         // as the number of possibilities are so small.
         let mut result = ExtendedCurvePoint::id_point();
-        result.conditional_assign(&zero_p, Choice::from((s_mod_four == Limb(0)) as u8));
-        result.conditional_assign(&one_p, Choice::from((s_mod_four == Limb(1)) as u8));
-        result.conditional_assign(&two_p, Choice::from((s_mod_four == Limb(2)) as u8));
-        result.conditional_assign(&three_p, Choice::from((s_mod_four == Limb(3)) as u8));
+        result.conditional_assign(
+            &zero_p,
+            Choice::from((s_mod_four == U448::from(0_u64)) as u8),
+        );
+        result.conditional_assign(
+            &one_p,
+            Choice::from((s_mod_four == U448::from(1_u64)) as u8),
+        );
+        result.conditional_assign(
+            &two_p,
+            Choice::from((s_mod_four == U448::from(2_u64)) as u8),
+        );
+        result.conditional_assign(
+            &three_p,
+            Choice::from((s_mod_four == U448::from(3_u64)) as u8),
+        );
 
         result
     }
@@ -333,12 +352,6 @@ impl PartialEq for ExtendedCurvePoint {
     }
 }
 
-impl_modulus!(
-    Modulus,
-    U448,
-    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-);
-
 /// ------------------------------
 /// TESTS
 /// ------------------------------
@@ -382,6 +395,15 @@ pub fn test_g_times_two_g_plus_g() {
 }
 
 #[test]
+// 4 * G = 2 * (2 * G)
+fn test_four_g() {
+    let fourg = ExtendedCurvePoint::generator() * Scalar::from(4_u64);
+    let two_times_twog =
+        (ExtendedCurvePoint::generator() * Scalar::from(2_u64)) * Scalar::from(2_u64);
+    assert!(fourg == two_times_twog)
+}
+
+#[test]
 //4 * G != 𝒪
 fn test_four_g_not_id() {
     let four_g = ExtendedCurvePoint::generator();
@@ -401,7 +423,7 @@ fn r_times_g_id() {
 }
 
 #[test]
-// k*G = (k mod r)*G
+// k * G = (k mod r) * G
 // Remark: this fails when generating tremendously large
 // random numbers, but works fine with u64. idk this
 // might be expected, need to check with Dr. Barreto ¯\_(ツ)_/¯
@@ -410,6 +432,7 @@ fn k_g_equals_k_mod_r_times_g() {
     use rand::Rng;
     let mut rng = rand::thread_rng();
     let random_number: u64 = rng.gen();
+    let random_number = random_number & !0b11;
     let k = U448::from(random_number);
     let g = ExtendedCurvePoint::generator();
 
@@ -420,4 +443,69 @@ fn k_g_equals_k_mod_r_times_g() {
     let mut k_mod_r_timesg = ExtendedCurvePoint::generator();
     k_mod_r_timesg = k_mod_r_timesg * (Scalar::from_uint(k_mod_r.0));
     assert!(&g == &k_mod_r_timesg)
+}
+
+#[test]
+// (k + 1)*G = (k*G) + G
+// https://www.shiftleft.org/papers/isogeny/isogeny.pdf
+// page 4 specifies s is always known to be a multiple of 4
+fn k_plus_one_g() {
+    let mut rng = rand::thread_rng();
+    let mut k = rand::Rng::gen::<u64>(&mut rng);
+    // Zero out the last two bits to ensure the number is a multiple of 4
+    k &= !0b11;
+
+    let k1_g = ExtendedCurvePoint::generator() * Scalar::from((k + 1).into());
+    let k_g1 = (ExtendedCurvePoint::generator() * Scalar::from(k.into()))
+        .add(&ExtendedCurvePoint::generator());
+
+    assert!(&k1_g == &k_g1)
+}
+
+#[test]
+//(k + t)*G = (k*G) + (t*G)
+fn k_t() {
+    let mut rng = rand::thread_rng();
+    let mut k = rand::Rng::gen::<u64>(&mut rng);
+    let mut t: u64 = rand::Rng::gen::<u64>(&mut rng);
+    // Zero out the last two bits to ensure the number is a multiple of 4
+    k &= !0b11;
+    t &= !0b11;
+
+    //(k + t)*G
+    let k_plus_t_G = ExtendedCurvePoint::generator() * (Scalar::from(k + t));
+
+    // (k*G) + (t*G)
+    let kg_plus_tg = (ExtendedCurvePoint::generator() * Scalar::from(k))
+        .add(&(ExtendedCurvePoint::generator() * Scalar::from(t)));
+
+    assert!(k_plus_t_G == kg_plus_tg)
+}
+
+#[test]
+//k*(t*P) = t*(k*G) = (k*t mod r)*G
+fn test_ktp() {
+    let mut rng = rand::thread_rng();
+    let mut k = rand::Rng::gen::<u64>(&mut rng);
+    let mut t: u64 = rand::Rng::gen::<u64>(&mut rng);
+    // Zero out the last two bits to ensure the number is a multiple of 4
+    k &= !0b11;
+    t &= !0b11;
+
+    //k*(t*P)
+    let ktp = (ExtendedCurvePoint::generator() * (Scalar::from(k))) * (Scalar::from(t));
+
+    // t*(k*G)
+    let tkg = (ExtendedCurvePoint::generator() * (Scalar::from(t))) * (Scalar::from(k));
+
+    // (k*t mod r)*G
+    let kt_mod_rg = ExtendedCurvePoint::generator()
+        * Scalar::from_uint(
+            (Scalar::from(t) * Scalar::from(k))
+                .val
+                .const_rem(&Modulus::MODULUS)
+                .0,
+        );
+
+    assert!(ktp == tkg && tkg == kt_mod_rg)
 }

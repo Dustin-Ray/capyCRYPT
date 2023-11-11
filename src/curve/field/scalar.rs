@@ -1,10 +1,15 @@
 use std::ops::Mul;
 
 use crypto_bigint::{
-    impl_modulus, modular::{constant_mod::ResidueParams, montgomery_reduction}, Encoding, NonZero, Uint, U448, subtle::{ConstantTimeEq, Choice},
+    impl_modulus,
+    modular::constant_mod::ResidueParams,
+    subtle::{Choice, ConstantTimeEq},
+    Encoding, NonZero, U448,
 };
 
 pub const R_448: &str = "3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7CCA23E9C44EDB49AED63690216CC2728DC58F552378C292AB5844F3";
+
+pub const R_2: &str = "049b9b60e3539257c1b195d97af32c4b88ea18590d66de235ee4d838ae17cf72a3c47c441a9cc14be4d070af2052bcb7f823b7293402a939";
 
 impl_modulus!(
     Modulus,
@@ -12,17 +17,17 @@ impl_modulus!(
     "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
 );
 
-const R: U448 = Uint::MAX
-    .const_rem(&Modulus::MODULUS)
-    .0
-    .wrapping_add(&Uint::ONE);
-
 #[derive(Debug, Clone, Copy)]
 pub struct Scalar {
     pub val: U448,
 }
 
 impl Scalar {
+    // a + b mod p
+    pub fn add(&self, rhs: &Self) -> Self {
+        Self::from_uint(self.val.add_mod(&rhs.val, &Modulus::MODULUS))
+    }
+
     /// Divides a scalar by four without reducing mod p
     /// This is used in the 2-isogeny when mapping points from Ed448-Goldilocks
     /// to Twisted-Goldilocks
@@ -70,7 +75,7 @@ impl Scalar {
     /// adapated from:
     ///  https://github.com/crate-crypto/Ed448-Goldilocks/blob/master/src/field/scalar.rs
     /// to work over 64-bit word sizes
-    pub fn montgomery_multiply_64(&self, y: &U448, montgomery_factor: &U448) -> U448 {
+    pub fn montgomery_multiply_64(&self, montgomery_factor: &U448) -> Self {
         let mut result = U448::ZERO;
         let mut carry = 0;
 
@@ -79,7 +84,7 @@ impl Scalar {
             let mut chain: u128 = 0; // Using u128 for the chain to handle potential overflow.
 
             // Perform the multiplication-addition for each limb.
-            for (j, &ylimb) in y.as_limbs().iter().enumerate() {
+            for (j, &ylimb) in self.val.as_limbs().iter().enumerate() {
                 chain += u128::from(self.val.as_limbs()[i]) * u128::from(ylimb)
                     + u128::from(result.as_limbs()[j]);
                 result.as_limbs_mut()[j] = crypto_bigint::Limb(chain as u64);
@@ -108,7 +113,7 @@ impl Scalar {
         }
 
         result = result.sub_mod(&Modulus::MODULUS, &Modulus::MODULUS);
-        result
+        Scalar::from_uint(result)
     }
 }
 
@@ -120,17 +125,15 @@ impl ConstantTimeEq for Scalar {
 
 impl PartialEq for Scalar {
     fn eq(&self, other: &Scalar) -> bool {
-        self.ct_eq(&other).into()
+        self.ct_eq(other).into()
     }
 }
 
-
-
 impl Mul<Scalar> for Scalar {
     type Output = Scalar;
-
-    fn mul(self, rhs: Self) -> Self {
-        Scalar::from_uint(self.montgomery_multiply_64(&rhs.val, &R))
+    fn mul(self, rhs: Scalar) -> Self::Output {
+        let unreduced = self.montgomery_multiply_64(&rhs.val);
+        unreduced.montgomery_multiply_64(&U448::from_be_hex(R_2))
     }
 }
 
@@ -146,14 +149,17 @@ fn test_div_rem() {
 
 #[test]
 fn test_mul() {
-    
     let a: Scalar = Scalar::from_uint(U448::from_be_hex("1e63e8073b089f0747cf8cac2c3dc2732aae8688a8fa552ba8cb0ae8c0be082e74d657641d9ac30a087b8fb97f8ed27dc96a3c35ffb823a3"));
     let b: Scalar = Scalar::from_uint(U448::from_be_hex("16c5450acae1cb680a92de2d8e59b30824e8d4991adaa0e7bc343bcbd099595b188c6b1a1e30b38b17aa6d9be416b899686eb329d8bedc42"));
     let c: Scalar = Scalar::from_uint(U448::from_be_hex("6C17D05228B01E52DA3A3E7E30972D2A88A365302E7D8564935AACB2172149FD741AA3027F1329058E8AF8E98DFA3CA13978982627E005F6"));
-    
+
     let res: Scalar = a * b;
 
-    let product_mod_p = Scalar::from_uint( montgomery_reduction(&a.val.mul_wide(&b.val), &Modulus::MODULUS, Modulus::MOD_NEG_INV));
+    let product_mod_p = Scalar::from_uint(crypto_bigint::modular::montgomery_reduction(
+        &a.val.mul_wide(&b.val),
+        &Modulus::MODULUS,
+        Modulus::MOD_NEG_INV,
+    ));
 
     println!("{:?}", res);
     assert!(c == res && res == product_mod_p);

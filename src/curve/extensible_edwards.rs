@@ -34,8 +34,8 @@ pub const TWISTED_D: FieldElement = FieldElement(fiat_p448_tight_field_element([
 ]));
 
 /// This is the representation that we will do most of the group operations on.
-// In affine (x,y) is the extensible point (X, Y, Z, T1, T2)
-// Where x = X/Z , y = Y/Z , T1 * T2 = T
+/// In affine (x,y) is the extensible point (X, Y, Z, T1, T2)
+/// Where x = X/Z , y = Y/Z , T1 * T2 = T
 pub struct ExtensibleCurvePoint {
     pub X: FieldElement,
     pub Y: FieldElement,
