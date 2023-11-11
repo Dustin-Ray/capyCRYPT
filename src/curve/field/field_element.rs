@@ -91,10 +91,10 @@ impl FieldElement {
         let base = self;
         let base_square = base.square();
         let base_cubed = *base * base_square;
-        let base_sextupled = base_cubed.square();
-        let base_septupled = *base * base_sextupled;
-        let base_56 = base_septupled.square_n(3); // Represents base^56
-        let base_63 = base_septupled * base_56; // Represents base^63
+        let base_pow_six = base_cubed.square();
+        let base_pow_seven = *base * base_pow_six;
+        let base_56 = base_pow_seven.square_n(3); // Represents base^56
+        let base_63 = base_pow_seven * base_56; // Represents base^63
 
         // Additional steps with more descriptive variable names
         let step1 = base_63.square_n(6) * base_63;

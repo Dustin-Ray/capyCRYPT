@@ -30,6 +30,18 @@ pub const TWO_TIMES_TWISTED_D: FieldElement = FieldElement(fiat_p448_tight_field
     144115188075855870,
 ]));
 
+/// Twisted Edwards D equals `d-1`, equals to -39082
+pub const TWISTED_D: FieldElement = FieldElement(fiat_p448_tight_field_element([
+    144115188075816788,
+    144115188075855870,
+    144115188075855870,
+    144115188075855870,
+    144115188075855868,
+    144115188075855870,
+    144115188075855870,
+    144115188075855870,
+]));
+
 impl ExtensibleCurvePoint {
     pub fn identity() -> ExtensibleCurvePoint {
         ExtensibleCurvePoint {
@@ -93,6 +105,27 @@ impl ExtensibleCurvePoint {
             Z: F * G,
             T1: E,
             T2: H,
+        }
+    }
+
+    /// Subtracts an extensible point from an extended point
+    /// Returns an extensible point
+    /// This is a direct modification of the addition formula to the negation of `other`
+    pub fn sub_extended(&self, other: &ExtendedCurvePoint) -> ExtensibleCurvePoint {
+        let A = self.X * other.X;
+        let B = self.Y * other.Y;
+        let C = self.T1 * self.T2 * other.T * TWISTED_D;
+        let D = self.Z * other.Z;
+        let E = (self.X + self.Y) * (other.Y - other.X) + A - B;
+        let F = D + C;
+        let G = D - C;
+        let H = B - A;
+        ExtensibleCurvePoint {
+            X: E * F,
+            Y: G * H,
+            T1: E,
+            T2: H,
+            Z: F * G,
         }
     }
 

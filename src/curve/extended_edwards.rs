@@ -1,5 +1,7 @@
 #![allow(non_snake_case)]
-use std::ops::Mul;
+use std::ops::{Mul, Neg};
+
+use crate::curve::field::scalar::R_448;
 
 use super::{
     extensible_edwards::ExtensibleCurvePoint,
@@ -7,9 +9,11 @@ use super::{
 };
 use crypto_bigint::{
     subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq},
-    Limb,
+    Limb, U448, impl_modulus, AddMod, modular::constant_mod::ResidueParams,
 };
 use fiat_crypto::p448_solinas_64::*;
+use rand::{Rng, thread_rng};
+
 
 /// Edwards `d`, equals to -39081
 pub const EDWARDS_D: FieldElement = FieldElement(fiat_p448_tight_field_element([
@@ -184,6 +188,15 @@ impl ExtendedCurvePoint {
         self.add(self)
     }
 
+    pub fn negate(&self) -> ExtendedCurvePoint {
+        ExtendedCurvePoint {
+            X: self.X.negate(),
+            Y: self.Y,
+            Z: self.Z,
+            T: self.T.negate(),
+        }
+    }
+
     /// Returns (scalar mod 4) * P in constant time
     pub fn scalar_mod_four(&self, scalar: &Scalar) -> ExtendedCurvePoint {
         // Compute compute (scalar mod 4)
@@ -275,6 +288,10 @@ impl ExtendedCurvePoint {
     }
 }
 
+/// ------------------------------
+/// GROUP OPERATIONS
+/// ------------------------------
+
 /// Select a point in fixed time
 impl ConditionallySelectable for ExtendedCurvePoint {
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
@@ -303,6 +320,15 @@ impl Mul<Scalar> for ExtendedCurvePoint {
     }
 }
 
+// Neg trait for CurvePoint
+impl Neg for ExtendedCurvePoint {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        self.negate()
+    }
+}
+
 impl ConstantTimeEq for ExtendedCurvePoint {
     fn ct_eq(&self, other: &Self) -> Choice {
         let XZ = self.X * other.Z;
@@ -322,7 +348,18 @@ impl PartialEq for ExtendedCurvePoint {
 }
 impl Eq for ExtendedCurvePoint {}
 
+impl_modulus!(
+    Modulus,
+    U448,
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+);
+
+/// ------------------------------
+/// TESTS
+/// ------------------------------
+
 #[test]
+ // 0 * G = 𝒪
 pub fn test_g_times_zero_id() {
     let p = ExtendedCurvePoint::generator();
     let zero = Scalar::from(0_u64);
@@ -333,6 +370,7 @@ pub fn test_g_times_zero_id() {
 }
 
 #[test]
+// G * 1 = G
 pub fn test_g_times_one_g() {
     let p = ExtendedCurvePoint::generator();
     let one = Scalar::from(1_u64);
@@ -342,11 +380,60 @@ pub fn test_g_times_one_g() {
     assert!(res == id)
 }
 
+// G + (-G) = 𝒪
 #[test]
+fn test_g_plus_neg_g() {
+    let g = ExtendedCurvePoint::generator();
+    assert!(g.add(&-g) == ExtendedCurvePoint::id_point())
+}
+
+#[test]
+// 2 * G = G + G
 pub fn test_g_times_two_g_plus_g() {
     let p = ExtendedCurvePoint::generator();
     let two = Scalar::from(2_u64);
     let res = p * two;
     let res2 = p.add(&p);
     assert!(res == res2)
+}
+
+#[test]
+//4 * G != 𝒪
+fn test_four_g_not_id() {
+    let four_g = ExtendedCurvePoint::generator();
+    let four_g = four_g * Scalar::from(4_u64);
+
+    let id = ExtendedCurvePoint::id_point();
+    assert!(!(&four_g == &id))
+}
+
+#[test]
+//r*G = 𝒪
+fn r_times_g_id() {
+    let mut g = ExtendedCurvePoint::generator();
+    g = g * Scalar::from_uint(U448::from_be_hex(R_448));
+
+    let id = ExtendedCurvePoint::id_point();
+    assert!(!(&g == &id))
+}
+
+#[test]
+// k*G = (k mod r)*G
+// Remark: this fails when generating tremendously large
+// random numbers, but works fine with u64. idk this
+// might be expected, need to check with Dr. Barreto ¯\_(ツ)_/¯
+fn k_g_equals_k_mod_r_times_g() {
+
+    let mut rng = rand::thread_rng();
+    let random_number: u64 = rng.gen();
+    let k = U448::from(random_number);
+    let g = ExtendedCurvePoint::generator();
+
+    let same_k = k.clone();
+    let g = g * (Scalar::from_uint(k));
+    let r = U448::from_be_hex(R_448);
+    let k_mod_r = same_k.const_rem(&r);
+    let mut k_mod_r_timesg = ExtendedCurvePoint::generator();
+    k_mod_r_timesg = k_mod_r_timesg * (Scalar::from_uint(k_mod_r.0));
+    assert!(&g == &k_mod_r_timesg)
 }

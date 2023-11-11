@@ -34,6 +34,10 @@ impl Scalar {
         }
     }
 
+    pub fn from_uint(val: U448) -> Self {
+        Scalar { val }
+    }
+
     pub fn to_radix_16(&self) -> [i8; 113] {
         let bytes = self.val.to_be_bytes();
         let mut output = [0i8; 113];
@@ -96,26 +100,6 @@ fn montgomery_multiply_64(x: &U448, y: &U448, montgomery_factor: &U448) -> U448 
     result = result.sub_mod(&Modulus::MODULUS, &Modulus::MODULUS);
     result
 }
-
-// #[test]
-// fn test_mul() {
-//     // let a = U448::from_be_hex("1e63e8073b089f0747cf8cac2c3dc2732aae8688a8fa552ba8cb0ae8c0be082e74d657641d9ac30a087b8fb97f8ed27dc96a3c35ffb823a3");
-//     // let b = U448::from_be_hex("16c5450acae1cb680a92de2d8e59b30824e8d4991adaa0e7bc343bcbd099595b188c6b1a1e30b38b17aa6d9be416b899686eb329d8bedc42");
-
-//     // let c = U448::from_be_hex("6C17D05228B01E52DA3A3E7E30972D2A88A365302E7D8564935AACB2172149FD741AA3027F1329058E8AF8E98DFA3CA13978982627E005F6");
-
-//     // const R: U448 = Uint::MAX
-//     //     .const_rem(&Modulus::MODULUS)
-//     //     .0
-//     //     .wrapping_add(&Uint::ONE);
-
-//     // // let res = montgomery_multiply(&a, &b, &R);
-
-//     // let product_mod_p = montgomery_reduction(&a.mul_wide(&b), &Modulus::MODULUS, Modulus::MOD_NEG_INV);
-
-//     // println!("{:?}", res);
-//     // assert!(c == res && res == product_mod_p)
-// }
 
 #[test]
 fn test_div_rem() {
