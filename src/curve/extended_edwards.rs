@@ -1,19 +1,16 @@
 #![allow(non_snake_case)]
 use std::ops::{Mul, Neg};
 
-use crate::curve::field::scalar::R_448;
-
 use super::{
     extensible_edwards::ExtensibleCurvePoint,
     field::{field_element::FieldElement, lookup_table::LookupTable, scalar::Scalar},
 };
 use crypto_bigint::{
+    impl_modulus,
     subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq},
-    Limb, U448, impl_modulus, AddMod, modular::constant_mod::ResidueParams,
+    Limb, U448,
 };
 use fiat_crypto::p448_solinas_64::*;
-use rand::{Rng, thread_rng};
-
 
 /// Edwards `d`, equals to -39081
 pub const EDWARDS_D: FieldElement = FieldElement(fiat_p448_tight_field_element([
@@ -359,7 +356,7 @@ impl_modulus!(
 /// ------------------------------
 
 #[test]
- // 0 * G = 𝒪
+// 0 * G = 𝒪
 pub fn test_g_times_zero_id() {
     let p = ExtendedCurvePoint::generator();
     let zero = Scalar::from(0_u64);
@@ -410,6 +407,7 @@ fn test_four_g_not_id() {
 #[test]
 //r*G = 𝒪
 fn r_times_g_id() {
+    use crate::curve::field::scalar::R_448;
     let mut g = ExtendedCurvePoint::generator();
     g = g * Scalar::from_uint(U448::from_be_hex(R_448));
 
@@ -423,7 +421,8 @@ fn r_times_g_id() {
 // random numbers, but works fine with u64. idk this
 // might be expected, need to check with Dr. Barreto ¯\_(ツ)_/¯
 fn k_g_equals_k_mod_r_times_g() {
-
+    use crate::curve::field::scalar::R_448;
+    use rand::Rng;
     let mut rng = rand::thread_rng();
     let random_number: u64 = rng.gen();
     let k = U448::from(random_number);
