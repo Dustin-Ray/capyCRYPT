@@ -1,10 +1,16 @@
 #![allow(non_snake_case)]
+use crypto_bigint::subtle::{
+    Choice, 
+    ConditionallyNegatable, 
+    ConditionallySelectable
+};
 
-use crypto_bigint::subtle::{Choice, ConditionallyNegatable, ConditionallySelectable};
+use super::{
+    extensible_edwards::ExtensibleCurvePoint, 
+    field::field_element::FieldElement
+};
 
-use super::{extensible_edwards::ExtensibleCurvePoint, field::field_element::FieldElement};
-
-// Its a variant of Niels, where a Z coordinate is added for unmixed readdition
+// Variant of Niels, where a Z coordinate is added for unmixed readdition
 // ((y+x)/2, (y-x)/2, dxy, Z)
 #[derive(Copy, Clone)]
 pub struct ProjectiveNielsPoint {

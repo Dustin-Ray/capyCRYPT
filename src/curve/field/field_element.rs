@@ -86,7 +86,6 @@ impl FieldElement {
     /// Inverts a field element
     /// Previous chain length: 462, new length 460
     /// Addition chain taken from https://github.com/mmcloughlin/addchain
-
     pub fn invert(&self) -> FieldElement {
         let base = self;
         let base_square = base.square();

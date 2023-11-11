@@ -1,4 +1,10 @@
-use crypto_bigint::{impl_modulus, modular::constant_mod::ResidueParams, Encoding, NonZero, U448};
+use crypto_bigint::{
+    impl_modulus, 
+    modular::constant_mod::ResidueParams, 
+    Encoding, 
+    NonZero, 
+    U448
+};
 
 pub const R_448: &str = "3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7CCA23E9C44EDB49AED63690216CC2728DC58F552378C292AB5844F3";
 
@@ -59,7 +65,9 @@ impl Scalar {
     }
 }
 
-/// adapated from https://github.com/crate-crypto/Ed448-Goldilocks/blob/master/src/field/scalar.rs
+/// adapated from:
+///  https://github.com/crate-crypto/Ed448-Goldilocks/blob/master/src/field/scalar.rs
+/// to work over 64-bit word sizes
 fn montgomery_multiply_64(x: &U448, y: &U448, montgomery_factor: &U448) -> U448 {
     let mut result = U448::ZERO;
     let mut carry = 0;
@@ -96,7 +104,6 @@ fn montgomery_multiply_64(x: &U448, y: &U448, montgomery_factor: &U448) -> U448 
         carry = (chain >> 64) as u64;
     }
 
-    // Assuming reduction is done elsewhere, return the result directly.
     result = result.sub_mod(&Modulus::MODULUS, &Modulus::MODULUS);
     result
 }

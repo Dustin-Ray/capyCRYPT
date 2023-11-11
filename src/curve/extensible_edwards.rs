@@ -1,22 +1,13 @@
 #![allow(non_snake_case)]
-
-use fiat_crypto::p448_solinas_64::fiat_p448_tight_field_element;
-
 use super::{
     extended_edwards::ExtendedCurvePoint, field::field_element::FieldElement,
     projective_niels::ProjectiveNielsPoint,
 };
+use fiat_crypto::p448_solinas_64::fiat_p448_tight_field_element;
 
-/// This is the representation that we will do most of the group operations on.
-// In affine (x,y) is the extensible point (X, Y, Z, T1, T2)
-// Where x = X/Z , y = Y/Z , T1 * T2 = T
-pub struct ExtensibleCurvePoint {
-    pub X: FieldElement,
-    pub Y: FieldElement,
-    pub Z: FieldElement,
-    pub T1: FieldElement,
-    pub T2: FieldElement,
-}
+/// ------------------------------
+/// CONSTANTS
+/// ------------------------------
 
 /// Twice the Twisted Edwards d which equals to -78164
 pub const TWO_TIMES_TWISTED_D: FieldElement = FieldElement(fiat_p448_tight_field_element([
@@ -42,7 +33,23 @@ pub const TWISTED_D: FieldElement = FieldElement(fiat_p448_tight_field_element([
     144115188075855870,
 ]));
 
+/// This is the representation that we will do most of the group operations on.
+// In affine (x,y) is the extensible point (X, Y, Z, T1, T2)
+// Where x = X/Z , y = Y/Z , T1 * T2 = T
+pub struct ExtensibleCurvePoint {
+    pub X: FieldElement,
+    pub Y: FieldElement,
+    pub Z: FieldElement,
+    pub T1: FieldElement,
+    pub T2: FieldElement,
+}
+
 impl ExtensibleCurvePoint {
+    
+    /// ------------------------------
+    /// GROUP OPERATIONS
+    /// ------------------------------
+
     pub fn identity() -> ExtensibleCurvePoint {
         ExtensibleCurvePoint {
             X: FieldElement::zero(),
@@ -53,6 +60,10 @@ impl ExtensibleCurvePoint {
         }
     }
 
+    /// ------------------------------
+    /// CURVE POINT COERCION
+    /// ------------------------------
+
     /// Converts an Extensible point to a ProjectiveNiels Point
     pub fn to_projective_niels(&self) -> ProjectiveNielsPoint {
         ProjectiveNielsPoint {
@@ -62,6 +73,20 @@ impl ExtensibleCurvePoint {
             Td: self.T1 * self.T2 * TWO_TIMES_TWISTED_D,
         }
     }
+
+    /// Converts an extensible point to an extended point
+    pub fn to_extended(&self) -> ExtendedCurvePoint {
+        ExtendedCurvePoint {
+            X: self.X,
+            Y: self.Y,
+            Z: self.Z,
+            T: self.T1 * self.T2,
+        }
+    }
+
+    /// ------------------------------
+    /// CURVE POINT ARITHMETIC
+    /// ------------------------------
 
     /// Adds an extensible point to a ProjectiveNiels point
     /// Returns an extensible point
@@ -126,16 +151,6 @@ impl ExtensibleCurvePoint {
             T1: E,
             T2: H,
             Z: F * G,
-        }
-    }
-
-    /// Converts an extensible point to an extended point
-    pub fn to_extended(&self) -> ExtendedCurvePoint {
-        ExtendedCurvePoint {
-            X: self.X,
-            Y: self.Y,
-            Z: self.Z,
-            T: self.T1 * self.T2,
         }
     }
 }

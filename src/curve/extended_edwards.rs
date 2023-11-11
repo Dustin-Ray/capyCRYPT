@@ -1,14 +1,22 @@
 #![allow(non_snake_case)]
 use std::ops::{Mul, Neg};
-
 use super::{
     extensible_edwards::ExtensibleCurvePoint,
-    field::{field_element::FieldElement, lookup_table::LookupTable, scalar::Scalar},
+    field::{
+        field_element::FieldElement, 
+        lookup_table::LookupTable, 
+        scalar::Scalar
+    },
 };
 use crypto_bigint::{
     impl_modulus,
-    subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq},
-    Limb, U448,
+    subtle::{
+        Choice, 
+        ConditionallyNegatable, 
+        ConditionallySelectable, 
+        ConstantTimeEq},
+    Limb, 
+    U448,
 };
 use fiat_crypto::p448_solinas_64::*;
 
@@ -24,13 +32,6 @@ pub const EDWARDS_D: FieldElement = FieldElement(fiat_p448_tight_field_element([
     144115188075855870,
 ]));
 
-/// All curves defined here:
-/// <https://csrc.nist.gov/publications/detail/fips/186/5/final>
-#[derive(Debug, Clone, Copy)]
-pub enum EdCurves {
-    E448,
-}
-
 #[derive(Debug, Clone, Copy)]
 pub struct ExtendedCurvePoint {
     pub X: FieldElement,
@@ -45,6 +46,7 @@ pub struct AffineEdwards {
 }
 
 impl ExtendedCurvePoint {
+    
     /// ------------------------------
     /// ISOGENY OPERATIONS
     /// ------------------------------
@@ -112,6 +114,11 @@ impl ExtendedCurvePoint {
         result.to_extended()
     }
 
+    /// Uses a 2-isogeny to map the point to the Ed448-Goldilocks
+    pub fn to_untwisted(&self) -> ExtendedCurvePoint {
+        self.edwards_isogeny(FieldElement::minus_one())
+    }
+
     /// ------------------------------
     /// CURVE POINT COERCION
     /// ------------------------------
@@ -119,11 +126,6 @@ impl ExtendedCurvePoint {
     /// Lifts extended to twisted extended
     pub fn to_twisted(&self) -> ExtendedCurvePoint {
         self.edwards_isogeny(FieldElement::one())
-    }
-
-    /// Uses a 2-isogeny to map the point to the Ed448-Goldilocks
-    pub fn to_untwisted(&self) -> ExtendedCurvePoint {
-        self.edwards_isogeny(FieldElement::minus_one())
     }
 
     /// Brings an extended Edwards down to affine x, y
@@ -181,6 +183,7 @@ impl ExtendedCurvePoint {
         ExtendedCurvePoint { X, Y, Z, T }
     }
 
+    // replace with doubling algorithm
     pub fn double(&self) -> ExtendedCurvePoint {
         self.add(self)
     }
@@ -206,11 +209,8 @@ impl ExtendedCurvePoint {
         let two_p = one_p.double();
         let three_p = two_p.add(self);
 
-        // Under the reasonable assumption that `==` is constant time
-        // Then the whole function is constant time.
         // This should be cheaper than calling double_and_add or a scalar mul operation
         // as the number of possibilities are so small.
-        // XXX: This claim has not been tested (although it sounds intuitive to me)
         let mut result = ExtendedCurvePoint::id_point();
         result.conditional_assign(&zero_p, Choice::from((s_mod_four == Limb(0)) as u8));
         result.conditional_assign(&one_p, Choice::from((s_mod_four == Limb(1)) as u8));
@@ -286,7 +286,7 @@ impl ExtendedCurvePoint {
 }
 
 /// ------------------------------
-/// GROUP OPERATIONS
+/// TRAITS
 /// ------------------------------
 
 /// Select a point in fixed time
@@ -317,7 +317,7 @@ impl Mul<Scalar> for ExtendedCurvePoint {
     }
 }
 
-// Neg trait for CurvePoint
+
 impl Neg for ExtendedCurvePoint {
     type Output = Self;
 
@@ -343,7 +343,6 @@ impl PartialEq for ExtendedCurvePoint {
         self.ct_eq(other).into()
     }
 }
-impl Eq for ExtendedCurvePoint {}
 
 impl_modulus!(
     Modulus,
