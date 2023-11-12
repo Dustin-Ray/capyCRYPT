@@ -10,6 +10,12 @@ pub mod sha3 {
     pub mod sponge;
 }
 
+pub mod aes {
+    pub mod aes_functions;
+    pub mod aes_modes;
+    pub mod aes_utils;
+}
+
 /// Module for encrypt, decrypt, and sign functions.
 pub mod ops;
 
