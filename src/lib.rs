@@ -13,7 +13,7 @@ pub mod sha3 {
 pub mod aes {
     pub mod aes_functions;
     pub mod aes_modes;
-    pub mod aes_utils;
+    pub mod aes_constants;
 }
 
 /// Module for encrypt, decrypt, and sign functions.

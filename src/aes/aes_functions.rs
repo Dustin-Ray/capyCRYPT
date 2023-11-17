@@ -1,5 +1,5 @@
 
-use crate::aes::aes_utils::{SBOX, INV_SBOX, RCON, CMDS, INV_CMDS, GF_MUL_TABLE};
+use crate::aes::aes_constants::{SBOX, INV_SBOX, RCON, CMDS, INV_CMDS, GF_MUL_TABLE};
 
 pub struct AES {
     pub round_key: Vec<u8>,
@@ -37,7 +37,7 @@ impl AES {
     }
 
     // Cipher function to encrypt a state block.
-    pub fn encrypt_block(input: &Vec<u8>, output: &mut Vec<u8>, block_index: usize, round_keys: &Vec<u8>) {
+    pub fn encrypt_block(input: &mut Vec<u8>,  block_index: usize, round_keys: &Vec<u8>) {
         // Number of columns in the state matrix
         const NB: usize = 4;
     
@@ -65,16 +65,16 @@ impl AES {
         Self::shift_rows(&mut state);
         Self::add_round_key(&mut state, &round_keys[nr * 4 * NB..(nr + 1) * 4 * NB].to_vec());
         
-        // Populate output vector with encrypted state.
-        for i in 0..NB {
-            for j in 0..NB {
-                output.push(state[j][i]);
+        // Replace input with encrypted state.
+        for j in 0..NB {
+            for i in 0..NB {
+                input[block_index + i + 4 * j] = state[i][j];
             }
         }
     }
 
     // InvCipher function to decrypt a state block.
-    pub fn decrypt_block(input: &Vec<u8>, output: &mut Vec<u8>, block_index: usize, round_keys: &Vec<u8>) {
+    pub fn decrypt_block(input: &mut Vec<u8>, block_index: usize, round_keys: &Vec<u8>) {
         // Number of columns in the state matrix
         const NB: usize = 4;
     
@@ -102,10 +102,10 @@ impl AES {
         Self::inv_sub_bytes(&mut state);
         Self::add_round_key(&mut state, round_keys);
         
-        // Populate output vector with decrypted state.
-        for i in 0..NB {
-            for j in 0..NB {
-                output.push(state[j][i]);
+        // Replace input with decrypted state.
+        for j in 0..NB {
+            for i in 0..NB {
+                input[block_index + i + 4 * j] = state[i][j];
             }
         }
     }
