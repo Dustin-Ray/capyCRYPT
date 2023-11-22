@@ -14,7 +14,8 @@ use crate::{
         },
         sponge::{sponge_absorb, sponge_squeeze},
     },
-    Hashable, KeyEncryptable, KeyPair, Message, PwEncryptable, Signable, Signature,
+    aes::aes_functions::{AES, apply_pcks7_padding, remove_pcks7_padding, xor_blocks},
+    Hashable, KeyEncryptable, KeyPair, Message, PwEncryptable, Signable, Signature, AesEncryptable,
 };
 use num_bigint::BigInt as Integer;
 const SELECTED_CURVE: EdCurves = E448;
@@ -515,4 +516,120 @@ impl Signable for Message {
         let h_p = kmac_xof(&big_to_bytes(u.x), &self.msg, 512, "T", self.d.unwrap());
         self.op_result = Some(h_p == self.sig.clone().unwrap().h)
     }
+}
+
+impl AesEncryptable for Message {
+    /// # Symmetric Encryption using AES in CBC Mode
+    /// Encrypts a [`Message`] using the AES algorithm in CBC (Cipher Block Chaining) mode.
+    /// For more information refer to: NIST Special Publication 800-38A.
+    /// ## Replaces:
+    /// * `Message.data` with the result of encryption.
+    /// * `Message.digest` with the keyed hash of plaintext.
+    /// * `Message.sym_nonce` with the initialization vector (IV).
+    /// SECURITY NOTE: ciphertext length == plaintext length
+    /// ## Algorithm:
+    /// /// * iv ← Random(16)
+    /// * (ke || ka) ← kmac_xof(iv || key, “”, 512, “AES”)
+    /// * C1 = encrypt_block(P1 ⊕ IV)
+    /// * Cj = encrypt_block(Pj ⊕ Cj-1) for j = 2 … n
+    /// ## Arguments:
+    /// * `key: &Vec<u8>`: symmetric encryption key.
+    /// ## Usage:
+    /// ```
+    /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
+    /// use capycrypt::{Message, AesEncryptable};
+    /// // Get a random 16-byte key
+    /// let key = get_random_bytes(16);
+    /// // Initialize the Message with some plaintext data
+    /// let mut input = Message::new(get_random_bytes(5242880));
+    /// // Encrypt the Message using AES in CBC mode
+    /// input.aes_encrypt_cbc(&key);
+    /// // Decrypt the Message (need the same key)
+    /// input.aes_decrypt_cbc(&key);
+    /// // Verify operation success
+    /// assert!(input.op_result.unwrap());
+    /// ```
+    fn aes_encrypt_cbc(&mut self, key: &Vec<u8>) {
+
+        let iv = get_random_bytes(16);
+        let mut ke_ka = iv.clone();
+        ke_ka.append(&mut key.to_owned());
+        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", 256);
+        let ke = &ke_ka[..key.len()].to_vec(); // Encryption Key
+        let ka = &ke_ka[key.len()..].to_vec(); // Authentication Key
+
+        self.digest = Some(kmac_xof(&ka, &self.msg, 512, "AES", 256));
+        self.sym_nonce = Some(iv.clone());
+
+        let key_schedule = AES::new(ke);
+
+        apply_pcks7_padding(&mut self.msg);
+
+        for block_index in (0..self.msg.len()).step_by(16) {
+            xor_blocks(&mut self.msg, &self.sym_nonce.as_mut().unwrap(), block_index);
+            AES::encrypt_block(&mut self.msg, block_index, &key_schedule.round_key);
+            *self.sym_nonce.as_mut().unwrap() = self.msg[block_index..block_index + 16].to_vec();
+       }
+
+       self.sym_nonce = Some(iv);
+    }
+
+    /// # Symmetric Decryption using AES in CBC Mode
+    /// Decrypts a [`Message`] using the AES algorithm in CBC (Cipher Block Chaining) mode.
+    /// For more information refer to: NIST Special Publication 800-38A.
+    /// ## Replaces:
+    /// * `Message.data` with the result of decryption.
+    /// * `Message.op_result` with the result of verification against the keyed hash.
+    /// * `Message.sym_nonce` is used as the initialization vector (IV).
+    /// SECURITY NOTE: ciphertext length == plaintext length
+    /// ## Algorithm:
+    /// * iv ← Symmetric nonce (IV)
+    /// * (ke || ka) ← kmac_xof(iv || key, “”, 512, “AES”)
+    /// * P1 = decrypt_block(C1) ⊕ IV
+    /// * Pj = decrypt_block(Cj) ⊕ Cj-1 for j = 2 … n
+    /// ## Arguments:
+    /// * `key: &Vec<u8>`: symmetric encryption key.
+    /// ## Usage:
+    /// ```
+    /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
+    /// use capycrypt::{Message, AesEncryptable};
+    /// // Get a random 16-byte key
+    /// let key = get_random_bytes(16);
+    /// // Initialize the Message with some ciphertext data
+    /// let mut input = Message::new(get_random_bytes(5242880));
+    /// // Encrypt the Message using AES in CBC mode
+    /// input.aes_encrypt_cbc(&key);
+    /// // Decrypt the Message (using the same key)
+    /// input.aes_decrypt_cbc(&key);
+    /// // Verify operation success
+    /// assert!(input.op_result.unwrap());
+    /// ```
+    fn aes_decrypt_cbc(&mut self, key: &Vec<u8>) {
+        
+        let mut iv = self.sym_nonce.clone().unwrap();
+        let mut ke_ka = iv.clone();
+        ke_ka.append(&mut key.to_owned());
+        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", 256);
+        let ke = &ke_ka[..key.len()].to_vec(); // Encryption Key
+        let ka = &ke_ka[key.len()..].to_vec(); // Authentication Key
+
+        let key_schedule = AES::new(ke);
+
+        for block_index in (0..self.msg.len()).step_by(16) {
+            let temp = self.msg[block_index..block_index + 16].to_vec();
+            AES::decrypt_block(&mut self.msg, block_index, &key_schedule.round_key);
+            xor_blocks(&mut self.msg, &iv, block_index);
+            iv = temp;
+        }
+
+        remove_pcks7_padding(&mut self.msg);
+
+        let ver = &kmac_xof(&ka, &self.msg, 512, "AES", 256);
+        self.op_result = Some(self.digest.as_mut().unwrap() == ver);
+    }
+
+    // Future Modes of Operations are:
+    // - Output feedback (OFB)
+    // - Counter (CTR)
+    // - Galois Counter Mode (GCM)
 }

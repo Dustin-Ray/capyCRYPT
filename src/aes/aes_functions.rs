@@ -11,10 +11,9 @@ pub struct AES {
 
 // FIPS 197 compliant functions.
 impl AES {
-    pub fn new(key_string: &str) -> Self {
+    pub fn new(key: &Vec<u8>) -> Self {
         // Convert bytes to bits
-        let key_length = key_string.len() * 4;
-        
+        let key_length = key.len() * 8;
         // set values of n_w and n_r based on key bit length.
         let (n_w, n_r) = match key_length {
             128 => (4, 10),
@@ -24,10 +23,9 @@ impl AES {
         };
 
         // Initilize round_key vector based on size needed.
-        let mut round_key = vec![0u8; 16 * (n_r as usize + 1)];
+        let mut round_key = key.to_vec();
         // Generate all key rounds.
-        let key = Self::expand_key(key_string, n_w, n_r);
-        round_key.copy_from_slice(&key);
+        Self::key_expansion(&mut round_key, n_w, n_r);
 
         AES {
             round_key,
@@ -223,28 +221,11 @@ impl AES {
     }
 
     // The routine that generates the round keys from the key. 
-    fn expand_key(key_string: &str, n_w: u32, n_r: u32) -> Vec<u8> {
-        let mut key: Vec<u8> = vec![0; 16 * (n_r as usize + 1)];
-        let mut temp = [0u8; 4];
+    fn key_expansion(key: &mut Vec<u8>, n_w: u32, n_r: u32) {
+        key.resize_with(16 * (n_r as usize + 1), Default::default);
+        let mut temp = [0u8; 4];    
 
-        let mut index = 0;
-        let mut i = 0;
-
-        // Parse given key as string, and pupulate key u8 vector.
-        while i < 4 * n_w {
-            let hex_byte = &key_string[index..(index + 2)];       
-            let parsed_byte = u8::from_str_radix(hex_byte, 16).unwrap_or_else(|e| {
-                panic!("Failed to parse hexadecimal string: {:?}", e);
-            });
-        
-            key[i as usize] = parsed_byte;
-        
-            i += 1;
-            index += 2;
-        }
-        
-
-        i = 4 * n_w;
+        let mut i = 4 * n_w;
         while i < (16 * (n_r as usize + 1)).try_into().unwrap() {
             for j in 0..4 {
                 temp[j] = key[i as usize - 4 + j];
@@ -266,7 +247,7 @@ impl AES {
             i += 4;
         }
 
-        return key;
+        //return key;
     }
 
     // The transformation of words in which the four bytes of the word
@@ -292,4 +273,26 @@ impl AES {
         temp[0] ^= RCON[round];
     }
 
+}
+
+pub fn apply_pcks7_padding(input: &mut Vec<u8>) {
+    let num_of_needed_padding = 16 - (input.len() % 16);
+    let padding_value = num_of_needed_padding as u8;
+
+    for _i in 0..num_of_needed_padding {
+        input.push(padding_value);
+    }
+}
+
+pub fn remove_pcks7_padding(input: &mut Vec<u8>) {
+    let padding_value = input[input.len() - 1] as usize;
+
+    let amount_to_remove = input.len() - padding_value;
+    input.truncate(amount_to_remove)
+}
+
+pub fn xor_blocks(a: &mut Vec<u8>, b: &Vec<u8>, block_index: usize) {
+    for i in 0..16 {
+        a[i + block_index] ^= b[i];
+    }
 }
