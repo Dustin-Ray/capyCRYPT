@@ -30,6 +30,10 @@ harness = false
 name = "benchmark_e521_512"
 harness = false
 
+[[bench]]
+name = "benchmark_aes"
+harness = false
+
 [profile.dev]
 opt-level = 0
 

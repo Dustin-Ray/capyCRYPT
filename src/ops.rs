@@ -1,4 +1,5 @@
 use crate::{
+    aes::aes_functions::{apply_pcks7_padding, remove_pcks7_padding, xor_blocks, AES},
     curves::{
         order, EdCurvePoint,
         EdCurves::{self, E448},
@@ -14,8 +15,7 @@ use crate::{
         },
         sponge::{sponge_absorb, sponge_squeeze},
     },
-    aes::aes_functions::{AES, apply_pcks7_padding, remove_pcks7_padding, xor_blocks},
-    Hashable, KeyEncryptable, KeyPair, Message, PwEncryptable, Signable, Signature, AesEncryptable,
+    AesEncryptable, Hashable, KeyEncryptable, KeyPair, Message, PwEncryptable, Signable, Signature,
 };
 use num_bigint::BigInt as Integer;
 const SELECTED_CURVE: EdCurves = E448;
@@ -528,10 +528,13 @@ impl AesEncryptable for Message {
     /// * `Message.sym_nonce` with the initialization vector (IV).
     /// SECURITY NOTE: ciphertext length == plaintext length
     /// ## Algorithm:
-    /// /// * iv ← Random(16)
+    /// * iv ← Random(16)
     /// * (ke || ka) ← kmac_xof(iv || key, “”, 512, “AES”)
     /// * C1 = encrypt_block(P1 ⊕ IV)
     /// * Cj = encrypt_block(Pj ⊕ Cj-1) for j = 2 … n
+    /// Here:
+    /// - P: Represents plaintext blocks.
+    /// - C: Represents ciphertext blocks.
     /// ## Arguments:
     /// * `key: &Vec<u8>`: symmetric encryption key.
     /// ## Usage:
@@ -549,8 +552,7 @@ impl AesEncryptable for Message {
     /// // Verify operation success
     /// assert!(input.op_result.unwrap());
     /// ```
-    fn aes_encrypt_cbc(&mut self, key: &Vec<u8>) {
-
+    fn aes_encrypt_cbc(&mut self, key: &[u8]) {
         let iv = get_random_bytes(16);
         let mut ke_ka = iv.clone();
         ke_ka.append(&mut key.to_owned());
@@ -558,7 +560,7 @@ impl AesEncryptable for Message {
         let ke = &ke_ka[..key.len()].to_vec(); // Encryption Key
         let ka = &ke_ka[key.len()..].to_vec(); // Authentication Key
 
-        self.digest = Some(kmac_xof(&ka, &self.msg, 512, "AES", 256));
+        self.digest = Some(kmac_xof(ka, &self.msg, 512, "AES", 256));
         self.sym_nonce = Some(iv.clone());
 
         let key_schedule = AES::new(ke);
@@ -566,12 +568,12 @@ impl AesEncryptable for Message {
         apply_pcks7_padding(&mut self.msg);
 
         for block_index in (0..self.msg.len()).step_by(16) {
-            xor_blocks(&mut self.msg, &self.sym_nonce.as_mut().unwrap(), block_index);
+            xor_blocks(&mut self.msg, self.sym_nonce.as_mut().unwrap(), block_index);
             AES::encrypt_block(&mut self.msg, block_index, &key_schedule.round_key);
             *self.sym_nonce.as_mut().unwrap() = self.msg[block_index..block_index + 16].to_vec();
-       }
+        }
 
-       self.sym_nonce = Some(iv);
+        self.sym_nonce = Some(iv);
     }
 
     /// # Symmetric Decryption using AES in CBC Mode
@@ -587,6 +589,9 @@ impl AesEncryptable for Message {
     /// * (ke || ka) ← kmac_xof(iv || key, “”, 512, “AES”)
     /// * P1 = decrypt_block(C1) ⊕ IV
     /// * Pj = decrypt_block(Cj) ⊕ Cj-1 for j = 2 … n
+    /// Here:
+    /// - P: Represents plaintext blocks.
+    /// - C: Represents ciphertext blocks.
     /// ## Arguments:
     /// * `key: &Vec<u8>`: symmetric encryption key.
     /// ## Usage:
@@ -604,8 +609,7 @@ impl AesEncryptable for Message {
     /// // Verify operation success
     /// assert!(input.op_result.unwrap());
     /// ```
-    fn aes_decrypt_cbc(&mut self, key: &Vec<u8>) {
-        
+    fn aes_decrypt_cbc(&mut self, key: &[u8]) {
         let mut iv = self.sym_nonce.clone().unwrap();
         let mut ke_ka = iv.clone();
         ke_ka.append(&mut key.to_owned());
@@ -624,12 +628,7 @@ impl AesEncryptable for Message {
 
         remove_pcks7_padding(&mut self.msg);
 
-        let ver = &kmac_xof(&ka, &self.msg, 512, "AES", 256);
+        let ver = &kmac_xof(ka, &self.msg, 512, "AES", 256);
         self.op_result = Some(self.digest.as_mut().unwrap() == ver);
     }
-
-    // Future Modes of Operations are:
-    // - Output feedback (OFB)
-    // - Counter (CTR)
-    // - Galois Counter Mode (GCM)
 }

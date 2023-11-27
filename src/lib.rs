@@ -11,8 +11,8 @@ pub mod sha3 {
 }
 
 pub mod aes {
-    pub mod aes_functions;
     pub mod aes_constants;
+    pub mod aes_functions;
 }
 
 /// Module for encrypt, decrypt, and sign functions.
@@ -97,7 +97,7 @@ pub trait Signable {
     fn verify(&mut self, pub_key: &EdCurvePoint);
 }
 
-pub trait  AesEncryptable {
-    fn aes_encrypt_cbc(&mut self, key: &Vec<u8>);
-    fn aes_decrypt_cbc(&mut self, key: &Vec<u8>);
+pub trait AesEncryptable {
+    fn aes_encrypt_cbc(&mut self, key: &[u8]);
+    fn aes_decrypt_cbc(&mut self, key: &[u8]);
 }
