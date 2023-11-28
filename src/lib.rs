@@ -10,6 +10,11 @@ pub mod sha3 {
     pub mod sponge;
 }
 
+pub mod aes {
+    pub mod aes_functions;
+    pub mod aes_constants;
+}
+
 /// Module for encrypt, decrypt, and sign functions.
 pub mod ops;
 
@@ -90,4 +95,9 @@ pub trait KeyEncryptable {
 pub trait Signable {
     fn sign(&mut self, key: &KeyPair, d: u64);
     fn verify(&mut self, pub_key: &EdCurvePoint);
+}
+
+pub trait  AesEncryptable {
+    fn aes_encrypt_cbc(&mut self, key: &Vec<u8>);
+    fn aes_decrypt_cbc(&mut self, key: &Vec<u8>);
 }
