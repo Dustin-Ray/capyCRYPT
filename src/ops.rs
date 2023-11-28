@@ -2,7 +2,7 @@ use crate::{
     aes::aes_functions::{apply_pcks7_padding, remove_pcks7_padding, xor_blocks, AES},
     curves::{
         order, EdCurvePoint,
-        EdCurves::{self, E448},
+        EdCurves::{self},
         Generator,
     },
     sha3::{
@@ -18,7 +18,7 @@ use crate::{
     AesEncryptable, Hashable, KeyEncryptable, KeyPair, Message, PwEncryptable, Signable, Signature,
 };
 use num_bigint::BigInt as Integer;
-const SELECTED_CURVE: EdCurves = E448;
+
 
 /*
 ============================================================
@@ -130,9 +130,9 @@ impl Hashable for Message {
     /// use capycrypt::{Hashable, Message};
     /// // Hash the empty string
     /// let mut data = Message::new(vec![]);
-    /// // Obtained from OpenSSL
+    /// // Obtained from echo -n "" | openssl dgst -sha3-256
     /// let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
-    /// // Compute a SHA3 digest with 256 bits of security
+    /// // Compute a SHA3 digest with 128 bits of security
     /// data.compute_sha3_hash(256);
     /// assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
     /// ```
@@ -293,7 +293,7 @@ impl KeyPair {
     /// ```
     pub fn new(pw: &Vec<u8>, owner: String, curve: EdCurves, d: u64) -> KeyPair {
         // Timing sidechannel on variable keysize is mitigated here due to modding by curve order.
-        let s: Integer = (bytes_to_big(kmac_xof(pw, &[], 512, "K", d)) * 4) % order(SELECTED_CURVE);
+        let s: Integer = (bytes_to_big(kmac_xof(pw, &[], 512, "K", d)) * 4) % order(curve);
 
         let pub_key = EdCurvePoint::generator(curve, false) * (s);
 
@@ -469,7 +469,7 @@ impl Signable for Message {
 
         let k: Integer = bytes_to_big(kmac_xof(&s_bytes, &self.msg, 512, "N", d)) * 4;
 
-        let u = EdCurvePoint::generator(SELECTED_CURVE, false) * k.clone();
+        let u = EdCurvePoint::generator(key.curve, false) * k.clone();
         let ux_bytes = big_to_bytes(u.x);
         let h = kmac_xof(&ux_bytes, &self.msg, 512, "T", d);
         let h_big = bytes_to_big(h.clone());

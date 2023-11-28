@@ -94,10 +94,6 @@ impl Add<&EdCurvePoint> for EdCurvePoint {
     /// point values. In particular, because d is not square in Z/pZ, the strongly
     /// unified Edwards point addition formulas apply. ref:
     /// <https://csrc.nist.gov/publications/detail/fips/186/5/final>
-    /// ## Remark:
-    /// excessive cloning in this function is a consequence of the
-    /// Rug Integer GMP FFI which does not implement ```copy``` trait. Observed complexity
-    /// impact appears minimal.
     fn add(mut self, p2: &EdCurvePoint) -> EdCurvePoint {
         let x1 = &self.x;
         let y1 = &self.y;
@@ -206,10 +202,6 @@ impl Mul<Integer> for EdCurvePoint {
     /// Fixed-time point multiplication. NOTE: not memory safe.
     /// * `s`: scalar value to multiply by
     /// * multiplication is defined to be P₀ + P₁ + ... Pₛ
-    /// ## Remark:
-    /// excessive cloning in this function is a consequence of the
-    /// Rug Integer GMP FFI which does not implement ```copy``` trait. Observed complexity
-    /// impact appears minimal.
     fn mul(self, s: Integer) -> EdCurvePoint {
         let mut r0 = EdCurvePoint::id_point(self.curve);
         let mut r1 = self.clone();
