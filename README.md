@@ -11,11 +11,12 @@ This library is built with love as an academic excercise in cryptographic algori
 
 
 ## Features
-- **SHA-3:** NIST-Compliant Secure Hash Algorithm 3 (SHA-3) implementation for generating cryptographic hash values.
+- **AES:** NIST-Compliant Advanced Encryption Standard (AES) implementation for encrypting and decrypting data.
 
 - **Edwards Elliptic Curve:** A variety of Edwards curve implementations for elliptic curve cryptography (ECC) operations are offered, varying in security and efficiency. Curves can be easily interchanged in asymmetric operations to suit the needs of the application.
 
-- **AES:** NIST-Compliant Advanced Encryption Standard (AES) implementation for encrypting and decrypting data.
+- **SHA-3:** NIST-Compliant Secure Hash Algorithm 3 (SHA-3) implementation for generating cryptographic hash values, symmetric keystreams, and PRNGs.
+
 
 ## Supported Operations
 - **Message Digest:** Computes hash of a given message, with adjustable digest lengths.
