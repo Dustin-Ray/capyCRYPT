@@ -1,5 +1,4 @@
-
-use crate::aes::aes_constants::{SBOX, INV_SBOX, RCON, CMDS, INV_CMDS, GF_MUL_TABLE};
+use crate::aes::aes_constants::{CMDS, GF_MUL_TABLE, INV_CMDS, INV_SBOX, RCON, SBOX};
 
 pub struct AES {
     pub round_key: Vec<u8>,
@@ -35,10 +34,10 @@ impl AES {
     }
 
     // Cipher function to encrypt a state block.
-    pub fn encrypt_block(input: &mut Vec<u8>,  block_index: usize, round_keys: &Vec<u8>) {
+    pub fn encrypt_block(input: &mut [u8], block_index: usize, round_keys: &Vec<u8>) {
         // Number of columns in the state matrix
         const NB: usize = 4;
-    
+
         // Initialize the state matrix
         let mut state = [[0u8; NB]; NB];
         for j in 0..NB {
@@ -46,23 +45,26 @@ impl AES {
                 state[i][j] = input[block_index + i + 4 * j];
             }
         }
-        
+
         // Number of rounds
         let nr = round_keys.len() / (4 * NB) - 1;
 
         Self::add_round_key(&mut state, round_keys);
-    
+
         for round in 1..=nr - 1 {
-            Self::sub_bytes(&mut state); 
-            Self::shift_rows(&mut state);   
+            Self::sub_bytes(&mut state);
+            Self::shift_rows(&mut state);
             Self::mix_columns(&mut state);
-            Self::add_round_key(&mut state, &round_keys[round * 4 * NB..(round + 1) * 4 * NB].to_vec());
+            Self::add_round_key(
+                &mut state,
+                &round_keys[round * 4 * NB..(round + 1) * 4 * NB],
+            );
         }
-    
+
         Self::sub_bytes(&mut state);
         Self::shift_rows(&mut state);
-        Self::add_round_key(&mut state, &round_keys[nr * 4 * NB..(nr + 1) * 4 * NB].to_vec());
-        
+        Self::add_round_key(&mut state, &round_keys[nr * 4 * NB..(nr + 1) * 4 * NB]);
+
         // Replace input with encrypted state.
         for j in 0..NB {
             for i in 0..NB {
@@ -72,10 +74,10 @@ impl AES {
     }
 
     // InvCipher function to decrypt a state block.
-    pub fn decrypt_block(input: &mut Vec<u8>, block_index: usize, round_keys: &Vec<u8>) {
+    pub fn decrypt_block(input: &mut [u8], block_index: usize, round_keys: &Vec<u8>) {
         // Number of columns in the state matrix
         const NB: usize = 4;
-    
+
         // Initialize the state matrix
         let mut state = [[0u8; NB]; NB];
         for j in 0..NB {
@@ -86,20 +88,23 @@ impl AES {
 
         // Number of rounds
         let nr = round_keys.len() / (4 * NB) - 1;
-    
-        Self::add_round_key(&mut state, &round_keys[nr * 4 * NB..(nr + 1) * 4 * NB].to_vec());
-    
+
+        Self::add_round_key(&mut state, &round_keys[nr * 4 * NB..(nr + 1) * 4 * NB]);
+
         for round in (1..=nr - 1).rev() {
-            Self::inv_shift_rows(&mut state); 
-            Self::inv_sub_bytes(&mut state); 
-            Self::add_round_key(&mut state, &round_keys[round * 4 * NB..(round + 1) * 4 * NB].to_vec()); 
+            Self::inv_shift_rows(&mut state);
+            Self::inv_sub_bytes(&mut state);
+            Self::add_round_key(
+                &mut state,
+                &round_keys[round * 4 * NB..(round + 1) * 4 * NB],
+            );
             Self::inv_mix_columns(&mut state);
         }
-      
+
         Self::inv_shift_rows(&mut state);
         Self::inv_sub_bytes(&mut state);
         Self::add_round_key(&mut state, round_keys);
-        
+
         // Replace input with decrypted state.
         for j in 0..NB {
             for i in 0..NB {
@@ -107,17 +112,18 @@ impl AES {
             }
         }
     }
-    
-    // The transformation of the state in which a round key is combined 
+
+    // The transformation of the state in which a round key is combined
     // with the state. No inverse because XOR is its own inverse.
-    fn add_round_key(state: &mut [[u8; 4]; 4], round_key: &Vec<u8>) {
+    fn add_round_key(state: &mut [[u8; 4]; 4], round_key: &[u8]) {
         for i in 0..4 {
             for j in 0..4 {
-                state[i][j] = state[i][j] ^ round_key[i + 4 * j];
+                //state[i][j] = state[i][j] ^ round_key[i + 4 * j];
+                state[i][j] ^= round_key[i + 4 * j];
             }
         }
     }
-    
+
     // The transformation of the state that applies the S-box independently
     // to each byte of the state.
     fn sub_bytes(state: &mut [[u8; 4]; 4]) {
@@ -136,56 +142,40 @@ impl AES {
             }
         }
     }
-    
+
     // The transformation of the state in which the last three rows are
     // cyclically shifted by different offsets.
     fn shift_rows(state: &mut [[u8; 4]; 4]) {
-        let mut shift = 1;
-    
         for x in 1..4 {
-            let mut index = 1;
-    
-            while index <= shift {
+            for _ in 0..x {
                 let first = state[x][0];
-    
                 for y in 0..3 {
                     state[x][y] = state[x][y + 1];
                 }
-    
-                index += 1;
                 state[x][3] = first;
             }
-            shift += 1;
         }
     }
 
     // The inverse of shift_rows().
     fn inv_shift_rows(state: &mut [[u8; 4]; 4]) {
-        let mut shift = 1;
-    
         for x in 1..4 {
-            let mut index = 1;
-    
-            while index <= shift {
+            for _ in 0..x {
                 let last = state[x][3];
-    
                 for y in (1..4).rev() {
                     state[x][y] = state[x][y - 1];
                 }
-    
-                index += 1;
                 state[x][0] = last;
             }
-            shift += 1;
         }
     }
-    
+
     // The transformation of the state that takes all of the columns of the
     // state and mixes their data (independently of one another) to produce
     // new columns.
     fn mix_columns(state: &mut [[u8; 4]; 4]) {
         let mut temp_state = [[0u8; 4]; 4];
-    
+
         for i in 0..4 {
             for k in 0..4 {
                 for j in 0..4 {
@@ -197,16 +187,16 @@ impl AES {
                 }
             }
         }
-    
+
         for i in 0..4 {
             state[i].copy_from_slice(&temp_state[i]);
         }
     }
-    
+
     // The inverse of mix_columns().
     fn inv_mix_columns(state: &mut [[u8; 4]; 4]) {
         let mut temp_state = [[0u8; 4]; 4];
-    
+
         for i in 0..4 {
             for k in 0..4 {
                 for j in 0..4 {
@@ -214,16 +204,16 @@ impl AES {
                 }
             }
         }
-    
+
         for i in 0..4 {
             state[i].copy_from_slice(&temp_state[i]);
         }
     }
 
-    // The routine that generates the round keys from the key. 
+    // The routine that generates the round keys from the key.
     fn key_expansion(key: &mut Vec<u8>, n_w: u32, n_r: u32) {
         key.resize_with(16 * (n_r as usize + 1), Default::default);
-        let mut temp = [0u8; 4];    
+        let mut temp = [0u8; 4];
 
         let mut i = 4 * n_w;
         while i < (16 * (n_r as usize + 1)).try_into().unwrap() {
@@ -239,7 +229,7 @@ impl AES {
                 Self::sub_word(&mut temp);
             }
 
-            key[i as usize + 0] = key[i as usize + 0 - 4 * n_w as usize] ^ temp[0];
+            key[i as usize] = key[i as usize - 4 * n_w as usize] ^ temp[0];
             key[i as usize + 1] = key[i as usize + 1 - 4 * n_w as usize] ^ temp[1];
             key[i as usize + 2] = key[i as usize + 2 - 4 * n_w as usize] ^ temp[2];
             key[i as usize + 3] = key[i as usize + 3 - 4 * n_w as usize] ^ temp[3];
@@ -272,7 +262,6 @@ impl AES {
     fn rcon(temp: &mut [u8; 4], round: usize) {
         temp[0] ^= RCON[round];
     }
-
 }
 
 pub fn apply_pcks7_padding(input: &mut Vec<u8>) {
@@ -291,7 +280,7 @@ pub fn remove_pcks7_padding(input: &mut Vec<u8>) {
     input.truncate(amount_to_remove)
 }
 
-pub fn xor_blocks(a: &mut Vec<u8>, b: &Vec<u8>, block_index: usize) {
+pub fn xor_blocks(a: &mut [u8], b: &[u8], block_index: usize) {
     for i in 0..16 {
         a[i + block_index] ^= b[i];
     }

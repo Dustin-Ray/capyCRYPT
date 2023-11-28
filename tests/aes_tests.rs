@@ -2,39 +2,45 @@
 
 mod aes_modes_tests {
     use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-    use capycrypt::{Message, AesEncryptable};
+    use capycrypt::{AesEncryptable, Message};
 
     #[test]
     fn aes_128_cbc() {
-        let key = get_random_bytes(16); // 16 bytes -> 128 bits
+        // Get a random key (16 bytes -> 128 bits)
+        let key = get_random_bytes(16);
+        // Get 5mb random data
         let mut input = Message::new(get_random_bytes(5242880));
 
-        input.aes_encrypt_cbc(&key);
-        input.aes_decrypt_cbc(&key);
+        input.aes_encrypt_cbc(&key); // Encrypt the input
+        input.aes_decrypt_cbc(&key); // Decrypt the input
 
-        assert!(input.op_result.unwrap());
+        assert!(input.op_result.unwrap()); // Verify operation success
     }
 
     #[test]
     fn aes_192_cbc() {
-        let key = get_random_bytes(24); // 24 bytes -> 192 bits
+        // Get a random key (24 bytes -> 192 bits)
+        let key = get_random_bytes(24);
+        // Get 5mb random data
         let mut input = Message::new(get_random_bytes(5242880));
 
-        input.aes_encrypt_cbc(&key);
-        input.aes_decrypt_cbc(&key);
+        input.aes_encrypt_cbc(&key); // Encrypt the input
+        input.aes_decrypt_cbc(&key); // Decrypt the input
 
-        assert!(input.op_result.unwrap());
+        assert!(input.op_result.unwrap()); // Verify operation success
     }
 
     #[test]
     fn aes_256_cbc() {
-        let key = get_random_bytes(32); // 32 bytes -> 256 bits
+        // Get a random key (32 bytes -> 256 bits)
+        let key = get_random_bytes(32);
+        // Get 5mb random data
         let mut input = Message::new(get_random_bytes(5242880));
 
-        input.aes_encrypt_cbc(&key);
-        input.aes_decrypt_cbc(&key);
+        input.aes_encrypt_cbc(&key); // Encrypt the input
+        input.aes_decrypt_cbc(&key); // Decrypt the input
 
-        assert!(input.op_result.unwrap());
+        assert!(input.op_result.unwrap()); // Verify operation success
     }
 }
 
@@ -54,7 +60,10 @@ mod aes_functions_tests {
 
     #[test]
     fn test_removing_padding() {
-        let mut input = Message::new(hex::decode("0000000000000000000000000000000010101010101010101010101010101010").unwrap());
+        let mut input = Message::new(
+            hex::decode("0000000000000000000000000000000010101010101010101010101010101010")
+                .unwrap(),
+        );
         remove_pcks7_padding(&mut input.msg);
 
         let expected = "00000000000000000000000000000000";
