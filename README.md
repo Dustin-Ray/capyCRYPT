@@ -4,12 +4,14 @@
 [![Crates.io](https://img.shields.io/crates/v/capycrypt?style=flat-square)](https://crates.io/crates/capycrypt)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/drcapybara/capyCRYPT/blob/master/LICENSE.txt) 
 
-A complete Rust cryptosystem implementing [NIST FIPS 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf) paired with a variety of Edwards curves. An academic exercise in cryptographic algorithm design.
+A complete Rust cryptosystem implementing [NIST FIPS 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf) & [NIST FIPS 197](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf) paired with a variety of Edwards curves. An academic exercise in cryptographic algorithm design.
 
 ## Features
 - **SHA-3:** NIST-Compliant Secure Hash Algorithm 3 (SHA-3) implementation for generating cryptographic hash values.
 
 - **Edwards Elliptic Curve:** A variety of Edwards curve implementations for elliptic curve cryptography (ECC) operations are offered, varying in security and efficiency. Curves can be easily interchanged in asymmetric operations to suit the needs of the application.
+
+- **AES:** NIST-Compliant Advanced Encryption Standard (AES) implementation for encrypting and decrypting data.
 
 ## Supported Operations
 - **Message Digest:** Computes hash of a given message, with adjustable digest lengths.
@@ -21,7 +23,7 @@ A complete Rust cryptosystem implementing [NIST FIPS 202](https://nvlpubs.nist.g
 ## Installation
 Add the following line to your `Cargo.toml` file:
 ```toml
-capycrypt = "0.4.5"
+capycrypt = "0.5"
 ```
 
 ### Note: Building the `rug` Crate
@@ -59,6 +61,25 @@ let mut msg = Message::new(get_random_bytes(5242880));
 msg.pw_encrypt(&pw, 512);
 // Decrypt the data
 msg.pw_decrypt(&pw);
+// Verify operation success
+assert!(msg.op_result.unwrap());
+```
+
+### AES-CBC Symmetric Encrypt/Decrypt:
+```rust
+use capycrypt::{
+    Message,
+    AESEncryptable,
+    sha3::{aux_functions::byte_utils::get_random_bytes}
+};
+// Get a random 128-bit password
+let key = get_random_bytes(16);
+// Get 5mb random data
+let mut msg = Message::new(get_random_bytes(5242880));
+// Encrypt the data
+msg.aes_encrypt_cbc(&key);
+// Decrypt the data
+msg.aes_encrypt_cbc(&key);
 // Verify operation success
 assert!(msg.op_result.unwrap());
 ```
