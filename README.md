@@ -23,7 +23,7 @@ A complete Rust cryptosystem implementing [NIST FIPS 202](https://nvlpubs.nist.g
 ## Installation
 Add the following line to your `Cargo.toml` file:
 ```toml
-capycrypt = "0.5"
+capycrypt = "0.5.0"
 ```
 
 ### Note: Building the `rug` Crate
