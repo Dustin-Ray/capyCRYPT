@@ -4,7 +4,7 @@ version = "0.5.0"
 edition = "2021"
 
 license = "MIT"
-keywords = ["aes", "sha3", "edwards-curve", "cryptosystem", "side-channel-resistance"]
+keywords = ["aes", "sha3", "edwards-curve", "cryptosystem", "cryptography"]
 readme = "README.md"
 authors = ["Dustin Ray (Dr. Capybara) <dustinray313@gmail.com>", "Hunter Richardson (HLRichardson-Git) <hunter@hunterrichardson.net>"]
 description = "A complete Rust cryptosystem implementing NIST FIPS 202 & NIST FIPS 197 paired with a variety of Edwards curves. An academic exercise in cryptographic algorithm design."
