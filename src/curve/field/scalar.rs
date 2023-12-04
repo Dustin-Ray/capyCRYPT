@@ -1,4 +1,4 @@
-use std::ops::Mul;
+use std::ops::{Mul, Div};
 
 use crypto_bigint::{
     impl_modulus,
@@ -34,8 +34,7 @@ impl Scalar {
     pub fn div_four(&mut self) {
         self.val = self
             .val
-            .div_rem(&NonZero::new(U448::from(4_u64)).unwrap())
-            .0;
+            .div(&NonZero::new(U448::from(4_u64)).unwrap());
     }
 
     pub fn invert(&mut self) {

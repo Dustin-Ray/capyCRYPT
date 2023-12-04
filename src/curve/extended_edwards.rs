@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 use super::{
+    edwards::{EdCurvePoint, IdPoint},
     extensible_edwards::ExtensibleCurvePoint,
     field::{field_element::FieldElement, lookup_table::LookupTable, scalar::Scalar},
 };
@@ -164,25 +165,12 @@ impl ExtendedCurvePoint {
     /// CURVE POINT ARITHMETIC
     /// ------------------------------
 
-    // https://iacr.org/archive/asiacrypt2008/53500329/53500329.pdf (3.1)
     pub fn add(&self, other: &ExtendedCurvePoint) -> ExtendedCurvePoint {
-        let aXX = self.X * other.X;
-        let dTT = EDWARDS_D * self.T * other.T;
-        let ZZ = self.Z * other.Z;
-        let YY = self.Y * other.Y;
-        let X1Y2_plus_Y1X2 = (self.X * other.Y) + (self.Y * other.X);
-
-        let X = X1Y2_plus_Y1X2 * (ZZ - dTT);
-        let Y = (YY - aXX) * (ZZ + dTT);
-        let T = (YY - aXX) * X1Y2_plus_Y1X2;
-        let Z = (ZZ - dTT) * (ZZ + dTT);
-
-        ExtendedCurvePoint { X, Y, Z, T }
+        self.to_extensible().add_extended(&other).to_extended()
     }
 
-    // replace with doubling algorithm
     pub fn double(&self) -> ExtendedCurvePoint {
-        self.add(self)
+        self.to_extensible().double().to_extended()
     }
 
     pub fn negate(&self) -> ExtendedCurvePoint {
@@ -279,6 +267,43 @@ impl ExtendedCurvePoint {
                 41035719659624511,
                 30626637035688077,
                 56117654178374172,
+            ])),
+        }
+    }
+
+    /// Generates the 2-isogenous twisted curve
+    pub fn tw_generator() -> ExtendedCurvePoint {
+        ExtendedCurvePoint {
+            X: FieldElement(fiat_p448_tight_field_element([
+                0,
+                72057594037927936,
+                72057594037927935,
+                36028797018963967,
+                72057594037927934,
+                72057594037927935,
+                72057594037927935,
+                36028797018963967,
+            ])),
+            Y: FieldElement(fiat_p448_tight_field_element([
+                27155415521118820,
+                3410937204744648,
+                19376965222209947,
+                22594032279754776,
+                21520481577673772,
+                10141917371396176,
+                59827755213158602,
+                37445921829569158,
+            ])),
+            Z: FieldElement(fiat_p448_tight_field_element([1, 0, 0, 0, 0, 0, 0, 0])),
+            T: FieldElement(fiat_p448_tight_field_element([
+                64114820220813573,
+                27592348249940115,
+                21918321435874307,
+                45908688348236165,
+                34141937727972228,
+                63575698147485199,
+                22766751209138687,
+                30740600843388580,
             ])),
         }
     }
@@ -380,7 +405,7 @@ pub fn test_g_times_one_g() {
 // G + (-G) = 𝒪
 #[test]
 fn test_g_plus_neg_g() {
-    let g = ExtendedCurvePoint::generator();
+    let g = ExtendedCurvePoint::tw_generator();
     assert!(g.add(&-g) == ExtendedCurvePoint::id_point())
 }
 
@@ -390,7 +415,7 @@ pub fn test_g_times_two_g_plus_g() {
     let p = ExtendedCurvePoint::generator();
     let two = Scalar::from(2_u64);
     let res = p * two;
-    let res2 = p.add(&p);
+    let res2 = p.double();
     assert!(res == res2)
 }
 
@@ -483,7 +508,7 @@ fn k_t() {
 }
 
 #[test]
-//k*(t*P) = t*(k*G) = (k*t mod r)*G
+//k*(t*G) = t*(k*G) = (k*t mod r)*G
 fn test_ktp() {
     let mut rng = rand::thread_rng();
     let mut k = rand::Rng::gen::<u64>(&mut rng);

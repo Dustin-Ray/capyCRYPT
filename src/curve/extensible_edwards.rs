@@ -83,6 +83,11 @@ impl ExtensibleCurvePoint {
         }
     }
 
+    /// Adds two extensible points together by converting the other point to a ExtendedPoint
+    pub fn add_extensible(&self, other: &ExtensibleCurvePoint) -> ExtensibleCurvePoint {
+        self.add_extended(&other.to_extended())
+    }
+
     /// ------------------------------
     /// CURVE POINT ARITHMETIC
     /// ------------------------------
@@ -109,6 +114,27 @@ impl ExtensibleCurvePoint {
             Z: F * G,
             T1: E,
             T2: D,
+        }
+    }
+
+    /// Adds an extensible point to an extended point
+    /// Returns an extensible point
+    /// (3.1) https://iacr.org/archive/asiacrypt2008/53500329/53500329.pdf
+    pub fn add_extended(&self, other: &ExtendedCurvePoint) -> ExtensibleCurvePoint {
+        let A = self.X * other.X;
+        let B = self.Y * other.Y;
+        let C = self.T1 * self.T2 * other.T * TWISTED_D;
+        let D = self.Z * other.Z;
+        let E = (self.X + self.Y) * (other.X + other.Y) - A - B;
+        let F = D - C;
+        let G = D + C;
+        let H = B + A;
+        ExtensibleCurvePoint {
+            X: E * F,
+            Y: G * H,
+            T1: E,
+            T2: H,
+            Z: F * G,
         }
     }
 
