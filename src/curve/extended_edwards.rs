@@ -388,7 +388,6 @@ pub fn test_g_times_zero_id() {
     let zero = Scalar::from(0_u64);
     let res = p * zero;
     let id = ExtendedCurvePoint::id_point();
-
     assert!(res == id)
 }
 
@@ -405,8 +404,11 @@ pub fn test_g_times_one_g() {
 // G + (-G) = 𝒪
 #[test]
 fn test_g_plus_neg_g() {
-    let g = ExtendedCurvePoint::tw_generator();
-    assert!(g.add(&-g) == ExtendedCurvePoint::id_point())
+    let g = ExtendedCurvePoint::generator();
+    let neg_g = ExtendedCurvePoint::generator().negate();
+    let id = g.add(&neg_g);
+    assert_eq!(id, ExtendedCurvePoint::id_point());
+
 }
 
 #[test]
@@ -483,7 +485,6 @@ fn k_plus_one_g() {
     let k1_g = ExtendedCurvePoint::generator() * Scalar::from((k + 1).into());
     let k_g1 = (ExtendedCurvePoint::generator() * Scalar::from(k.into()))
         .add(&ExtendedCurvePoint::generator());
-
     assert!(&k1_g == &k_g1)
 }
 
@@ -499,10 +500,12 @@ fn k_t() {
 
     //(k + t)*G
     let k_plus_t_G = ExtendedCurvePoint::generator() * (Scalar::from(k + t));
+    dbg!(k_plus_t_G);
 
     // (k*G) + (t*G)
     let kg_plus_tg = (ExtendedCurvePoint::generator() * Scalar::from(k))
         .add(&(ExtendedCurvePoint::generator() * Scalar::from(t)));
+    dbg!(kg_plus_tg);
 
     assert!(k_plus_t_G == kg_plus_tg)
 }
