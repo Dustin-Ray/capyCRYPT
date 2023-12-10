@@ -4,11 +4,13 @@ use super::{
     field::{field_element::FieldElement, lookup_table::LookupTable, scalar::Scalar},
     twisted_edwards::TwistedPoint,
 };
-use crypto_bigint::subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq};
+use crypto_bigint::subtle::{
+    Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq,
+};
 use fiat_crypto::p448_solinas_64::*;
 use std::ops::{Add, Mul, Neg};
 
-/// Extended coordinates further extend projective coordinates by adding an
+/// Extended coordinates extend projective coordinates by adding an
 /// additional auxiliary coordinate to speed up certain calculations.
 /// A point in extended coordinates is represented as (X:Y:Z:T), with the
 /// additional constraint that T = XY/Z.

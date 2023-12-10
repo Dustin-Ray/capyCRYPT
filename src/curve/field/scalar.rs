@@ -10,11 +10,7 @@ use crypto_bigint::{
 /// Order of the curve. Distinct from field prime.
 pub const R_448: &str = "3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7CCA23E9C44EDB49AED63690216CC2728DC58F552378C292AB5844F3";
 
-impl_modulus!(
-    R,
-    U448,
-    R_448
-);
+impl_modulus!(R, U448, R_448);
 
 #[derive(Debug, Clone, Copy)]
 pub struct Scalar {

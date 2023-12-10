@@ -60,7 +60,7 @@ pub mod ops_tests {
     }
     #[test]
     // This test shouldnt have a huge variation between key sizes due to the fixed-time
-    // nature of the lookup table being used for scalar decomposition in the 
+    // nature of the lookup table being used for scalar decomposition in the
     // variable_base multiplication
     fn test_sig_timing_side_channel() {
         for i in 0..10 {

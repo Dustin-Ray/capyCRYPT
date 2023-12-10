@@ -1,6 +1,5 @@
-use capycrypt::{KeyEncryptable, KeyPair, Message, PwEncryptable, Signable};
-
 use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
+use capycrypt::{KeyEncryptable, KeyPair, Message, PwEncryptable, Signable};
 use criterion::{criterion_group, criterion_main, Criterion};
 
 const BIT_SECURITY: u64 = 224;
@@ -25,7 +24,7 @@ pub fn sign_verify(mut key_pair: KeyPair, mut msg: Message) {
 }
 
 fn bench_sign_verify(c: &mut Criterion) {
-    c.bench_function("e222 + SHA3-224 Sign + Verify Roundtrip", |b| {
+    c.bench_function("e448 + SHA3-224 Sign + Verify Roundtrip", |b| {
         b.iter(|| {
             sign_verify(
                 KeyPair::new(&get_random_bytes(16), "test key".to_string(), BIT_SECURITY),
@@ -47,7 +46,7 @@ fn bench_sym_enc(c: &mut Criterion) {
 }
 
 fn bench_key_gen_enc_dec(c: &mut Criterion) {
-    c.bench_function("e222 + SHA3-224 Asymmetric enc + dec", |b| {
+    c.bench_function("e448 + SHA3-224 Asymmetric enc + dec", |b| {
         b.iter(|| {
             key_gen_enc_dec(
                 &mut KeyPair::new(&get_random_bytes(32), "test key".to_string(), BIT_SECURITY)

@@ -25,11 +25,11 @@ rand = "0.8"
 num-bigint = { version = "0.4", features = ["rand"] }
 
 [[bench]]
-name = "benchmark_e222_224"
+name = "benchmark_e448_224"
 harness = false
 
 [[bench]]
-name = "benchmark_e521_512"
+name = "benchmark_e448_512"
 harness = false
 
 [profile.dev]

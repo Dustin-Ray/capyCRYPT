@@ -2,7 +2,10 @@
 // ------------------------------
 // TESTS
 // ------------------------------
-use capycrypt::curve::{extended_edwards::ExtendedPoint, field::scalar::{Scalar, R_448}};
+use capycrypt::curve::{
+    extended_edwards::ExtendedPoint,
+    field::scalar::{Scalar, R_448},
+};
 use crypto_bigint::U448;
 
 #[test]
