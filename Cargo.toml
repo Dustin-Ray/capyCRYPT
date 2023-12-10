@@ -1,10 +1,10 @@
 [package]
 name = "capycrypt"
-version = "0.4.5"
+version = "0.6.0"
 edition = "2021"
 
 license = "MIT"
-keywords = ["cryptography", "fips202", "edwards", "sha3", "schnorr"]
+keywords = ["aes", "fips202", "edwards", "ed448", "schnorr"]
 readme = "README.md"
 authors = ["Dustin Ray (Dr. Capybara) <dustinray313@gmail.com>"]
 description = "An academic exercise in cryptographic algorithm design, pairing NIST FIPS 202 with a variety of Edwards curves."
