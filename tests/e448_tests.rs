@@ -13,7 +13,7 @@ mod e448_tests {
     use num_bigint::BigInt as big;
     use rand::{thread_rng, Rng};
     const SELECTED_CURVE: EdCurves = E448;
-
+    
     #[test]
     // 0 * G = 𝒪
     fn test_zero_times_g() {
