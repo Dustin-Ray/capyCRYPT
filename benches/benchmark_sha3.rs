@@ -7,7 +7,7 @@ const BIT_SECURITY: u64 = 256;
 
 /// hash 5mb of random data with 128 bits of security
 fn sha3_digest(mut msg: Message) {
-    msg.compute_sha3_hash(BIT_SECURITY);
+    msg.compute_hash_sha3(BIT_SECURITY);
 }
 
 fn bench_sha3_digest(c: &mut Criterion) {

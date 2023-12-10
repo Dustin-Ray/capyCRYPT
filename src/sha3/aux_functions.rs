@@ -69,17 +69,15 @@ pub mod nist_800_185 {
 }
 
 pub mod byte_utils {
-    use num_bigint::{BigInt as big, RandBigInt, Sign};
     use crypto_bigint::Encoding;
     use crypto_bigint::U448;
     use num_bigint::{BigInt as big, RandBigInt};
+
     /// Aux methods for byte operations.
     use rand::prelude::*;
     use rand::thread_rng;
 
     use crate::curve::field::scalar::Scalar;
-    use rand::thread_rng;
-
     /// Gets size number of random bytes.
     /// * `size`: number of bytes requested
     /// * `return: Vec<u8>` of size number of random u8s
@@ -90,14 +88,6 @@ pub mod byte_utils {
     }
 
     /// Get a random big with size number of bits
-    pub fn get_random_big(bits: usize) -> big {
-        let mut rng = thread_rng();
-
-        // The `gen_bigint` method takes the number of bits as argument to generate
-        // a random `BigInt`. If you want a non-negative number, make sure the most
-        // significant bit is not set, which will effectively give you a number with
-        // one bit less than the specified size.
-        rng.gen_bigint(bits as u64)
     pub fn get_random_big(bits: usize) -> big {
         let mut rng = thread_rng();
 

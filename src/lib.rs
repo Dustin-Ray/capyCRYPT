@@ -1,7 +1,5 @@
 #![warn(clippy::just_underscores_and_digits)]
 use curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
-use curves::{EdCurvePoint, EdCurves};
-use num_bigint::BigInt as Integer;
 
 /// Module for all EC operations.
 pub mod curve {
@@ -110,5 +108,5 @@ pub trait KeyEncryptable {
 
 pub trait Signable {
     fn sign(&mut self, key: &KeyPair, d: u64);
-    fn verify(&mut self, pub_key: &EdCurvePoint);
+    fn verify(&mut self, pub_key: &ExtendedPoint);
 }

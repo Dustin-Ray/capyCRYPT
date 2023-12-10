@@ -1,5 +1,7 @@
 #[cfg(test)]
 pub mod ops_tests {
+    use std::time::Instant;
+
     use capycrypt::{
         sha3::aux_functions::byte_utils::get_random_bytes, KeyEncryptable, KeyPair, Message,
         PwEncryptable, Signable,
@@ -57,7 +59,7 @@ pub mod ops_tests {
 
         assert!(msg.op_result.unwrap());
     }
-    
+
     // This test shouldnt have a huge variation between key sizes due to the fixed-time
     // nature of the lookup table being used for scalar decomposition in the
     // variable_base multiplication algorithm.

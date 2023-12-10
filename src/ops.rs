@@ -1,4 +1,5 @@
 use crate::{
+    aes::aes_functions::{apply_pcks7_padding, remove_pcks7_padding, xor_blocks, AES},
     curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar},
     sha3::{
         aux_functions::{
