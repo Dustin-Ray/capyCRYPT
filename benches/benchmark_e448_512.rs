@@ -24,7 +24,7 @@ pub fn sign_verify(mut key_pair: KeyPair, mut msg: Message) {
 }
 
 fn bench_sign_verify(c: &mut Criterion) {
-    c.bench_function("e521 + SHA3-512 Sign + Verify Roundtrip 5mb", |b| {
+    c.bench_function("e448 + SHA3-512 Sign + Verify Roundtrip 5mb", |b| {
         b.iter(|| {
             sign_verify(
                 KeyPair::new(&get_random_bytes(16), "test key".to_string(), BIT_SECURITY),
@@ -46,7 +46,7 @@ fn bench_sym_enc(c: &mut Criterion) {
 }
 
 fn bench_key_gen_enc_dec(c: &mut Criterion) {
-    c.bench_function("e521 + SHA3-512 Asymmetric enc + dec 5mb", |b| {
+    c.bench_function("e448 + SHA3-512 Asymmetric enc + dec 5mb", |b| {
         b.iter(|| {
             key_gen_enc_dec(
                 &mut KeyPair::new(&get_random_bytes(32), "test key".to_string(), BIT_SECURITY)

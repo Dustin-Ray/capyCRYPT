@@ -4,7 +4,7 @@ use crypto_bigint::subtle::{ConditionallySelectable, ConstantTimeEq};
 
 pub struct LookupTable([ProjectiveNielsPoint; 8]);
 
-/// Precomputes odd multiples of the point passed in
+/// Precomputes odd multiples of self
 impl From<&ExtendedPoint> for LookupTable {
     fn from(point: &ExtendedPoint) -> LookupTable {
         let P = point.to_extensible();
@@ -17,7 +17,7 @@ impl From<&ExtendedPoint> for LookupTable {
 }
 
 impl LookupTable {
-    /// Selects a projective niels point from a lookup table in constant time
+    /// Selects a projective niels point from a lookup table in fixed-time
     pub fn select(&self, index: u32) -> ProjectiveNielsPoint {
         let mut result = ProjectiveNielsPoint::id_point();
         for i in 1..9 {

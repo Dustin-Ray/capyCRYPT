@@ -10,10 +10,10 @@ use crypto_bigint::subtle::{
 use fiat_crypto::p448_solinas_64::*;
 use std::ops::{Add, Mul, Neg};
 
-/// Extended coordinates extend projective coordinates by adding an
-/// additional auxiliary coordinate to speed up certain calculations.
-/// A point in extended coordinates is represented as (X:Y:Z:T), with the
-/// additional constraint that T = XY/Z.
+/// Extends projective coordinates by adding an additional 
+/// auxiliary coordinate to speed up certain calculations.
+/// A point in extended coordinates is represented as (X:Y:Z:T), 
+/// with the additional constraint that T = XY/Z.
 ///
 /// This representation allows certain operations, like point doubling and
 /// addition, to be performed more efficiently.The Edwards curve equation in
@@ -28,9 +28,7 @@ pub struct ExtendedPoint {
 }
 
 impl ExtendedPoint {
-    /// https://www.shiftleft.org/papers/isogeny/isogeny.pdf
-    /// page 4 specifies s is always known to be a multiple of 4
-    ///
+
     /// Performs variable-base scalar multiplication on an elliptic curve point.
     ///
     /// This function multiplies an elliptic curve point (`point`) with a scalar (`s`) and returns

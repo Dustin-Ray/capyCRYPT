@@ -1,10 +1,10 @@
-use std::ops::{Div, Mul, Sub};
+use std::ops::{Mul, Sub};
 
 use crypto_bigint::{
     const_residue, impl_modulus,
     modular::constant_mod::ResidueParams,
     subtle::{Choice, ConstantTimeEq},
-    Encoding, NonZero, U448,
+    Encoding, U448,
 };
 
 /// Order of the curve. Distinct from field prime.
@@ -12,27 +12,22 @@ pub const R_448: &str = "3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 
 impl_modulus!(R, U448, R_448);
 
+/// https://www.shiftleft.org/papers/isogeny/isogeny.pdf
+/// page 4 specifies s is always known to be a multiple of 4
 #[derive(Debug, Clone, Copy)]
 pub struct Scalar {
     pub val: U448,
 }
 
 impl Scalar {
-    /// a + b mod p
+    /// a + b mod r
     pub fn add_mod(&self, rhs: &Self) -> Self {
         Self::from(self.val.add_mod(&rhs.val, &R::MODULUS))
     }
 
-    // a - b mod p
+    // a - b mod r
     pub fn sub_mod(&self, rhs: &Self) -> Self {
         Self::from(self.val.sub_mod(&rhs.val, &R::MODULUS))
-    }
-
-    /// Divides a scalar by four without reducing mod p
-    /// This is used in the 2-isogeny when mapping points from Ed448-Goldilocks
-    /// to Twisted-Goldilocks
-    pub fn div_four(&mut self) {
-        self.val = self.val.div(&NonZero::new(U448::from(4_u64)).unwrap());
     }
 
     pub fn from<T: Into<U448>>(val: T) -> Self {
@@ -221,16 +216,6 @@ impl Sub<Scalar> for Scalar {
     fn sub(self, rhs: Scalar) -> Self::Output {
         self.sub_mod(&rhs)
     }
-}
-
-#[test]
-fn test_div_rem() {
-    let a = U448::from(8_u64);
-    let b = NonZero::new(U448::from(4_u64)).unwrap();
-    let res = a.div_rem(&b);
-    // 8 / 4 = 2 with no remainder
-    assert!(res.0 == U448::from(2_u64));
-    assert!(res.1 == U448::ZERO);
 }
 
 // TODO: test scalar mul
