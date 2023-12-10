@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
+use super::{field::field_element::FieldElement, twisted_edwards::TwistedPoint};
 use crypto_bigint::subtle::{Choice, ConditionallyNegatable, ConditionallySelectable};
-use super::{twisted_edwards::TwistedPoint, field::field_element::FieldElement};
 
 // Variant of Niels, where a Z coordinate is added for unmixed readdition
 // ((y+x)/2, (y-x)/2, dxy, Z)

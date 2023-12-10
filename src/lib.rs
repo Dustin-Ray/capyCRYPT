@@ -5,8 +5,8 @@ use curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
 pub mod curve {
     pub mod affine;
     pub mod extended_edwards;
-    pub mod twisted_edwards;
     pub mod projective_niels;
+    pub mod twisted_edwards;
     pub mod field {
         pub mod field_element;
         pub mod lookup_table;
