@@ -283,6 +283,7 @@ impl KeyPair {
         let s: Scalar =
             bytes_to_scalar(kmac_xof(pw, &[], 448, "SK", d)).mul_mod_r(&Scalar::from(4_u64));
 
+
         let V = ExtendedPoint::tw_generator() * s;
 
         KeyPair {
@@ -320,10 +321,10 @@ impl KeyEncryptable for Message {
     fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: u64) {
         self.d = Some(d);
         let k = bytes_to_scalar(get_random_bytes(56)).mul_mod_r(&Scalar::from(4_u64));
-        let w = *pub_key * k;
-        let Z = ExtendedPoint::tw_generator() * k;
+        let w = (*pub_key * k).to_affine();
+        let Z = (ExtendedPoint::tw_generator() * k).to_affine();
 
-        let ke_ka = kmac_xof(&w.X.to_bytes().to_vec(), &[], 448 * 2, "PK", d);
+        let ke_ka = kmac_xof(&w.x.to_bytes().to_vec(), &[], 448 * 2, "PK", d);
         let ke = &mut ke_ka[..ke_ka.len() / 2].to_vec();
         let ka = &mut ke_ka[ke_ka.len() / 2..].to_vec();
 
@@ -332,7 +333,7 @@ impl KeyEncryptable for Message {
         xor_bytes(&mut self.msg, &c);
 
         self.digest = Some(t);
-        self.asym_nonce = Some(Z);
+        self.asym_nonce = Some(Z.to_extended());
     }
 
     /// # Asymmetric Decryption
@@ -368,10 +369,10 @@ impl KeyEncryptable for Message {
         let Z = self.asym_nonce.unwrap();
         let s: Scalar = bytes_to_scalar(kmac_xof(&pw.to_owned(), &[], 448, "SK", self.d.unwrap()))
             .mul_mod_r(&Scalar::from(4_u64));
-        let w = Z * s;
+        let Z = (Z * s).to_affine();
 
         let ke_ka = kmac_xof(
-            &w.X.to_bytes().to_vec(),
+            &Z.x.to_bytes().to_vec(),
             &[],
             448 * 2,
             "PK",

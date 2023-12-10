@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 use super::{
     extensible_edwards::ExtensibleCurvePoint,
-    field::{field_element::FieldElement, lookup_table::LookupTable, scalar::Scalar},
+    field::{field_element::FieldElement, lookup_table::LookupTable, scalar::Scalar}, affine::AffinePoint,
 };
 use crypto_bigint::{
     impl_modulus,
@@ -122,6 +122,18 @@ impl ExtendedPoint {
             T1: self.T,
             T2: FieldElement::one(),
         }
+    }
+
+    pub fn to_affine(&self) -> AffinePoint {
+        let INV_Z = self.Z.invert();
+
+        let mut x = self.X * INV_Z;
+        x.strong_reduce();
+
+        let mut y = self.Y * INV_Z;
+        y.strong_reduce();
+
+        AffinePoint { x, y }
     }
 
     // ------------------------------

@@ -1,5 +1,5 @@
 #![warn(clippy::just_underscores_and_digits)]
-use curve::{edwards::EdCurves, extended_edwards::ExtendedPoint, field::scalar::Scalar};
+use curve::{edwards::EdCurves, extended_edwards::ExtendedPoint, field::scalar::Scalar, affine::AffinePoint};
 
 /// Module for all EC operations.
 pub mod curve {
@@ -7,6 +7,7 @@ pub mod curve {
     pub mod extended_edwards;
     pub mod extensible_edwards;
     pub mod projective_niels;
+    pub mod affine;
     pub mod field {
         pub mod field_element;
         pub mod lookup_table;
