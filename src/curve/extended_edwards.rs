@@ -276,6 +276,13 @@ impl Add<ExtendedPoint> for &ExtendedPoint {
     }
 }
 
+impl Add<ExtendedPoint> for ExtendedPoint {
+    type Output = ExtendedPoint;
+    fn add(self, rhs: ExtendedPoint) -> ExtendedPoint {
+        ExtendedPoint::add(&self, &rhs)
+    }
+}
+
 impl Neg for ExtendedPoint {
     type Output = Self;
 
@@ -333,7 +340,7 @@ pub fn test_g_times_one_g() {
 fn test_g_plus_neg_g() {
     let g = ExtendedPoint::tw_generator();
     let neg_g = ExtendedPoint::tw_generator().negate();
-    let id = g.add(&neg_g);
+    let id = g.add(neg_g);
 
     assert_eq!(id, ExtendedPoint::id_point());
 }
@@ -344,7 +351,7 @@ pub fn test_g_times_two_g_plus_g() {
     let g: ExtendedPoint = ExtendedPoint::tw_generator();
     let two = Scalar::from(2_u64);
     let res = g * two;
-    let res2 = g.add(&g);
+    let res2 = g.add(g);
 
     assert!(res == res2)
 }
@@ -410,7 +417,7 @@ fn k_plus_one_g() {
 
     let k1_g = ExtendedPoint::tw_generator() * Scalar::from::<u64>((k + 1).into());
     let k_g1 = (ExtendedPoint::tw_generator() * Scalar::from::<u64>(k.into()))
-        .add(&ExtendedPoint::tw_generator());
+        .add(ExtendedPoint::tw_generator());
 
     assert!(&k1_g == &k_g1)
 }
@@ -427,7 +434,7 @@ fn k_t() {
 
     // (k*G) + (t*G)
     let kg_plus_tg = (ExtendedPoint::tw_generator() * Scalar::from(k as u64))
-        .add(&(ExtendedPoint::tw_generator() * Scalar::from(t as u64)));
+        .add(ExtendedPoint::tw_generator() * Scalar::from(t as u64));
 
     assert!(k_plus_t_G == kg_plus_tg)
 }

@@ -414,6 +414,7 @@ impl Signable for Message {
     /// ## Usage
     /// ```
     /// ```
+    #[allow(non_snake_case)]
     fn sign(&mut self, key: &KeyPair, d: u64) {
         self.d = Some(d);
 
@@ -425,8 +426,8 @@ impl Signable for Message {
         let k: Scalar = bytes_to_scalar(kmac_xof(&s_bytes, &self.msg, 448, "N", d))
         * (Scalar::from(4_u64));
 
-        let u = ExtendedPoint::tw_generator() * k;
-        let ux_bytes = u.X.to_bytes().to_vec();
+        let U = ExtendedPoint::tw_generator() * k;
+        let ux_bytes = U.to_affine().x.to_bytes().to_vec();
         let h = kmac_xof(&ux_bytes, &self.msg, 448, "T", d);
         let h_big = bytes_to_scalar(h.clone());
         //(a % b + b) % b
@@ -448,12 +449,13 @@ impl Signable for Message {
     /// ## Usage
     /// ```
     /// ```
+    #[allow(non_snake_case)]
     fn verify(&mut self, pub_key: &ExtendedPoint) {
-        let mut u = ExtendedPoint::tw_generator() * self.sig.clone().unwrap().z;
+        let mut U = ExtendedPoint::tw_generator() * self.sig.clone().unwrap().z;
         let hv = *pub_key * bytes_to_scalar(self.sig.clone().unwrap().h);
-        u = &u + hv;
+        U = U + (hv);
         let h_p = kmac_xof(
-            &u.X.to_bytes().to_vec(),
+            &U.to_affine().x.to_bytes().to_vec(),
             &self.msg,
             448,
             "T",
