@@ -123,14 +123,6 @@ impl FieldElement {
         result
     }
 
-    /// Reduces the field element to a canonical representation
-    /// This is used when checking equality between two field elements and
-    /// when encoding a field element
-    pub(crate) fn strong_reduce(&mut self) {
-        let mut self_loose = fiat_p448_loose_field_element([0; 8]);
-        fiat_p448_relax(&mut self_loose, &self.0);
-        fiat_p448_carry(&mut self.0, &self_loose);
-    }
 }
 
 impl ConstantTimeEq for FieldElement {

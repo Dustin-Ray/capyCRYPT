@@ -43,17 +43,17 @@ impl Scalar {
         self.val.inv_mod(&U448::from_be_hex(R_448));
     }
 
-    /// Performs a constant-time modular multiplication of two `Scalar` values.
+    /// Performs a fixed-time modular multiplication of two `Scalar` values.
     ///
     /// This method multiplies the current `Scalar` instance (`self`) with another `Scalar` (`rhs`)
-    /// and returns the product modulo a predefined modulus (`Modulus`). It uses constant-time
+    /// and returns the product modulo a predefined modulus (`Modulus`). It uses fixed-time
     /// Montgomery reduction algorithm in the `crypto-bigint` backend for the multiplication, which is
     /// crucial for cryptographic applications to ensure both security and efficiency.
     ///
     /// Montgomery reduction is a method used in modular arithmetic that allows for efficient
     /// computation of modular multiplication and reduction without explicitly performing division.
     /// The algorithm operates in a way that is independent of the values of the operands, thereby
-    /// ensuring constant-time execution, which is vital for protecting against timing attacks in
+    /// ensuring fixed-time execution, which is vital for protecting against timing attacks in
     /// cryptographic operations.
     ///
     /// ## Arguments

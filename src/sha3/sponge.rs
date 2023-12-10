@@ -41,7 +41,7 @@ fn state_to_byte_array(uint64s: &[u64]) -> Vec<u8> {
     result
 }
 
-/// Absorbs 200 bytes of message into constant memory size.
+/// Absorbs 200 bytes of message into fixed memory size.
 fn bytes_to_state(in_val: &mut Vec<u8>, rate_in_bytes: usize) -> [u64; 25] {
     let mut offset: usize = 0;
     let mut s: [u64; 25] = [0; 25];

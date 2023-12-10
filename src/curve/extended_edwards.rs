@@ -43,13 +43,46 @@ pub struct AffinePoint {
 }
 
 impl ExtendedPoint {
-    // https://www.shiftleft.org/papers/isogeny/isogeny.pdf
-    // page 4 specifies s is always known to be a multiple of 4
+    /// https://www.shiftleft.org/papers/isogeny/isogeny.pdf
+    /// page 4 specifies s is always known to be a multiple of 4
+    /// 
+    /// Performs variable-base scalar multiplication on an elliptic curve point.
+    ///
+    /// This function multiplies an elliptic curve point (`point`) with a scalar (`s`) and returns
+    /// the resulting point. It is optimized for variable-base multiplication, which is a common
+    /// operation in elliptic curve cryptography, particularly in contexts like key exchange or
+    /// digital signature generation.
+    ///
+    /// # Algorithm
+    ///
+    /// The function employs the following steps in the multiplication process:
+    ///
+    /// 1. Convert the scalar `s` to radix-16 representation using `to_radix_16`.
+    /// 2. Create a lookup table from the input point for fast scalar multiplication.
+    /// 3. Iterate over each digit of the radix-16 scalar, in reverse order.
+    ///    - In each iteration, perform four point doublings on the accumulating result.
+    ///    - Extract the sign and absolute value of the current scalar digit.
+    ///    - Select the corresponding point from the lookup table, conditionally negate it
+    ///      based on the sign, and add it to the result.
+    /// 4. Convert the result from the extensible point representation back to the extended point.
+    ///
+    /// This approach combines the efficiency of radix-16 scalar representation with a pre-computed
+    /// lookup table to accelerate the point multiplication process.
+    ///
+    /// # Arguments
+    ///
+    /// * `point`: A reference to an `ExtendedPoint`, the elliptic curve point to be multiplied.
+    /// * `s`: A reference to a `Scalar`, the scalar by which the point is to be multiplied.
+    ///
+    /// # Returns
+    ///
+    /// An `ExtendedPoint` that is the result of the scalar multiplication of `point` by `s`.
     pub fn variable_base(point: &ExtendedPoint, s: &Scalar) -> ExtendedPoint {
+        
+        // We make use of the faster doubling for ExtensiblePoints
         let mut result = ExtensibleCurvePoint::identity();
 
         let scalar = s.to_radix_16();
-
         let lookup = LookupTable::from(point);
 
         for i in (0..113).rev() {
@@ -68,25 +101,13 @@ impl ExtendedPoint {
             result = result.add_projective_niels(&neg_P);
         }
 
+        // Convert back to entended when complete
         result.to_extended()
     }
 
     // ------------------------------
     // CURVE POINT PROJECTION
     // ------------------------------
-
-    /// Projects to affine x, y
-    pub fn to_affine(&self) -> AffinePoint {
-        let INV_Z = self.Z.invert();
-
-        let mut X = self.X * INV_Z;
-        X.strong_reduce();
-
-        let mut Y = self.Y * INV_Z;
-        Y.strong_reduce();
-
-        AffinePoint { X, Y }
-    }
 
     /// Projects to ExtendedPoint to ExtensiblePoint
     pub fn to_extensible(&self) -> ExtensibleCurvePoint {
@@ -96,17 +117,6 @@ impl ExtendedPoint {
             Z: self.Z,
             T1: self.T,
             T2: FieldElement::one(),
-        }
-    }
-
-    /// Variant of Niels, where a Z coordinate is added for unmixed readdition
-    /// ((y+x)/2, (y-x)/2, dxy, Z)
-    pub fn to_projective_niels(&self) -> ExtendedPoint {
-        ExtendedPoint {
-            X: self.Y + self.X,
-            Y: self.Y - self.X,
-            Z: self.Z,
-            T: EDWARDS_D * self.X * self.Y,
         }
     }
 
