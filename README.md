@@ -88,13 +88,13 @@ use capycrypt::{
     KeyEncryptable,
     KeyPair,
     Message,
-    sha3::aux_functions::byte_utils::get_random_bytes,
-    curves::EdCurves::E448};
+    sha3::aux_functions::byte_utils::get_random_bytes
+};
 
 // Get 5mb random data
 let mut msg = Message::new(get_random_bytes(5242880));
 // Create a new private/public keypair
-let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), E448, 512);
+let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), 512);
 
 // Encrypt the message
 msg.key_encrypt(&key_pair.pub_key, 512);
@@ -117,7 +117,7 @@ let mut msg = Message::new(get_random_bytes(5242880));
 // Get a random password
 let pw = get_random_bytes(64);
 // Generate a signing keypair
-let key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
+let key_pair = KeyPair::new(&pw, "test key".to_string(), 512);
 // Sign with 256 bits of security
 msg.sign(&key_pair, 512);
 // Verify signature

@@ -312,6 +312,24 @@ impl KeyEncryptable for Message {
     /// * d: u64: Requested security strength in bits. Can only be 224, 256, 384, or 512.
     /// ## Usage:
     /// ```
+    /// use capycrypt::{
+    ///     KeyEncryptable,
+    ///     KeyPair,
+    ///     Message,
+    ///     sha3::aux_functions::byte_utils::get_random_bytes
+    /// };
+    ///
+    /// // Get 5mb random data
+    /// let mut msg = Message::new(get_random_bytes(5242880));
+    /// // Create a new private/public keypair
+    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), 512);
+    ///
+    /// // Encrypt the message
+    /// msg.key_encrypt(&key_pair.pub_key, 512);
+    /// // Decrypt the message
+    /// msg.key_decrypt(&key_pair.priv_key);
+    /// // Verify
+    /// assert!(msg.op_result.unwrap());
     /// ```
     #[allow(non_snake_case)]
     fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: u64) {
@@ -359,6 +377,24 @@ impl KeyEncryptable for Message {
     ///
     /// ## Usage:
     /// ```
+    /// use capycrypt::{
+    ///     KeyEncryptable,
+    ///     KeyPair,
+    ///     Message,
+    ///     sha3::aux_functions::byte_utils::get_random_bytes
+    /// };
+    ///
+    /// // Get 5mb random data
+    /// let mut msg = Message::new(get_random_bytes(5242880));
+    /// // Create a new private/public keypair
+    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), 512);
+    ///
+    /// // Encrypt the message
+    /// msg.key_encrypt(&key_pair.pub_key, 512);
+    /// // Decrypt the message
+    /// msg.key_decrypt(&key_pair.priv_key);
+    /// // Verify
+    /// assert!(msg.op_result.unwrap());
     /// ```
     #[allow(non_snake_case)]
     fn key_decrypt(&mut self, pw: &[u8]) {
@@ -409,6 +445,24 @@ impl Signable for Message {
     ///
     /// ## Usage
     /// ```
+    /// use capycrypt::{
+    ///     Signable,
+    ///     KeyPair,
+    ///     Message,
+    ///     sha3::aux_functions::byte_utils::get_random_bytes
+    /// };
+    /// // Get random 5mb
+    /// let mut msg = Message::new(get_random_bytes(5242880));
+    /// // Get a random password
+    /// let pw = get_random_bytes(64);
+    /// // Generate a signing keypair
+    /// let key_pair = KeyPair::new(&pw, "test key".to_string(), 512);
+    /// // Sign with 256 bits of security
+    /// msg.sign(&key_pair, 512);
+    /// // Verify signature
+    /// msg.verify(&key_pair.pub_key);
+    /// // Assert correctness
+    /// assert!(msg.op_result.unwrap());
     /// ```
     #[allow(non_snake_case)]
     fn sign(&mut self, key: &KeyPair, d: u64) {
@@ -444,6 +498,24 @@ impl Signable for Message {
     /// * Some([`Message`].sig)
     /// ## Usage
     /// ```
+    /// use capycrypt::{
+    ///     Signable,
+    ///     KeyPair,
+    ///     Message,
+    ///     sha3::aux_functions::byte_utils::get_random_bytes
+    /// };
+    /// // Get random 5mb
+    /// let mut msg = Message::new(get_random_bytes(5242880));
+    /// // Get a random password
+    /// let pw = get_random_bytes(64);
+    /// // Generate a signing keypair
+    /// let key_pair = KeyPair::new(&pw, "test key".to_string(), 512);
+    /// // Sign with 256 bits of security
+    /// msg.sign(&key_pair, 512);
+    /// // Verify signature
+    /// msg.verify(&key_pair.pub_key);
+    /// // Assert correctness
+    /// assert!(msg.op_result.unwrap());
     /// ```
     #[allow(non_snake_case)]
     fn verify(&mut self, pub_key: &ExtendedPoint) {
