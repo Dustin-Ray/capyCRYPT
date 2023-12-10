@@ -28,7 +28,7 @@ This library is built with love as an academic excercise in cryptographic algori
 ## Installation
 Add the following line to your `Cargo.toml` file:
 ```toml
-capycrypt = "0.6.0"
+capycrypt = "0.6.2"
 ```
 
 ## Quick Start
