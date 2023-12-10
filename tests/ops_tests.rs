@@ -1,8 +1,8 @@
 #[cfg(test)]
 pub mod ops_tests {
     use capycrypt::{
-        curve::edwards::EdCurves::E448, sha3::aux_functions::byte_utils::get_random_bytes,
-        KeyEncryptable, KeyPair, Message, PwEncryptable, Signable,
+        sha3::aux_functions::byte_utils::get_random_bytes, KeyEncryptable, KeyPair, Message,
+        PwEncryptable, Signable,
     };
     use std::time::Instant;
 
@@ -29,7 +29,7 @@ pub mod ops_tests {
     #[test]
     fn test_key_gen_enc_dec_256() {
         let mut msg = Message::new(get_random_bytes(5242880));
-        let key_pair = KeyPair::new(&get_random_bytes(56), "test key".to_string(), E448, 256);
+        let key_pair = KeyPair::new(&get_random_bytes(64), "test key".to_string(), 256);
 
         msg.key_encrypt(&key_pair.pub_key, 256);
         msg.key_decrypt(&key_pair.priv_key);
@@ -40,7 +40,7 @@ pub mod ops_tests {
     #[test]
     fn test_key_gen_enc_dec_512() {
         let mut msg = Message::new(get_random_bytes(5242880));
-        let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), E448, 512);
+        let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), 512);
 
         msg.key_encrypt(&key_pair.pub_key, 512);
         msg.key_decrypt(&key_pair.priv_key);
@@ -50,8 +50,8 @@ pub mod ops_tests {
     #[test]
     pub fn test_signature_256() {
         let mut msg = Message::new(get_random_bytes(5242880));
-        let pw = get_random_bytes(56);
-        let key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 256);
+        let pw = get_random_bytes(64);
+        let key_pair = KeyPair::new(&pw, "test key".to_string(), 256);
 
         msg.sign(&key_pair, 256);
         msg.verify(&key_pair.pub_key);
@@ -63,7 +63,7 @@ pub mod ops_tests {
         for i in 0..10 {
             let mut msg = Message::new(get_random_bytes(16));
             let pw = get_random_bytes(1 << i);
-            let mut key_pair = KeyPair::new(&pw, "test key".to_string(), E448, 512);
+            let mut key_pair = KeyPair::new(&pw, "test key".to_string(), 512);
 
             let now = Instant::now();
             msg.sign(&mut key_pair, 512);

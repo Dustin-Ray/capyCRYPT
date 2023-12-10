@@ -7,14 +7,12 @@ use crypto_bigint::{
     Encoding, NonZero, U448,
 };
 
-pub const R_448: &str = "3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7CCA23E9C44EDB49AED63690216CC2728DC58F552378C292AB5844F3";
-
 pub const R_2: &str = "049b9b60e3539257c1b195d97af32c4b88ea18590d66de235ee4d838ae17cf72a3c47c441a9cc14be4d070af2052bcb7f823b7293402a939";
 
 impl_modulus!(
-    Modulus,
+    R,
     U448,
-    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    "3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7CCA23E9C44EDB49AED63690216CC2728DC58F552378C292AB5844F3"
 );
 
 #[derive(Debug, Clone, Copy)]
@@ -25,12 +23,12 @@ pub struct Scalar {
 impl Scalar {
     /// a + b mod p
     pub fn add_mod(&self, rhs: &Self) -> Self {
-        Self::from(self.val.add_mod(&rhs.val, &Modulus::MODULUS))
+        Self::from(self.val.add_mod(&rhs.val, &R::MODULUS))
     }
 
     // a - b mod p
     pub fn sub_mod(&self, rhs: &Self) -> Self {
-        Self::from(self.val.sub_mod(&rhs.val, &Modulus::MODULUS))
+        Self::from(self.val.sub_mod(&rhs.val, &R::MODULUS))
     }
 
     /// Divides a scalar by four without reducing mod p
@@ -45,7 +43,7 @@ impl Scalar {
     }
 
     pub fn invert(&mut self) {
-        self.val.inv_mod(&U448::from_be_hex(R_448));
+        self.val.inv_mod(&R::MODULUS);
     }
 
     /// Performs a fixed-time modular multiplication of two `Scalar` values.
@@ -72,8 +70,8 @@ impl Scalar {
     pub fn mul_mod(&self, rhs: &Scalar) -> Scalar {
         let self_val: U448 = self.val;
         let rhs_val: U448 = rhs.val;
-        let a = const_residue!(self_val, Modulus);
-        let b = const_residue!(rhs_val, Modulus);
+        let a = const_residue!(self_val, R);
+        let b = const_residue!(rhs_val, R);
         Scalar {
             val: a.mul(&b).retrieve(),
         }
@@ -81,11 +79,6 @@ impl Scalar {
 
     // this is a bummer, will fix asap
     pub fn mul_mod_r(&self, rhs: &Scalar) -> Scalar {
-        impl_modulus!(
-            R,
-            U448,
-            "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-        );
         let self_val: U448 = self.val;
         let rhs_val: U448 = rhs.val;
         let a = const_residue!(self_val, R);
@@ -186,7 +179,7 @@ impl Scalar {
             let multiplicand = result.as_limbs()[0].wrapping_mul(montgomery_factor.as_limbs()[0]);
 
             chain = 0;
-            for (j, &mlimb) in Modulus::MODULUS.as_limbs().iter().enumerate() {
+            for (j, &mlimb) in R::MODULUS.as_limbs().iter().enumerate() {
                 chain += (u128::from(multiplicand)) * u128::from(mlimb)
                     + u128::from(result.as_limbs()[j]);
                 if j > 0 {
@@ -202,7 +195,7 @@ impl Scalar {
             carry = (chain >> 64) as u64;
         }
 
-        result = result.sub_mod(&Modulus::MODULUS, &Modulus::MODULUS);
+        result = result.sub_mod(&R::MODULUS, &R::MODULUS);
         Scalar::from(result)
     }
 }

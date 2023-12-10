@@ -123,5 +123,4 @@ pub mod byte_utils {
     pub fn scalar_to_bytes(s: &Scalar) -> Vec<u8> {
         s.val.to_be_bytes().to_vec()
     }
-
 }

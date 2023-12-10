@@ -1,7 +1,8 @@
 #![allow(non_snake_case)]
 use super::{
+    affine::AffinePoint,
     extensible_edwards::ExtensibleCurvePoint,
-    field::{field_element::FieldElement, lookup_table::LookupTable, scalar::Scalar}, affine::AffinePoint,
+    field::{field_element::FieldElement, lookup_table::LookupTable, scalar::Scalar},
 };
 use crypto_bigint::{
     impl_modulus,
@@ -16,6 +17,9 @@ impl_modulus!(
     U448,
     "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
 );
+
+/// Order of the curve. Distinct from field prime.
+pub const R_448: &str = "3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7CCA23E9C44EDB49AED63690216CC2728DC58F552378C292AB5844F3";
 
 /// -39081
 pub const EDWARDS_D: FieldElement = FieldElement(fiat_p448_tight_field_element([
@@ -379,7 +383,6 @@ fn test_four_g_not_id() {
 #[test]
 //r*G = 𝒪
 fn r_times_g_id() {
-    use crate::curve::field::scalar::R_448;
     let mut g = ExtendedPoint::generator();
     g = g * Scalar::from(U448::from_be_hex(R_448));
     let id = ExtendedPoint::id_point();
@@ -390,7 +393,6 @@ fn r_times_g_id() {
 #[test]
 // k * G = (k mod r) * G
 fn k_g_equals_k_mod_r_times_g() {
-    use crate::curve::field::scalar::R_448;
     use rand::Rng;
     let mut rng = rand::thread_rng();
     let random_number: u64 = rng.gen();

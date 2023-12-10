@@ -1,4 +1,4 @@
-use super::{field::field_element::FieldElement, extended_edwards::ExtendedPoint};
+use super::{extended_edwards::ExtendedPoint, field::field_element::FieldElement};
 
 #[derive(Debug)]
 pub struct AffinePoint {

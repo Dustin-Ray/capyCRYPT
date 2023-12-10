@@ -1,12 +1,8 @@
-use capycrypt::{
-    curve::edwards::EdCurves::{self, E448},
-    KeyEncryptable, KeyPair, Message, PwEncryptable, Signable,
-};
+use capycrypt::{KeyEncryptable, KeyPair, Message, PwEncryptable, Signable};
 
 use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
 use criterion::{criterion_group, criterion_main, Criterion};
 
-const SELECTED_CURVE: EdCurves = E448;
 const BIT_SECURITY: u64 = 224;
 
 /// Symmetric encrypt and decrypt roundtrip
@@ -17,7 +13,7 @@ fn sym_enc(pw: &mut Vec<u8>, mut msg: Message) {
 
 /// Asymmetric encrypt and decrypt roundtrip + keygen
 fn key_gen_enc_dec(pw: &mut Vec<u8>, mut msg: Message) {
-    let key_pair = KeyPair::new(pw, "test key".to_string(), SELECTED_CURVE, BIT_SECURITY);
+    let key_pair = KeyPair::new(pw, "test key".to_string(), BIT_SECURITY);
     msg.key_encrypt(&key_pair.pub_key, BIT_SECURITY);
     msg.key_decrypt(&key_pair.priv_key);
 }
@@ -32,12 +28,7 @@ fn bench_sign_verify(c: &mut Criterion) {
     c.bench_function("e222 + SHA3-224 Sign + Verify Roundtrip", |b| {
         b.iter(|| {
             sign_verify(
-                KeyPair::new(
-                    &get_random_bytes(16),
-                    "test key".to_string(),
-                    SELECTED_CURVE,
-                    BIT_SECURITY,
-                ),
+                KeyPair::new(&get_random_bytes(16), "test key".to_string(), BIT_SECURITY),
                 Message::new(get_random_bytes(5242880)),
             )
         });
@@ -59,13 +50,8 @@ fn bench_key_gen_enc_dec(c: &mut Criterion) {
     c.bench_function("e222 + SHA3-224 Asymmetric enc + dec", |b| {
         b.iter(|| {
             key_gen_enc_dec(
-                &mut KeyPair::new(
-                    &get_random_bytes(32),
-                    "test key".to_string(),
-                    SELECTED_CURVE,
-                    BIT_SECURITY,
-                )
-                .priv_key,
+                &mut KeyPair::new(&get_random_bytes(32), "test key".to_string(), BIT_SECURITY)
+                    .priv_key,
                 Message::new(get_random_bytes(5242880)),
             )
         });

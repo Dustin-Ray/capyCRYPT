@@ -1,13 +1,12 @@
 #![warn(clippy::just_underscores_and_digits)]
-use curve::{edwards::EdCurves, extended_edwards::ExtendedPoint, field::scalar::Scalar};
+use curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
 
 /// Module for all EC operations.
 pub mod curve {
-    pub mod edwards;
+    pub mod affine;
     pub mod extended_edwards;
     pub mod extensible_edwards;
     pub mod projective_niels;
-    pub mod affine;
     pub mod field {
         pub mod field_element;
         pub mod lookup_table;
@@ -54,8 +53,6 @@ pub struct KeyPair {
     pub priv_key: Vec<u8>,
     /// Date key was generated
     pub date_created: String,
-    /// Selected curve type
-    pub curve: EdCurves,
 }
 
 impl Message {

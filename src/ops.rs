@@ -1,5 +1,5 @@
 use crate::{
-    curve::{edwards::EdCurves, extended_edwards::ExtendedPoint, field::scalar::Scalar},
+    curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar},
     sha3::{
         aux_functions::{
             byte_utils::{
@@ -12,9 +12,6 @@ use crate::{
     },
     Hashable, KeyEncryptable, KeyPair, Message, PwEncryptable, Signable, Signature,
 };
-
-
-
 
 // ============================================================
 // The main components of the cryptosystem are defined here
@@ -126,7 +123,7 @@ impl Hashable for Message {
     /// // Obtained from echo -n "" | openssl dgst -sha3-256
     /// let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
     /// // Compute a SHA3 digest with 128 bits of security
-    /// data.compute_sha3_hash(256);
+    /// data.compute_hash_sha3(256);
     /// assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
     /// ```
     fn compute_hash_sha3(&mut self, d: u64) {
@@ -278,11 +275,10 @@ impl KeyPair {
     /// ```  
     /// ```
     #[allow(non_snake_case)]
-    pub fn new(pw: &Vec<u8>, owner: String, curve: EdCurves, d: u64) -> KeyPair {
+    pub fn new(pw: &Vec<u8>, owner: String, d: u64) -> KeyPair {
         // ensure a fixed-bitsize to mitigate sidechannel
         let s: Scalar =
             bytes_to_scalar(kmac_xof(pw, &[], 448, "SK", d)).mul_mod_r(&Scalar::from(4_u64));
-
 
         let V = ExtendedPoint::tw_generator() * s;
 
@@ -291,7 +287,6 @@ impl KeyPair {
             pub_key: V,
             priv_key: pw.to_vec(),
             date_created: get_date_and_time_as_string(),
-            curve,
         }
     }
 }
@@ -399,10 +394,10 @@ impl Signable for Message {
     /// Signs a [`Message`] under passphrase pw.
     ///
     /// ## Algorithm:
-    /// * `s` ← kmac_xof(pw, “”, 512, “K”); s ← 4s
-    /// * `k` ← kmac_xof(s, m, 512, “N”); k ← 4k
+    /// * `s` ← kmac_xof(pw, “”, 448, “K”); s ← 4s
+    /// * `k` ← kmac_xof(s, m, 448, “N”); k ← 4k
     /// * `𝑈` ← k*𝑮;
-    /// * `ℎ` ← kmac_xof(𝑈ₓ , m, 512, “T”); 𝑍 ← (𝑘 – ℎ𝑠) mod r
+    /// * `ℎ` ← kmac_xof(𝑈ₓ , m, 448, “T”); 𝑍 ← (𝑘 – ℎ𝑠) mod r
     ///
     /// ## Arguments:
     /// * key: &[`KeyPair`], : reference to KeyPair.
@@ -423,8 +418,8 @@ impl Signable for Message {
 
         let s_bytes = scalar_to_bytes(&s);
 
-        let k: Scalar = bytes_to_scalar(kmac_xof(&s_bytes, &self.msg, 448, "N", d))
-        * (Scalar::from(4_u64));
+        let k: Scalar =
+            bytes_to_scalar(kmac_xof(&s_bytes, &self.msg, 448, "N", d)) * (Scalar::from(4_u64));
 
         let U = ExtendedPoint::tw_generator() * k;
         let ux_bytes = U.to_affine().x.to_bytes().to_vec();
