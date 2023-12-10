@@ -122,7 +122,6 @@ impl FieldElement {
 
         result
     }
-
 }
 
 impl ConstantTimeEq for FieldElement {

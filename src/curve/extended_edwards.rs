@@ -45,7 +45,7 @@ pub struct AffinePoint {
 impl ExtendedPoint {
     /// https://www.shiftleft.org/papers/isogeny/isogeny.pdf
     /// page 4 specifies s is always known to be a multiple of 4
-    /// 
+    ///
     /// Performs variable-base scalar multiplication on an elliptic curve point.
     ///
     /// This function multiplies an elliptic curve point (`point`) with a scalar (`s`) and returns
@@ -78,7 +78,6 @@ impl ExtendedPoint {
     ///
     /// An `ExtendedPoint` that is the result of the scalar multiplication of `point` by `s`.
     pub fn variable_base(point: &ExtendedPoint, s: &Scalar) -> ExtendedPoint {
-        
         // We make use of the faster doubling for ExtensiblePoints
         let mut result = ExtensibleCurvePoint::identity();
 
@@ -329,7 +328,7 @@ pub fn test_g_times_two_g_plus_g() {
 #[test]
 // 4 * G = 2 * (2 * G)
 fn test_four_g() {
-    let fourg = ExtendedPoint::variable_base(&ExtendedPoint::tw_generator(), &Scalar::from(4_u64));
+    let fourg = ExtendedPoint::tw_generator() * Scalar::from(4_u64);
     let two_times_twog = (ExtendedPoint::tw_generator().double()).double();
 
     assert!(fourg == two_times_twog)
@@ -338,10 +337,12 @@ fn test_four_g() {
 #[test]
 //4 * G != 𝒪
 fn test_four_g_not_id() {
-    let four_g = ExtendedPoint::tw_generator() * Scalar::from(4_u64);
+    let four_g = ExtendedPoint::generator() * Scalar::from(4_u64);
+    let tw_four_g = ExtendedPoint::generator() * Scalar::from(4_u64);
     let id = ExtendedPoint::id_point();
 
-    assert!(!(&four_g == &id))
+    assert!(!(&four_g == &id));
+    assert!(!(&tw_four_g == &id))
 }
 
 #[test]
@@ -365,13 +366,13 @@ fn k_g_equals_k_mod_r_times_g() {
 
     // k * G
     let k = U448::from(random_number);
-    let g = ExtendedPoint::generator();
+    let g = ExtendedPoint::tw_generator();
 
     // (k mod r) * G
     let gk = g * (Scalar::from(k));
     let r = U448::from_be_hex(R_448);
     let k_mod_r = k.const_rem(&r);
-    let mut k_mod_r_timesg = ExtendedPoint::generator();
+    let mut k_mod_r_timesg = ExtendedPoint::tw_generator();
     k_mod_r_timesg = k_mod_r_timesg * (Scalar::from(k_mod_r.0));
 
     assert!(&gk == &k_mod_r_timesg)
