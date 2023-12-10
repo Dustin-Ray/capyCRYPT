@@ -33,7 +33,7 @@ pub const TWISTED_D: FieldElement = FieldElement(fiat_p448_tight_field_element([
     144115188075855870,
 ]));
 
-pub struct ExtensibleCurvePoint {
+pub struct TwistedPoint {
     pub X: FieldElement,
     pub Y: FieldElement,
     pub Z: FieldElement,
@@ -41,13 +41,13 @@ pub struct ExtensibleCurvePoint {
     pub T2: FieldElement,
 }
 
-impl ExtensibleCurvePoint {
+impl TwistedPoint {
     // ------------------------------
     // GROUP ELEMENTS
     // ------------------------------
 
-    pub fn identity() -> ExtensibleCurvePoint {
-        ExtensibleCurvePoint {
+    pub fn identity() -> TwistedPoint {
+        TwistedPoint {
             X: FieldElement::zero(),
             Y: FieldElement::one(),
             Z: FieldElement::one(),
@@ -78,7 +78,7 @@ impl ExtensibleCurvePoint {
         }
     }
 
-    pub fn add_extensible(&self, other: &ExtensibleCurvePoint) -> ExtensibleCurvePoint {
+    pub fn add_extensible(&self, other: &TwistedPoint) -> TwistedPoint {
         self.add_extended(&other.to_extended())
     }
 
@@ -87,7 +87,7 @@ impl ExtensibleCurvePoint {
     // ------------------------------
 
     /// (3.1)[Last set of formulas] https://iacr.org/archive/asiacrypt2008/53500329/53500329.pdf
-    pub fn add_projective_niels(&self, other: &ProjectiveNielsPoint) -> ExtensibleCurvePoint {
+    pub fn add_projective_niels(&self, other: &ProjectiveNielsPoint) -> TwistedPoint {
         let Z = self.Z * other.Z;
         let A = (self.Y - self.X) * other.Y_minus_X;
         let B = (self.Y + self.X) * other.Y_plus_X;
@@ -96,7 +96,7 @@ impl ExtensibleCurvePoint {
         let E = B - A;
         let F = Z - C;
         let G = Z + C;
-        ExtensibleCurvePoint {
+        TwistedPoint {
             X: E * F,
             Y: G * D,
             Z: F * G,
@@ -106,7 +106,7 @@ impl ExtensibleCurvePoint {
     }
 
     /// (3.1) https://iacr.org/archive/asiacrypt2008/53500329/53500329.pdf
-    pub fn add_extended(&self, other: &ExtendedPoint) -> ExtensibleCurvePoint {
+    pub fn add_extended(&self, other: &ExtendedPoint) -> TwistedPoint {
         let A = self.X * other.X;
         let B = self.Y * other.Y;
         let C = self.T1 * self.T2 * other.T * TWISTED_D;
@@ -115,7 +115,7 @@ impl ExtensibleCurvePoint {
         let F = D - C;
         let G = D + C;
         let H = B + A;
-        ExtensibleCurvePoint {
+        TwistedPoint {
             X: E * F,
             Y: G * H,
             T1: E,
@@ -126,7 +126,7 @@ impl ExtensibleCurvePoint {
 
     /// Doubles a point
     /// (3.3) https://iacr.org/archive/asiacrypt2008/53500329/53500329.pdf
-    pub fn double(&self) -> ExtensibleCurvePoint {
+    pub fn double(&self) -> TwistedPoint {
         let A = self.X.square();
         let B = self.Y.square();
         let C = self.Z.square() + self.Z.square();
@@ -135,7 +135,7 @@ impl ExtensibleCurvePoint {
         let G = D + B;
         let F = G - C;
         let H = D - B;
-        ExtensibleCurvePoint {
+        TwistedPoint {
             X: E * F,
             Y: G * H,
             Z: F * G,
@@ -144,7 +144,7 @@ impl ExtensibleCurvePoint {
         }
     }
 
-    pub fn sub_extended(&self, other: &ExtendedPoint) -> ExtensibleCurvePoint {
+    pub fn sub_extended(&self, other: &ExtendedPoint) -> TwistedPoint {
         let A = self.X * other.X;
         let B = self.Y * other.Y;
         let C = self.T1 * self.T2 * other.T * TWISTED_D;
@@ -153,7 +153,7 @@ impl ExtensibleCurvePoint {
         let F = D + C;
         let G = D - C;
         let H = B - A;
-        ExtensibleCurvePoint {
+        TwistedPoint {
             X: E * F,
             Y: G * H,
             T1: E,

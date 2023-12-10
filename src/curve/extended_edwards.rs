@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 use super::{
     affine::AffinePoint,
-    extensible_edwards::ExtensibleCurvePoint,
+    twisted_edwards::TwistedPoint,
     field::{field_element::FieldElement, lookup_table::LookupTable, scalar::Scalar},
 };
 use crypto_bigint::{
@@ -87,7 +87,7 @@ impl ExtendedPoint {
     /// An `ExtendedPoint` that is the result of the scalar multiplication of `point` by `s`.
     pub fn variable_base(point: &ExtendedPoint, s: &Scalar) -> ExtendedPoint {
         // We make use of the faster doubling for ExtensiblePoints
-        let mut result = ExtensibleCurvePoint::identity();
+        let mut result = TwistedPoint::identity();
 
         let scalar = s.to_radix_16();
         let lookup = LookupTable::from(point);
@@ -118,8 +118,8 @@ impl ExtendedPoint {
 
     /// Projects to ExtendedPoint to ExtensiblePoint to
     /// leverage faster addition and doubling
-    pub fn to_extensible(&self) -> ExtensibleCurvePoint {
-        ExtensibleCurvePoint {
+    pub fn to_extensible(&self) -> TwistedPoint {
+        TwistedPoint {
             X: self.X,
             Y: self.Y,
             Z: self.Z,
