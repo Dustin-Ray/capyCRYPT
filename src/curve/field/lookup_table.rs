@@ -1,12 +1,12 @@
 #![allow(non_snake_case)]
-use crate::curve::{extended_edwards::ExtendedCurvePoint, projective_niels::ProjectiveNielsPoint};
+use crate::curve::{extended_edwards::ExtendedPoint, projective_niels::ProjectiveNielsPoint};
 use crypto_bigint::subtle::{ConditionallySelectable, ConstantTimeEq};
 
 pub struct LookupTable([ProjectiveNielsPoint; 8]);
 
 /// Precomputes odd multiples of the point passed in
-impl From<&ExtendedCurvePoint> for LookupTable {
-    fn from(point: &ExtendedCurvePoint) -> LookupTable {
+impl From<&ExtendedPoint> for LookupTable {
+    fn from(point: &ExtendedPoint) -> LookupTable {
         let P = point.to_extensible();
         let mut table = [P.to_projective_niels(); 8];
         for i in 1..8 {

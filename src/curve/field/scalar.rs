@@ -25,7 +25,7 @@ pub struct Scalar {
 impl Scalar {
     // a + b mod p
     pub fn add(&self, rhs: &Self) -> Self {
-        Self::from_uint(self.val.add_mod(&rhs.val, &Modulus::MODULUS))
+        Self::from(self.val.add_mod(&rhs.val, &Modulus::MODULUS))
     }
 
     /// Divides a scalar by four without reducing mod p
@@ -35,10 +35,35 @@ impl Scalar {
         self.val = self.val.div(&NonZero::new(U448::from(4_u64)).unwrap());
     }
 
+    pub fn from<T: Into<U448>>(val: T) -> Self {
+        Scalar { val: val.into() }
+    }
+
     pub fn invert(&mut self) {
         self.val.inv_mod(&U448::from_be_hex(R_448));
     }
 
+    /// Performs a constant-time modular multiplication of two `Scalar` values.
+    ///
+    /// This method multiplies the current `Scalar` instance (`self`) with another `Scalar` (`rhs`)
+    /// and returns the product modulo a predefined modulus (`Modulus`). It uses constant-time
+    /// Montgomery reduction algorithm in the `crypto-bigint` backend for the multiplication, which is
+    /// crucial for cryptographic applications to ensure both security and efficiency.
+    ///
+    /// Montgomery reduction is a method used in modular arithmetic that allows for efficient
+    /// computation of modular multiplication and reduction without explicitly performing division.
+    /// The algorithm operates in a way that is independent of the values of the operands, thereby
+    /// ensuring constant-time execution, which is vital for protecting against timing attacks in
+    /// cryptographic operations.
+    ///
+    /// ## Arguments
+    ///
+    /// * `rhs`: A reference to the `Scalar` instance to be multiplied with `self`.
+    ///
+    /// ## Returns
+    ///
+    /// A new `Scalar` instance representing the result of the modular multiplication.
+    ///
     pub fn mul_mod(&self, rhs: &Scalar) -> Scalar {
         let self_val: U448 = self.val;
         let rhs_val: U448 = rhs.val;
@@ -49,18 +74,39 @@ impl Scalar {
         }
     }
 
-    pub fn from(val: u64) -> Self {
-        Scalar {
-            val: U448::from(val),
-        }
-    }
-
-    pub fn from_uint(val: U448) -> Self {
-        Scalar { val }
-    }
-
-    pub(crate) fn to_radix_16(&self) -> [i8; 113] {
-        let bytes = self.val.to_le_bytes(); // Convert the 7 u64 limbs to a 56-byte array
+    /// Converts a scalar value from radix 256 to radix 16. Borrowed from the dalek authors.
+    ///
+    /// This function takes a scalar value (`self`) and converts it from a byte representation
+    /// (radix 256) to a representation in radix 16 (nibbles). The output is an array of `i8` values
+    /// with a length of 113, where each element represents a nibble in radix 16.
+    ///
+    /// # Details
+    ///
+    /// The scalar value is first converted to its little-endian byte representation. Each byte
+    /// contains two nibbles (half-bytes), which are extracted separately as the top and bottom
+    /// halves of the byte. These nibbles are then re-centered to have values in the range [-8, 8),
+    /// which is achieved by adjusting each nibble based on a carry-over from its predecessor.
+    ///
+    /// The conversion process involves two main steps:
+    ///
+    /// 1. Radix conversion: Each byte of the scalar is split into two nibbles (4 bits each).
+    ///    The bottom half (`bot_half`) and the top half (`top_half`) of each byte are extracted
+    ///    and stored as separate elements in the output array.
+    ///
+    /// 2. Re-centering coefficients: After the initial conversion, the coefficients (nibbles)
+    ///    are in the range [0, 15]. They are re-centered to be within [-8, 8) by calculating a
+    ///    carry value and adjusting the nibbles accordingly. This process ensures that each
+    ///    coefficient is within the desired range, while maintaining the overall value of the
+    ///    scalar.  It reduces the number of required operations compared to binary,
+    ///    while still being more efficient to handle than byte-wise operations in certain
+    ///    cryptographic algorithms.
+    ///
+    /// # Returns
+    ///
+    /// An array of 113 `i8` elements, each representing a nibble of the original scalar in radix 16.
+    /// ```
+    pub(crate) fn to_radix_16(self) -> [i8; 113] {
+        let bytes = self.val.to_le_bytes();
         let mut output = [0i8; 113];
 
         // Convert from radix 256 (bytes) to radix 16 (nibbles)
@@ -89,10 +135,16 @@ impl Scalar {
         output
     }
 
-    /// adapated from:
-    ///  https://github.com/crate-crypto/Ed448-Goldilocks/blob/master/src/field/scalar.rs
+    /// Adapated from:
+    /// https://github.com/crate-crypto/Ed448-Goldilocks/blob/master/src/field/scalar.rs
     /// to work over 64-bit word sizes
-    pub fn montgomery_multiply_64(&self, montgomery_factor: &U448) -> Self {
+    ///
+    /// ### REMARK:
+    /// Works but I make no claims of fixed-time. `mul_mod` uses
+    /// the crypto-bigint montgomery reduce backend and is probably a better choice.
+    /// allow(dead_code) because I think this function is cool and worth hanging on to for now.
+    #[allow(dead_code)]
+    fn montgomery_multiply_64(&self, montgomery_factor: &U448) -> Self {
         let mut result = U448::ZERO;
         let mut carry = 0;
 
@@ -130,7 +182,7 @@ impl Scalar {
         }
 
         result = result.sub_mod(&Modulus::MODULUS, &Modulus::MODULUS);
-        Scalar::from_uint(result)
+        Scalar::from(result)
     }
 }
 
@@ -149,8 +201,7 @@ impl PartialEq for Scalar {
 impl Mul<Scalar> for Scalar {
     type Output = Scalar;
     fn mul(self, rhs: Scalar) -> Self::Output {
-        let unreduced = self.montgomery_multiply_64(&rhs.val);
-        unreduced.montgomery_multiply_64(&U448::from_be_hex(R_2))
+        self.mul_mod(&rhs)
     }
 }
 
@@ -164,41 +215,4 @@ fn test_div_rem() {
     assert!(res.1 == U448::ZERO);
 }
 
-#[test]
-fn test_mul() {
-    let a = Scalar::from_uint(U448::from([
-        0xffb823a3c96a3c35,
-        0x7f8ed27d087b8fb9,
-        0x1d9ac30a74d65764,
-        0xc0be082ea8cb0ae8,
-        0xa8fa552b2aae8688,
-        0x2c3dc27347cf8cac,
-        0x3b089f071e63e807,
-    ]));
-
-    let b = Scalar::from_uint(U448::from([
-        0xd8bedc42686eb329,
-        0xe416b89917aa6d9b,
-        0x1e30b38b188c6b1a,
-        0xd099595bbc343bcb,
-        0x1adaa0e724e8d499,
-        0x8e59b3080a92de2d,
-        0xcae1cb6816c5450a,
-    ]));
-
-    let c = Scalar::from_uint(U448::from([
-        0xa18d010a1f5b3197,
-        0x994c9c2b6abd26f5,
-        0x08a3a0e436a14920,
-        0x74e9335f07bcd931,
-        0xf2d89c1eb9036ff6,
-        0x203d424bfccd61b3,
-        0x4ca389ed31e055c1,
-    ]));
-
-    let product_mod_p = a.val.mul_wide(&b.val);
-    
-    println!("value for c: {:?}", c);
-    dbg!(product_mod_p);
-    assert!(c == Scalar::from_uint(U448::from(product_mod_p.0)));
-}
+// TODO: test scalar mul

@@ -275,7 +275,7 @@ impl KeyPair {
     /// ## Usage:
     /// ```  
     /// use capycrypt::{
-    ///     curves::EdCurves::E448, KeyPair,
+    ///     curve::edwards::EdCurves::E448, KeyPair,
     ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}}
     /// };
     /// // Get a random password
@@ -323,7 +323,7 @@ impl KeyEncryptable for Message {
     ///     KeyPair,
     ///     Message,
     ///     sha3::aux_functions::byte_utils::get_random_bytes,
-    ///     curves::EdCurves::E448};
+    ///     curve::edwards::EdCurves::E448};
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Generate the keypair
@@ -381,7 +381,7 @@ impl KeyEncryptable for Message {
     ///     KeyPair,
     ///     Message,
     ///     sha3::aux_functions::byte_utils::get_random_bytes,
-    ///     curves::EdCurves::E448};
+    ///     curve::edwards::EdCurves::E448};
     ///
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
@@ -443,7 +443,7 @@ impl Signable for Message {
     ///     KeyPair,
     ///     Message,
     ///     sha3::aux_functions::byte_utils::get_random_bytes,
-    ///     curves::EdCurves::E448};
+    ///     curve::edwards::EdCurves::E448};
     /// // Get random 5mb
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Get a random password
@@ -487,7 +487,7 @@ impl Signable for Message {
     ///     KeyPair,
     ///     Message,
     ///     sha3::aux_functions::byte_utils::get_random_bytes,
-    ///     curves::EdCurves::E448};
+    ///     curve::edwards::EdCurves::E448};
     /// // Get random 5mb
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Get a random password
