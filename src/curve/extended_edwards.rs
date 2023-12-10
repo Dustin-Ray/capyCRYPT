@@ -142,43 +142,6 @@ impl ExtendedPoint {
     // GROUP OPERATIONS
     // ------------------------------
 
-    /// Generates the curve
-    pub fn generator() -> ExtendedPoint {
-        ExtendedPoint {
-            X: FieldElement(fiat_p448_tight_field_element([
-                10880955091566686,
-                36276784145337894,
-                69571282115576635,
-                46113124210880026,
-                4247859732800292,
-                15440021224255559,
-                66747077793030847,
-                22264495316135181,
-            ])),
-            Y: FieldElement(fiat_p448_tight_field_element([
-                2385235625966100,
-                5396741696826776,
-                8134720567442877,
-                1584133578609663,
-                46047824121994270,
-                56121598560924524,
-                10283140089599689,
-                29624444337960636,
-            ])),
-            Z: FieldElement(fiat_p448_tight_field_element([1, 0, 0, 0, 0, 0, 0, 0])),
-            T: FieldElement(fiat_p448_tight_field_element([
-                1796939199780339,
-                45174008172060139,
-                40732174862907279,
-                63672088496536030,
-                37244660935497319,
-                41035719659624511,
-                30626637035688077,
-                56117654178374172,
-            ])),
-        }
-    }
-
     /// Generates the 2-isogenous twisted curve
     pub fn tw_generator() -> ExtendedPoint {
         ExtendedPoint {

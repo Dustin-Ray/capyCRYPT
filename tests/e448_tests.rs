@@ -63,8 +63,8 @@ fn test_four_g() {
 #[test]
 //4 * G != 𝒪
 fn test_four_g_not_id() {
-    let four_g = ExtendedPoint::generator() * Scalar::from(4_u64);
-    let tw_four_g = ExtendedPoint::generator() * Scalar::from(4_u64);
+    let four_g = ExtendedPoint::tw_generator() * Scalar::from(4_u64);
+    let tw_four_g = ExtendedPoint::tw_generator() * Scalar::from(4_u64);
     let id = ExtendedPoint::id_point();
 
     assert!(!(&four_g == &id));
@@ -74,11 +74,11 @@ fn test_four_g_not_id() {
 #[test]
 //r*G = 𝒪
 fn r_times_g_id() {
-    let mut g = ExtendedPoint::generator();
+    let mut g = ExtendedPoint::tw_generator();
     g = g * Scalar::from(U448::from_be_hex(R_448));
     let id = ExtendedPoint::id_point();
 
-    assert!(!(&g == &id))
+    assert!(&g == &id)
 }
 
 #[test]
