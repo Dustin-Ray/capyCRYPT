@@ -1,8 +1,19 @@
-use curves::{EdCurvePoint, EdCurves};
-use num_bigint::BigInt as Integer;
+#![warn(clippy::just_underscores_and_digits)]
+use curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
 
 /// Module for all EC operations.
-pub mod curves;
+pub mod curve {
+    pub mod affine;
+    pub mod extended_edwards;
+    pub mod projective_niels;
+    pub mod twisted_edwards;
+    pub mod field {
+        pub mod field_element;
+        pub mod lookup_table;
+        pub mod scalar;
+    }
+}
+
 /// Module for sha3 primitives.
 pub mod sha3 {
     pub mod aux_functions;
@@ -24,14 +35,14 @@ pub struct Signature {
     /// keyed hash of signed message
     pub h: Vec<u8>,
     /// public nonce
-    pub z: Integer,
+    pub z: Scalar,
 }
 
 impl Clone for Signature {
     fn clone(&self) -> Signature {
         Signature {
             h: self.h.clone(),
-            z: self.z.clone(),
+            z: self.z,
         }
     }
 }
@@ -42,13 +53,11 @@ pub struct KeyPair {
     /// String indicating the owner of the key, can be arbitrary
     pub owner: String,
     /// Public encryption key
-    pub pub_key: EdCurvePoint,
+    pub pub_key: ExtendedPoint,
     /// value representing secret scalar, None if KeyType is PUBLIC
     pub priv_key: Vec<u8>,
     /// Date key was generated
     pub date_created: String,
-    /// Selected curve type
-    pub curve: EdCurves,
 }
 
 impl Message {
@@ -71,33 +80,33 @@ pub struct Message {
     pub msg: Box<Vec<u8>>,
     pub d: Option<u64>,
     pub sym_nonce: Option<Vec<u8>>,
-    pub asym_nonce: Option<EdCurvePoint>,
+    pub asym_nonce: Option<ExtendedPoint>,
     pub digest: Option<Vec<u8>>,
     pub op_result: Option<bool>,
     pub sig: Option<Signature>,
 }
 
+pub trait AesEncryptable {
+    fn aes_encrypt_cbc(&mut self, key: &[u8]);
+    fn aes_decrypt_cbc(&mut self, key: &[u8]);
+}
+
 pub trait Hashable {
-    fn compute_sha3_hash(&mut self, d: u64);
+    fn compute_hash_sha3(&mut self, d: u64);
     fn compute_tagged_hash(&mut self, pw: &mut Vec<u8>, s: &str, d: u64);
 }
 
 pub trait PwEncryptable {
-    fn pw_encrypt(&mut self, pw: &[u8], d: u64);
-    fn pw_decrypt(&mut self, pw: &[u8]);
+    fn pw_encrypt_sha3(&mut self, pw: &[u8], d: u64);
+    fn pw_decrypt_sha3(&mut self, pw: &[u8]);
 }
 
 pub trait KeyEncryptable {
-    fn key_encrypt(&mut self, pub_key: &EdCurvePoint, d: u64);
+    fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: u64);
     fn key_decrypt(&mut self, pw: &[u8]);
 }
 
 pub trait Signable {
     fn sign(&mut self, key: &KeyPair, d: u64);
-    fn verify(&mut self, pub_key: &EdCurvePoint);
-}
-
-pub trait AesEncryptable {
-    fn aes_encrypt_cbc(&mut self, key: &[u8]);
-    fn aes_decrypt_cbc(&mut self, key: &[u8]);
+    fn verify(&mut self, pub_key: &ExtendedPoint);
 }

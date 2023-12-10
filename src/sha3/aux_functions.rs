@@ -69,11 +69,15 @@ pub mod nist_800_185 {
 }
 
 pub mod byte_utils {
-    use num_bigint::{BigInt as big, RandBigInt, Sign};
+    use crypto_bigint::Encoding;
+    use crypto_bigint::U448;
+    use num_bigint::{BigInt as big, RandBigInt};
+
     /// Aux methods for byte operations.
     use rand::prelude::*;
     use rand::thread_rng;
 
+    use crate::curve::field::scalar::Scalar;
     /// Gets size number of random bytes.
     /// * `size`: number of bytes requested
     /// * `return: Vec<u8>` of size number of random u8s
@@ -95,7 +99,7 @@ pub mod byte_utils {
     }
 
     /// XORs byte streams in place using iterators
-    /// * `a`: mut references to `Vec<u8>`, will be replaced with result of XOR
+    /// * `a`: reference to `Vec<u8>`, will be replaced with result of XOR
     /// * `b`: immut ref to `Vec<u8>`, dropped after function returns
     /// * `Remark`: Probable bottleneck unless impl with SIMD.
     pub fn xor_bytes(a: &mut Vec<u8>, b: &Vec<u8>) {
@@ -110,13 +114,13 @@ pub mod byte_utils {
         local.format("%Y-%m-%d %H:%M:%S").to_string()
     }
 
-    /// Encodes bytes to a hex string and then converts to GMP Integer.
-    pub fn bytes_to_big(in_bytes: Vec<u8>) -> big {
-        big::from_bytes_be(Sign::Plus, &in_bytes)
+    pub fn bytes_to_scalar(in_bytes: Vec<u8>) -> Scalar {
+        Scalar {
+            val: (U448::from_be_slice(&in_bytes)),
+        }
     }
 
-    /// Converts big into `Vec<u8>` of form Least significant digit first, with big endian digits.
-    pub fn big_to_bytes(in_val: big) -> Vec<u8> {
-        in_val.to_signed_bytes_be()
+    pub fn scalar_to_bytes(s: &Scalar) -> Vec<u8> {
+        s.val.to_be_bytes().to_vec()
     }
 }
