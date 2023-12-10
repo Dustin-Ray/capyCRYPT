@@ -4,15 +4,19 @@
 [![Crates.io](https://img.shields.io/crates/v/capycrypt?style=flat-square)](https://crates.io/crates/capycrypt)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/drcapybara/capyCRYPT/blob/master/LICENSE.txt) 
 
-A complete Rust cryptosystem implementing [NIST FIPS 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf) paired with a variety of Edwards curves.
+A complete Rust cryptosystem implementing [NIST FIPS 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf) & [NIST FIPS 197](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf) paired with a variety of Edwards curves. An academic exercise in cryptographic algorithm design.
 
 ## Security
 This library is built with love as an academic excercise in cryptographic algorithm design. Despite how awesome and cool it is, it probably shouldn't be used for anything serious. If you find ways to make it even better, open an issue or PR and we'll gladly engage.
 
+
 ## Features
-- **SHA-3:** NIST-Compliant Secure Hash Algorithm 3 (SHA-3) implementation for generating cryptographic hash values.
+- **AES:** NIST-Compliant Advanced Encryption Standard (AES) implementation for encrypting and decrypting data.
 
 - **Edwards Elliptic Curve:** A variety of Edwards curve implementations for elliptic curve cryptography (ECC) operations are offered, varying in security and efficiency. Curves can be easily interchanged in asymmetric operations to suit the needs of the application.
+
+- **SHA-3:** NIST-Compliant Secure Hash Algorithm 3 (SHA-3) implementation for generating cryptographic hash values, symmetric keystreams, and PRNGs.
+
 
 ## Supported Operations
 - **Message Digest:** Computes hash of a given message, with adjustable digest lengths.
@@ -24,7 +28,7 @@ This library is built with love as an academic excercise in cryptographic algori
 ## Installation
 Add the following line to your `Cargo.toml` file:
 ```toml
-capycrypt = "0.4.7"
+capycrypt = "0.5.0"
 ```
 
 ## Quick Start
@@ -36,7 +40,7 @@ let mut data = Message::new(vec![]);
 // Obtained from echo -n "" | openssl dgst -sha3-256
 let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
 // Compute a SHA3 digest with 128 bits of security
-data.compute_hash_sha3(256);
+data.compute_sha3_hash(256);
 assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
 ```
 
@@ -52,9 +56,28 @@ let pw = get_random_bytes(64);
 // Get 5mb random data
 let mut msg = Message::new(get_random_bytes(5242880));
 // Encrypt the data with 256 bits of security
-msg.pw_encrypt_sha3(&pw, 512);
+msg.pw_encrypt(&pw, 512);
 // Decrypt the data
-msg.pw_decrypt_sha3(&pw);
+msg.pw_decrypt(&pw);
+// Verify operation success
+assert!(msg.op_result.unwrap());
+```
+
+### AES-CBC Symmetric Encrypt/Decrypt:
+```rust
+use capycrypt::{
+    Message,
+    AESEncryptable,
+    sha3::{aux_functions::byte_utils::get_random_bytes}
+};
+// Get a random 128-bit password
+let key = get_random_bytes(16);
+// Get 5mb random data
+let mut msg = Message::new(get_random_bytes(5242880));
+// Encrypt the data
+msg.aes_encrypt_cbc(&key);
+// Decrypt the data
+msg.aes_encrypt_cbc(&key);
 // Verify operation success
 assert!(msg.op_result.unwrap());
 ```
