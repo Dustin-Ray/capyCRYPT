@@ -1,12 +1,10 @@
 #![allow(non_snake_case)]
 use super::{
-    edwards::{EdCurvePoint, IdPoint},
     extensible_edwards::ExtensibleCurvePoint,
     field::{field_element::FieldElement, lookup_table::LookupTable, scalar::Scalar},
 };
 use crypto_bigint::{
     impl_modulus,
-    modular::constant_mod::ResidueParams,
     subtle::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq},
     U448,
 };
@@ -347,7 +345,7 @@ impl Mul<Scalar> for ExtendedCurvePoint {
     type Output = ExtendedCurvePoint;
     /// Scalar multiplication: compute `scalar * self`.
     fn mul(self, scalar: Scalar) -> ExtendedCurvePoint {
-        self.scalar_mul(&scalar)
+        ExtendedCurvePoint::variable_base(&self, &scalar)
     }
 }
 
@@ -384,58 +382,64 @@ impl PartialEq for ExtendedCurvePoint {
 #[test]
 // 0 * G = 𝒪
 pub fn test_g_times_zero_id() {
-    let p = ExtendedCurvePoint::generator();
+    let p = ExtendedCurvePoint::tw_generator();
     let zero = Scalar::from(0_u64);
     let res = p * zero;
     let id = ExtendedCurvePoint::id_point();
+    
     assert!(res == id)
 }
 
 #[test]
 // G * 1 = G
 pub fn test_g_times_one_g() {
-    let p = ExtendedCurvePoint::generator();
+    let p = ExtendedCurvePoint::tw_generator();
     let one = Scalar::from(1_u64);
     let res = p * one;
-    let id = ExtendedCurvePoint::generator();
+    let id = ExtendedCurvePoint::tw_generator();
+    
     assert!(res == id)
 }
 
 // G + (-G) = 𝒪
 #[test]
 fn test_g_plus_neg_g() {
-    let g = ExtendedCurvePoint::generator();
-    let neg_g = ExtendedCurvePoint::generator().negate();
+    let g = ExtendedCurvePoint::tw_generator();
+    let neg_g = ExtendedCurvePoint::tw_generator().negate();
     let id = g.add(&neg_g);
+    
     assert_eq!(id, ExtendedCurvePoint::id_point());
-
 }
 
 #[test]
 // 2 * G = G + G
 pub fn test_g_times_two_g_plus_g() {
-    let p = ExtendedCurvePoint::generator();
+    let g: ExtendedCurvePoint = ExtendedCurvePoint::tw_generator();
     let two = Scalar::from(2_u64);
-    let res = p * two;
-    let res2 = p.double();
+    let res = g * two;
+    let res2 = g.add(&g);
+    
     assert!(res == res2)
 }
 
 #[test]
 // 4 * G = 2 * (2 * G)
 fn test_four_g() {
-    let fourg = ExtendedCurvePoint::generator() * Scalar::from(4_u64);
-    let two_times_twog =
-        (ExtendedCurvePoint::generator() * Scalar::from(2_u64)) * Scalar::from(2_u64);
+    let fourg = ExtendedCurvePoint::variable_base(
+        &ExtendedCurvePoint::tw_generator(),
+        &Scalar::from(4_u64),
+    );
+    let two_times_twog = (ExtendedCurvePoint::tw_generator().double()).double();
+    
     assert!(fourg == two_times_twog)
 }
 
 #[test]
 //4 * G != 𝒪
 fn test_four_g_not_id() {
-    let four_g = ExtendedCurvePoint::generator();
-    let four_g = four_g * Scalar::from(4_u64);
+    let four_g = ExtendedCurvePoint::tw_generator()* Scalar::from(4_u64);
     let id = ExtendedCurvePoint::id_point();
+    
     assert!(!(&four_g == &id))
 }
 
@@ -446,6 +450,7 @@ fn r_times_g_id() {
     let mut g = ExtendedCurvePoint::generator();
     g = g * Scalar::from_uint(U448::from_be_hex(R_448));
     let id = ExtendedCurvePoint::id_point();
+    
     assert!(!(&g == &id))
 }
 
@@ -459,17 +464,19 @@ fn k_g_equals_k_mod_r_times_g() {
     use rand::Rng;
     let mut rng = rand::thread_rng();
     let random_number: u64 = rng.gen();
-    let random_number = random_number & !0b11;
+    
+    // k * G
     let k = U448::from(random_number);
     let g = ExtendedCurvePoint::generator();
 
-    let same_k = k.clone();
-    let g = g * (Scalar::from_uint(k));
+    // (k mod r) * G
+    let gk = g * (Scalar::from_uint(k));
     let r = U448::from_be_hex(R_448);
-    let k_mod_r = same_k.const_rem(&r);
+    let k_mod_r = k.const_rem(&r);
     let mut k_mod_r_timesg = ExtendedCurvePoint::generator();
     k_mod_r_timesg = k_mod_r_timesg * (Scalar::from_uint(k_mod_r.0));
-    assert!(&g == &k_mod_r_timesg)
+    
+    assert!(&gk == &k_mod_r_timesg)
 }
 
 #[test]
@@ -478,13 +485,12 @@ fn k_g_equals_k_mod_r_times_g() {
 // page 4 specifies s is always known to be a multiple of 4
 fn k_plus_one_g() {
     let mut rng = rand::thread_rng();
-    let mut k = rand::Rng::gen::<u64>(&mut rng);
-    // Zero out the last two bits to ensure the number is a multiple of 4
-    k &= !0b11;
+    let k = rand::Rng::gen::<u64>(&mut rng);
 
-    let k1_g = ExtendedCurvePoint::generator() * Scalar::from((k + 1).into());
-    let k_g1 = (ExtendedCurvePoint::generator() * Scalar::from(k.into()))
-        .add(&ExtendedCurvePoint::generator());
+    let k1_g = ExtendedCurvePoint::tw_generator() * Scalar::from((k + 1).into());
+    let k_g1 = (ExtendedCurvePoint::tw_generator() * Scalar::from(k.into()))
+        .add(&ExtendedCurvePoint::tw_generator());
+    
     assert!(&k1_g == &k_g1)
 }
 
@@ -492,48 +498,39 @@ fn k_plus_one_g() {
 //(k + t)*G = (k*G) + (t*G)
 fn k_t() {
     let mut rng = rand::thread_rng();
-    let mut k = rand::Rng::gen::<u64>(&mut rng);
-    let mut t: u64 = rand::Rng::gen::<u64>(&mut rng);
-    // Zero out the last two bits to ensure the number is a multiple of 4
-    k &= !0b11;
-    t &= !0b11;
+    let k: u32 = rand::Rng::gen::<u32>(&mut rng);
+    let t: u32 = rand::Rng::gen::<u32>(&mut rng);
 
     //(k + t)*G
-    let k_plus_t_G = ExtendedCurvePoint::generator() * (Scalar::from(k + t));
-    dbg!(k_plus_t_G);
+    let k_plus_t_G = ExtendedCurvePoint::tw_generator() * (Scalar::from(k as u64 + t as u64));
 
     // (k*G) + (t*G)
-    let kg_plus_tg = (ExtendedCurvePoint::generator() * Scalar::from(k))
-        .add(&(ExtendedCurvePoint::generator() * Scalar::from(t)));
-    dbg!(kg_plus_tg);
+    let kg_plus_tg = (ExtendedCurvePoint::tw_generator() * Scalar::from(k as u64))
+        .add(&(ExtendedCurvePoint::tw_generator() * Scalar::from(t as u64)));
 
     assert!(k_plus_t_G == kg_plus_tg)
 }
 
 #[test]
 //k*(t*G) = t*(k*G) = (k*t mod r)*G
-fn test_ktp() {
+fn test_ktg() {
     let mut rng = rand::thread_rng();
-    let mut k = rand::Rng::gen::<u64>(&mut rng);
-    let mut t: u64 = rand::Rng::gen::<u64>(&mut rng);
-    // Zero out the last two bits to ensure the number is a multiple of 4
-    k &= !0b11;
-    t &= !0b11;
+    let k: u32 = rand::Rng::gen::<u32>(&mut rng);
+    let t: u32 = rand::Rng::gen::<u32>(&mut rng);
 
-    //k*(t*P)
-    let ktp = (ExtendedCurvePoint::generator() * (Scalar::from(k))) * (Scalar::from(t));
+    //k*(t*G)
+    let mut ktg = ExtendedCurvePoint::tw_generator() * (Scalar::from(t as u64));
+    ktg = ktg * (Scalar::from(k as u64));
 
     // t*(k*G)
-    let tkg = (ExtendedCurvePoint::generator() * (Scalar::from(t))) * (Scalar::from(k));
+    let mut tkg = ExtendedCurvePoint::tw_generator() * (Scalar::from(k as u64));
+    tkg = tkg * (Scalar::from(t as u64));
 
     // (k*t mod r)*G
-    let kt_mod_rg = ExtendedCurvePoint::generator()
-        * Scalar::from_uint(
-            (Scalar::from(t) * Scalar::from(k))
-                .val
-                .const_rem(&Modulus::MODULUS)
-                .0,
-        );
+    let ktmodr = Scalar::from(k as u64).mul_mod(&Scalar::from(t as u64));
+    let kt_modr_g = ExtendedCurvePoint::tw_generator() * ktmodr;
 
-    assert!(ktp == tkg && tkg == kt_mod_rg)
+    assert!(ktg == tkg);
+    assert!(tkg == kt_modr_g);
+    assert!(kt_modr_g == ktg);
 }

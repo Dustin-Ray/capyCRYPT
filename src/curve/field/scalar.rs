@@ -1,7 +1,7 @@
-use std::ops::{Mul, Div};
+use std::ops::{Div, Mul};
 
 use crypto_bigint::{
-    impl_modulus,
+    const_residue, impl_modulus,
     modular::constant_mod::ResidueParams,
     subtle::{Choice, ConstantTimeEq},
     Encoding, NonZero, U448,
@@ -32,13 +32,21 @@ impl Scalar {
     /// This is used in the 2-isogeny when mapping points from Ed448-Goldilocks
     /// to Twisted-Goldilocks
     pub fn div_four(&mut self) {
-        self.val = self
-            .val
-            .div(&NonZero::new(U448::from(4_u64)).unwrap());
+        self.val = self.val.div(&NonZero::new(U448::from(4_u64)).unwrap());
     }
 
     pub fn invert(&mut self) {
         self.val.inv_mod(&U448::from_be_hex(R_448));
+    }
+
+    pub fn mul_mod(&self, rhs: &Scalar) -> Scalar {
+        let self_val: U448 = self.val;
+        let rhs_val: U448 = rhs.val;
+        let a = const_residue!(self_val, Modulus);
+        let b = const_residue!(rhs_val, Modulus);
+        Scalar {
+            val: a.mul(&b).retrieve(),
+        }
     }
 
     pub fn from(val: u64) -> Self {
@@ -51,17 +59,27 @@ impl Scalar {
         Scalar { val }
     }
 
-    pub fn to_radix_16(&self) -> [i8; 113] {
-        let bytes = self.val.to_be_bytes();
+    pub(crate) fn to_radix_16(&self) -> [i8; 113] {
+        let bytes = self.val.to_le_bytes(); // Convert the 7 u64 limbs to a 56-byte array
         let mut output = [0i8; 113];
 
         // Convert from radix 256 (bytes) to radix 16 (nibbles)
-        for i in 0..56 {
-            output[2 * i] = (bytes[i] & 15) as i8; // Lower nibble
-            output[2 * i + 1] = ((bytes[i] >> 4) & 15) as i8; // Upper nibble
+        #[inline(always)]
+        fn bot_half(x: u8) -> u8 {
+            x & 15
+        }
+        #[inline(always)]
+        fn top_half(x: u8) -> u8 {
+            (x >> 4) & 15
         }
 
-        // Re-center coefficients to be between [-8, 8)
+        // radix-16 conversion
+        for i in 0..56 {
+            output[2 * i] = bot_half(bytes[i]) as i8;
+            output[2 * i + 1] = top_half(bytes[i]) as i8;
+        }
+
+        // re-center coefficients to be between [-8, 8)
         for i in 0..112 {
             let carry = (output[i] + 8) >> 4;
             output[i] -= carry << 4;
@@ -148,19 +166,39 @@ fn test_div_rem() {
 
 #[test]
 fn test_mul() {
-    let a: Scalar = Scalar::from_uint(U448::from_be_hex("1e63e8073b089f0747cf8cac2c3dc2732aae8688a8fa552ba8cb0ae8c0be082e74d657641d9ac30a087b8fb97f8ed27dc96a3c35ffb823a3"));
-    let b: Scalar = Scalar::from_uint(U448::from_be_hex("16c5450acae1cb680a92de2d8e59b30824e8d4991adaa0e7bc343bcbd099595b188c6b1a1e30b38b17aa6d9be416b899686eb329d8bedc42"));
-    let c: Scalar = Scalar::from_uint(U448::from_be_hex("6C17D05228B01E52DA3A3E7E30972D2A88A365302E7D8564935AACB2172149FD741AA3027F1329058E8AF8E98DFA3CA13978982627E005F6"));
+    let a = Scalar::from_uint(U448::from([
+        0xffb823a3c96a3c35,
+        0x7f8ed27d087b8fb9,
+        0x1d9ac30a74d65764,
+        0xc0be082ea8cb0ae8,
+        0xa8fa552b2aae8688,
+        0x2c3dc27347cf8cac,
+        0x3b089f071e63e807,
+    ]));
 
-    let res: Scalar = a * b;
+    let b = Scalar::from_uint(U448::from([
+        0xd8bedc42686eb329,
+        0xe416b89917aa6d9b,
+        0x1e30b38b188c6b1a,
+        0xd099595bbc343bcb,
+        0x1adaa0e724e8d499,
+        0x8e59b3080a92de2d,
+        0xcae1cb6816c5450a,
+    ]));
 
-    let product_mod_p = Scalar::from_uint(crypto_bigint::modular::montgomery_reduction(
-        &a.val.mul_wide(&b.val),
-        &Modulus::MODULUS,
-        Modulus::MOD_NEG_INV,
-    ));
+    let c = Scalar::from_uint(U448::from([
+        0xa18d010a1f5b3197,
+        0x994c9c2b6abd26f5,
+        0x08a3a0e436a14920,
+        0x74e9335f07bcd931,
+        0xf2d89c1eb9036ff6,
+        0x203d424bfccd61b3,
+        0x4ca389ed31e055c1,
+    ]));
 
-    println!("{:?}", res);
-    assert!(c == res && res == product_mod_p);
-    dbg!(res);
+    let product_mod_p = a.val.mul_wide(&b.val);
+    
+    println!("value for c: {:?}", c);
+    dbg!(product_mod_p);
+    assert!(c == Scalar::from_uint(U448::from(product_mod_p.0)));
 }
