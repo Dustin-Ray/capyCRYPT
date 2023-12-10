@@ -4,7 +4,6 @@ pub mod ops_tests {
         sha3::aux_functions::byte_utils::get_random_bytes, KeyEncryptable, KeyPair, Message,
         PwEncryptable, Signable,
     };
-    use std::time::Instant;
 
     #[test]
     pub fn test_sym_enc_512() {

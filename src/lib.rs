@@ -1,5 +1,7 @@
 #![warn(clippy::just_underscores_and_digits)]
 use curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
+use curves::{EdCurvePoint, EdCurves};
+use num_bigint::BigInt as Integer;
 
 /// Module for all EC operations.
 pub mod curve {
@@ -19,6 +21,11 @@ pub mod sha3 {
     pub mod aux_functions;
     pub mod keccakf;
     pub mod sponge;
+}
+
+pub mod aes {
+    pub mod aes_constants;
+    pub mod aes_functions;
 }
 
 /// Module for encrypt, decrypt, and sign functions.
@@ -81,6 +88,11 @@ pub struct Message {
     pub sig: Option<Signature>,
 }
 
+pub trait AesEncryptable {
+    fn aes_encrypt_cbc(&mut self, key: &[u8]);
+    fn aes_decrypt_cbc(&mut self, key: &[u8]);
+}
+
 pub trait Hashable {
     fn compute_hash_sha3(&mut self, d: u64);
     fn compute_tagged_hash(&mut self, pw: &mut Vec<u8>, s: &str, d: u64);
@@ -98,5 +110,5 @@ pub trait KeyEncryptable {
 
 pub trait Signable {
     fn sign(&mut self, key: &KeyPair, d: u64);
-    fn verify(&mut self, pub_key: &ExtendedPoint);
+    fn verify(&mut self, pub_key: &EdCurvePoint);
 }
