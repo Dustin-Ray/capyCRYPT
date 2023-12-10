@@ -1,4 +1,4 @@
-use std::ops::{Div, Mul};
+use std::ops::{Div, Mul, Sub};
 
 use crypto_bigint::{
     const_residue, impl_modulus,
@@ -23,9 +23,14 @@ pub struct Scalar {
 }
 
 impl Scalar {
-    // a + b mod p
-    pub fn add(&self, rhs: &Self) -> Self {
+    /// a + b mod p
+    pub fn add_mod(&self, rhs: &Self) -> Self {
         Self::from(self.val.add_mod(&rhs.val, &Modulus::MODULUS))
+    }
+
+    // a - b mod p
+    pub fn sub_mod(&self, rhs: &Self) -> Self {
+        Self::from(self.val.sub_mod(&rhs.val, &Modulus::MODULUS))
     }
 
     /// Divides a scalar by four without reducing mod p
@@ -69,6 +74,22 @@ impl Scalar {
         let rhs_val: U448 = rhs.val;
         let a = const_residue!(self_val, Modulus);
         let b = const_residue!(rhs_val, Modulus);
+        Scalar {
+            val: a.mul(&b).retrieve(),
+        }
+    }
+
+    // this is a bummer, will fix asap
+    pub fn mul_mod_r(&self, rhs: &Scalar) -> Scalar {
+        impl_modulus!(
+            R,
+            U448,
+            "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+        );
+        let self_val: U448 = self.val;
+        let rhs_val: U448 = rhs.val;
+        let a = const_residue!(self_val, R);
+        let b = const_residue!(rhs_val, R);
         Scalar {
             val: a.mul(&b).retrieve(),
         }
@@ -141,7 +162,7 @@ impl Scalar {
     ///
     /// ### REMARK:
     /// Works but I make no claims of fixed-time. `mul_mod` uses
-    /// the crypto-bigint montgomery reduce backend and is probably a better choice.
+    /// the crypto-bigint montgomery reduce backend and is definitely the correct choice.
     /// allow(dead_code) because I think this function is cool and worth hanging on to for now.
     #[allow(dead_code)]
     fn montgomery_multiply_64(&self, montgomery_factor: &U448) -> Self {
@@ -202,6 +223,13 @@ impl Mul<Scalar> for Scalar {
     type Output = Scalar;
     fn mul(self, rhs: Scalar) -> Self::Output {
         self.mul_mod(&rhs)
+    }
+}
+
+impl Sub<Scalar> for Scalar {
+    type Output = Scalar;
+    fn sub(self, rhs: Scalar) -> Self::Output {
+        self.sub_mod(&rhs)
     }
 }
 

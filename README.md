@@ -36,7 +36,7 @@ let mut data = Message::new(vec![]);
 // Obtained from echo -n "" | openssl dgst -sha3-256
 let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
 // Compute a SHA3 digest with 128 bits of security
-data.compute_sha3_hash(256);
+data.compute_hash_sha3(256);
 assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
 ```
 
@@ -52,9 +52,9 @@ let pw = get_random_bytes(64);
 // Get 5mb random data
 let mut msg = Message::new(get_random_bytes(5242880));
 // Encrypt the data with 256 bits of security
-msg.pw_encrypt(&pw, 512);
+msg.pw_encrypt_sha3(&pw, 512);
 // Decrypt the data
-msg.pw_decrypt(&pw);
+msg.pw_decrypt_sha3(&pw);
 // Verify operation success
 assert!(msg.op_result.unwrap());
 ```

@@ -9,7 +9,7 @@ use crypto_bigint::{
     U448,
 };
 use fiat_crypto::p448_solinas_64::*;
-use std::ops::{Mul, Neg};
+use std::ops::{Add, Mul, Neg};
 
 impl_modulus!(
     Modulus,
@@ -17,7 +17,7 @@ impl_modulus!(
     "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
 );
 
-/// Edwards `d`, equals to -39081
+/// -39081
 pub const EDWARDS_D: FieldElement = FieldElement(fiat_p448_tight_field_element([
     144115188075816789,
     144115188075855870,
@@ -29,17 +29,21 @@ pub const EDWARDS_D: FieldElement = FieldElement(fiat_p448_tight_field_element([
     144115188075855870,
 ]));
 
+/// Extended coordinates further extend projective coordinates by adding an
+/// additional auxiliary coordinate to speed up certain calculations.
+/// A point in extended coordinates is represented as (X:Y:Z:T), with the
+/// additional constraint that T = XY/Z.
+///
+/// This representation allows certain operations, like point doubling and
+/// addition, to be performed more efficiently.The Edwards curve equation in
+/// extended coordinates doesn't change form but utilizes the T coordinate
+/// to simplify the calculation of some operations.
 #[derive(Debug, Clone, Copy)]
 pub struct ExtendedPoint {
     pub X: FieldElement,
     pub Y: FieldElement,
     pub Z: FieldElement,
     pub T: FieldElement,
-}
-
-pub struct AffinePoint {
-    pub X: FieldElement,
-    pub Y: FieldElement,
 }
 
 impl ExtendedPoint {
@@ -100,7 +104,7 @@ impl ExtendedPoint {
             result = result.add_projective_niels(&neg_P);
         }
 
-        // Convert back to entended when complete
+        // Convert back to extended when complete
         result.to_extended()
     }
 
@@ -108,7 +112,8 @@ impl ExtendedPoint {
     // CURVE POINT PROJECTION
     // ------------------------------
 
-    /// Projects to ExtendedPoint to ExtensiblePoint
+    /// Projects to ExtendedPoint to ExtensiblePoint to
+    /// leverage faster addition and doubling
     pub fn to_extensible(&self) -> ExtensibleCurvePoint {
         ExtensibleCurvePoint {
             X: self.X,
@@ -252,6 +257,13 @@ impl Mul<Scalar> for ExtendedPoint {
     }
 }
 
+impl Add<ExtendedPoint> for &ExtendedPoint {
+    type Output = ExtendedPoint;
+    fn add(self, rhs: ExtendedPoint) -> ExtendedPoint {
+        ExtendedPoint::add(self, &rhs)
+    }
+}
+
 impl Neg for ExtendedPoint {
     type Output = Self;
 
@@ -328,10 +340,10 @@ pub fn test_g_times_two_g_plus_g() {
 #[test]
 // 4 * G = 2 * (2 * G)
 fn test_four_g() {
-    let fourg = ExtendedPoint::tw_generator() * Scalar::from(4_u64);
-    let two_times_twog = (ExtendedPoint::tw_generator().double()).double();
+    let four_g = ExtendedPoint::tw_generator() * Scalar::from(4_u64);
+    let two_times_two_g = (ExtendedPoint::tw_generator().double()).double();
 
-    assert!(fourg == two_times_twog)
+    assert!(four_g == two_times_two_g)
 }
 
 #[test]
