@@ -13,7 +13,7 @@ This library is built with love as an academic excercise in cryptographic algori
 ## Features
 - **AES:** NIST-Compliant Advanced Encryption Standard (AES) implementation for encrypting and decrypting data.
 
-- **Edwards Elliptic Curve:** A variety of Edwards curve implementations for elliptic curve cryptography (ECC) operations are offered, varying in security and efficiency. Curves can be easily interchanged in asymmetric operations to suit the needs of the application.
+- **Edwards Elliptic Curve:** High-performance, side-channel resistant instance of the Ed448-Goldilocks curve for asymmetric operations.
 
 - **SHA-3:** NIST-Compliant Secure Hash Algorithm 3 (SHA-3) implementation for generating cryptographic hash values, symmetric keystreams, and PRNGs.
 
