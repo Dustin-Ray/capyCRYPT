@@ -4,7 +4,7 @@ version = "0.6.4"
 edition = "2021"
 
 license = "MIT"
-keywords = ["aes", "fips202", "edwards", "ed448", "schnorr"]
+keywords = ["aes", "sha3", "elliptic-curve", "ed448", "schnorr"]
 readme = "README.md"
 authors = ["Dustin Ray (Dr. Capybara) <dustinray313@gmail.com>", "Hunter Richardson (HLRichardson-Git) <hunter@hunterrichardson.net>"]
 description = "An academic exercise in cryptographic algorithm design, pairing NIST FIPS 202 with a variety of Edwards curves."
