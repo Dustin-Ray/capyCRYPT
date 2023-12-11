@@ -48,25 +48,6 @@ data.compute_sha3_hash(256);
 assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
 ```
 
-### Symmetric Encrypt/Decrypt:
-```rust
-use capycrypt::{
-    Message,
-    PwEncryptable,
-    sha3::{aux_functions::byte_utils::get_random_bytes}
-};
-// Get a random password
-let pw = get_random_bytes(64);
-// Get 5mb random data
-let mut msg = Message::new(get_random_bytes(5242880));
-// Encrypt the data with 256 bits of security
-msg.pw_encrypt(&pw, 512);
-// Decrypt the data
-msg.pw_decrypt(&pw);
-// Verify operation success
-assert!(msg.op_result.unwrap());
-```
-
 ### AES-CBC Symmetric Encrypt/Decrypt:
 ```rust
 use capycrypt::{
