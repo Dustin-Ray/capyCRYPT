@@ -1,4 +1,8 @@
 # capyCRYPT - A Complete Rust Cryptosystem
+<p align="center">
+  <img src="./img.webp" width="250" height="250">
+</p>
+
 
 [![Build Status](https://github.com/drcapybara/capyCRYPT-Rust/actions/workflows/rust.yml/badge.svg)](https://github.com/drcapybara/capyCRYPT-Rust/actions/workflows/rust.yml)
 [![Crates.io](https://img.shields.io/crates/v/capycrypt?style=flat-square)](https://crates.io/crates/capycrypt)
