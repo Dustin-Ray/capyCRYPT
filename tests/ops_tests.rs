@@ -4,7 +4,7 @@ pub mod ops_tests {
 
     use capycrypt::{
         sha3::aux_functions::byte_utils::get_random_bytes, KeyEncryptable, KeyPair, Message,
-        PwEncryptable, Signable,
+        SpongeEncryptable, Signable,
     };
 
     #[test]
@@ -12,8 +12,8 @@ pub mod ops_tests {
         let pw = get_random_bytes(64);
         let mut msg = Message::new(get_random_bytes(5242880));
 
-        msg.pw_encrypt_sha3(&pw, 256);
-        msg.pw_decrypt_sha3(&pw);
+        msg.sha3_encrypt(&pw, 256);
+        msg.sha3_decrypt(&pw);
 
         assert!(msg.op_result.unwrap());
     }
@@ -22,8 +22,8 @@ pub mod ops_tests {
         let pw = get_random_bytes(64);
         let mut msg = Message::new(get_random_bytes(5242880));
 
-        msg.pw_encrypt_sha3(&pw, 256);
-        msg.pw_decrypt_sha3(&pw);
+        msg.sha3_encrypt(&pw, 256);
+        msg.sha3_decrypt(&pw);
 
         assert!(msg.op_result.unwrap());
     }

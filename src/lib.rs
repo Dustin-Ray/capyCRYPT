@@ -84,9 +84,9 @@ pub trait Hashable {
     fn compute_tagged_hash(&mut self, pw: &mut Vec<u8>, s: &str, d: u64);
 }
 
-pub trait PwEncryptable {
-    fn pw_encrypt_sha3(&mut self, pw: &[u8], d: u64);
-    fn pw_decrypt_sha3(&mut self, pw: &[u8]);
+pub trait SpongeEncryptable {
+    fn sha3_encrypt(&mut self, pw: &[u8], d: u64);
+    fn sha3_decrypt(&mut self, pw: &[u8]);
 }
 
 pub trait KeyEncryptable {

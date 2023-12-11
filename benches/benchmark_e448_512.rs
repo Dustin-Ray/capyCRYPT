@@ -1,13 +1,13 @@
 use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-use capycrypt::{KeyEncryptable, KeyPair, Message, PwEncryptable, Signable};
+use capycrypt::{KeyEncryptable, KeyPair, Message, SpongeEncryptable, Signable};
 use criterion::{criterion_group, criterion_main, Criterion};
 
 const BIT_SECURITY: u64 = 512;
 
 /// Symmetric encrypt and decrypt roundtrip
 fn sym_enc(pw: &mut Vec<u8>, mut msg: Message) {
-    msg.pw_encrypt_sha3(&pw, BIT_SECURITY);
-    msg.pw_decrypt_sha3(&pw);
+    msg.sha3_encrypt(&pw, BIT_SECURITY);
+    msg.sha3_decrypt(&pw);
 }
 
 /// Asymmetric encrypt and decrypt roundtrip + keygen

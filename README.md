@@ -53,6 +53,7 @@ assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
 use capycrypt::{
     Message,
     AESEncryptable,
+    SpongeEncryptable,
     sha3::{aux_functions::byte_utils::get_random_bytes}
 };
 // Get a random 128-bit password
@@ -62,7 +63,12 @@ let mut msg = Message::new(get_random_bytes(5242880));
 // Encrypt the data
 msg.aes_encrypt_cbc(&key);
 // Decrypt the data
-msg.aes_encrypt_cbc(&key);
+msg.aes_decrypt_cbc(&key);
+// Encrypt the data
+msg.sha3_encrypt(&pw, 512);
+// Decrypt the data
+msg.sha3_decrypt(&pw);
+
 // Verify operation success
 assert!(msg.op_result.unwrap());
 ```

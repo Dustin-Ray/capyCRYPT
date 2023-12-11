@@ -10,7 +10,7 @@ use crate::{
         },
         sponge::{sponge_absorb, sponge_squeeze},
     },
-    AesEncryptable, Hashable, KeyEncryptable, KeyPair, Message, PwEncryptable, Signable, Signature,
+    AesEncryptable, Hashable, KeyEncryptable, KeyPair, Message, SpongeEncryptable, Signable, Signature,
 };
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
 
@@ -161,7 +161,7 @@ impl Hashable for Message {
     }
 }
 
-impl PwEncryptable for Message {
+impl SpongeEncryptable for Message {
     /// # Symmetric Encryption
     /// Encrypts a [`Message`] m symmetrically under passphrase pw.
     /// ## Replaces:
@@ -182,7 +182,7 @@ impl PwEncryptable for Message {
     /// ```
     /// use capycrypt::{
     ///     Message,
-    ///     PwEncryptable,
+    ///     SpongeEncryptable,
     ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}}
     /// };
     /// // Get a random password
@@ -196,7 +196,7 @@ impl PwEncryptable for Message {
     /// // Verify operation success
     /// assert!(msg.op_result.unwrap());
     /// ```
-    fn pw_encrypt_sha3(&mut self, pw: &[u8], d: u64) {
+    fn sha3_encrypt(&mut self, pw: &[u8], d: u64) {
         self.d = Some(d);
         let z = get_random_bytes(512);
         let mut ke_ka = z.clone();
@@ -243,7 +243,7 @@ impl PwEncryptable for Message {
     /// // Verify operation success
     /// assert!(msg.op_result.unwrap());
     /// ```
-    fn pw_decrypt_sha3(&mut self, pw: &[u8]) {
+    fn sha3_decrypt(&mut self, pw: &[u8]) {
         let mut z_pw = self.sym_nonce.clone().unwrap();
         z_pw.append(&mut pw.to_owned());
         let ke_ka = kmac_xof(&z_pw, &[], 1024, "S", self.d.unwrap());
