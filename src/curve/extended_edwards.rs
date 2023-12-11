@@ -61,7 +61,7 @@ impl ExtendedPoint {
     ///
     /// An `ExtendedPoint` that is the result of the scalar multiplication of `point` by `s`.
     pub fn variable_base(point: &ExtendedPoint, s: &Scalar) -> ExtendedPoint {
-        // We make use of the faster doubling for ExtensiblePoints
+        // We make use of the faster doubling for TwistedPoint
         let mut result = TwistedPoint::identity();
 
         let scalar = s.to_radix_16();
