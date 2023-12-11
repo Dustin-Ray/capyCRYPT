@@ -77,7 +77,7 @@ pub mod byte_utils {
     use rand::prelude::*;
     use rand::thread_rng;
 
-    use crate::curve::field::scalar::Scalar;
+    use tiny_ed448_goldilocks::curve::field::scalar::Scalar;
     /// Gets size number of random bytes.
     /// * `size`: number of bytes requested
     /// * `return: Vec<u8>` of size number of random u8s

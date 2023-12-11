@@ -59,6 +59,24 @@ dependencies = [
  "num",
  "num-bigint",
  "rand",
+ "tiny_ed448_goldilocks",
+]
+
+[[package]]
+name = "capycrypt"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ddd93fa6490bd981f52faf76a4b19ee70f1836a7733475c9cb6ff7cef51c9753"
+dependencies = [
+ "byteorder",
+ "chrono",
+ "criterion",
+ "crypto-bigint",
+ "fiat-crypto",
+ "hex",
+ "num",
+ "num-bigint",
+ "rand",
 ]
 
 [[package]]
@@ -748,6 +766,22 @@ dependencies = [
  "libc",
  "wasi 0.10.0+wasi-snapshot-preview1",
  "winapi",
+]
+
+[[package]]
+name = "tiny_ed448_goldilocks"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a85b94950e49f4698f3dc98d1078d800c6a77c00c2cf64ef2a82d5dcc85bdb5"
+dependencies = [
+ "byteorder",
+ "capycrypt 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "chrono",
+ "criterion",
+ "crypto-bigint",
+ "fiat-crypto",
+ "hex",
+ "rand",
 ]
 
 [[package]]

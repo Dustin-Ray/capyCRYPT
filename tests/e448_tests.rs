@@ -2,7 +2,7 @@
 // ------------------------------
 // TESTS
 // ------------------------------
-use capycrypt::curve::{
+use tiny_ed448_goldilocks::curve::{
     extended_edwards::ExtendedPoint,
     field::scalar::{Scalar, R_448},
 };

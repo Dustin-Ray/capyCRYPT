@@ -22,6 +22,7 @@ crypto-bigint = "0.5.3"
 fiat-crypto = "0.2.2"
 rand = "0.8"
 num-bigint = { version = "0.4", features = ["rand"] }
+tiny_ed448_goldilocks = "0.1.1"
 
 [[bench]]
 name = "benchmark_e448_224"

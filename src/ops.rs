@@ -1,6 +1,5 @@
 use crate::{
     aes::aes_functions::{apply_pcks7_padding, remove_pcks7_padding, xor_blocks, AES},
-    curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar},
     sha3::{
         aux_functions::{
             byte_utils::{
@@ -13,6 +12,7 @@ use crate::{
     },
     AesEncryptable, Hashable, KeyEncryptable, KeyPair, Message, PwEncryptable, Signable, Signature,
 };
+use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
 
 // ============================================================
 // The main components of the cryptosystem are defined here
