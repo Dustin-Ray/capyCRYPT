@@ -111,7 +111,7 @@ use capycrypt::{
     KeyPair,
     Message,
     sha3::aux_functions::byte_utils::get_random_bytes,
-    curves::EdCurves::E448};
+};
 // Get random 5mb
 let mut msg = Message::new(get_random_bytes(5242880));
 // Get a random password
