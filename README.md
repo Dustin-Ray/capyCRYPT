@@ -48,7 +48,7 @@ data.compute_sha3_hash(256);
 assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
 ```
 
-### AES-CBC Symmetric Encrypt/Decrypt:
+### Symmetric Encrypt/Decrypt:
 ```rust
 use capycrypt::{
     Message,
