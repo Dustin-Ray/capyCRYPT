@@ -48,24 +48,7 @@ checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
 name = "capycrypt"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ddd93fa6490bd981f52faf76a4b19ee70f1836a7733475c9cb6ff7cef51c9753"
-dependencies = [
- "byteorder",
- "chrono",
- "criterion",
- "crypto-bigint",
- "fiat-crypto",
- "hex",
- "num",
- "num-bigint",
- "rand",
-]
-
-[[package]]
-name = "capycrypt"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "byteorder",
  "chrono",
@@ -770,12 +753,11 @@ dependencies = [
 
 [[package]]
 name = "tiny_ed448_goldilocks"
-version = "0.1.1"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a85b94950e49f4698f3dc98d1078d800c6a77c00c2cf64ef2a82d5dcc85bdb5"
+checksum = "304288400eeeca61a1438ece1cba533502b4bc41a95b6dc952767a9f597e5ccd"
 dependencies = [
  "byteorder",
- "capycrypt 0.6.2",
  "chrono",
  "criterion",
  "crypto-bigint",
