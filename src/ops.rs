@@ -568,7 +568,7 @@ impl AesEncryptable for Message {
         apply_pcks7_padding(&mut self.msg);
 
         for block_index in (0..self.msg.len()).step_by(16) {
-            xor_blocks(&mut self.msg, self.sym_nonce.as_mut().unwrap(), block_index);
+            xor_blocks(&mut self.msg[block_index..], self.sym_nonce.as_mut().unwrap());
             AES::encrypt_block(&mut self.msg, block_index, &key_schedule.round_key);
             *self.sym_nonce.as_mut().unwrap() = self.msg[block_index..block_index + 16].to_vec();
         }
@@ -622,13 +622,72 @@ impl AesEncryptable for Message {
         for block_index in (0..self.msg.len()).step_by(16) {
             let temp = self.msg[block_index..block_index + 16].to_vec();
             AES::decrypt_block(&mut self.msg, block_index, &key_schedule.round_key);
-            xor_blocks(&mut self.msg, &iv, block_index);
+            xor_blocks(&mut self.msg[block_index..], &iv);
             iv = temp;
         }
 
         remove_pcks7_padding(&mut self.msg);
 
         let ver = &kmac_xof(ka, &self.msg, 512, "AES", 256);
+        self.op_result = Some(self.digest.as_mut().unwrap() == ver);
+    }
+
+
+    
+    fn aes_encrypt_ctr(&mut self, key: &[u8]) {
+        let iv = get_random_bytes(12);
+        let mut counter = 0u32; 
+        let counter_bytes = (counter as u32).to_be_bytes();
+
+        let mut ke_ka = iv.clone();
+        ke_ka.extend_from_slice(&counter_bytes);
+        ke_ka.append(&mut key.to_owned());
+        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", 256);
+        let ke = &ke_ka[..key.len()].to_vec(); // Encryption Key
+        let ka = &ke_ka[key.len()..].to_vec(); // Authentication Key
+
+        self.sym_nonce = Some(iv.clone());
+
+        self.digest = Some(kmac_xof(&ka, &self.msg, 512, "AES", 256));
+
+        let key_schedule = AES::new(&ke);
+
+        for block_index in (0..self.msg.len()).step_by(16) {
+            let mut temp: Vec<u8> = iv.clone();
+            temp.extend_from_slice(&counter.to_be_bytes());
+
+            AES::encrypt_block(&mut temp, 0, &key_schedule.round_key);
+            xor_blocks(&mut self.msg[block_index..], &temp);
+
+            counter += 1;
+        }
+    }
+
+    fn aes_decrypt_ctr(&mut self, key: &[u8]) {
+        let iv = self.sym_nonce.clone().unwrap();
+        let mut counter = 0u32; 
+        let counter_bytes = (counter as u32).to_be_bytes();
+
+        let mut ke_ka = iv.clone();
+        ke_ka.extend_from_slice(&counter_bytes);
+        ke_ka.append(&mut key.to_owned());
+        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", 256);
+        let ke = &ke_ka[..key.len()].to_vec(); // Encryption Key
+        let ka = &ke_ka[key.len()..].to_vec(); // Authentication Key
+
+        let key_schedule = AES::new(&ke);
+
+        for block_index in (0..self.msg.len()).step_by(16) {
+            let mut temp: Vec<u8> = iv.clone();
+            temp.extend_from_slice(&counter.to_be_bytes());
+
+            AES::encrypt_block(&mut temp, 0, &key_schedule.round_key);
+            xor_blocks(&mut self.msg[block_index..], &temp);
+
+            counter += 1;
+        }
+
+        let ver = &kmac_xof(&ka, &self.msg, 512, "AES", 256);
         self.op_result = Some(self.digest.as_mut().unwrap() == ver);
     }
 }

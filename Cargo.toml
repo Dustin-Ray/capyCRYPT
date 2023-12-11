@@ -20,6 +20,7 @@ hex = {version = "0.4.3"}
 byteorder = {version = "1.4.3"}
 chrono = {version = "0.4.23"}
 criterion = "0.3"
+aes = "0.8.3"
 
 
 [[bench]]

@@ -100,4 +100,6 @@ pub trait Signable {
 pub trait AesEncryptable {
     fn aes_encrypt_cbc(&mut self, key: &[u8]);
     fn aes_decrypt_cbc(&mut self, key: &[u8]);
+    fn aes_encrypt_ctr(&mut self, key: &[u8]);
+    fn aes_decrypt_ctr(&mut self, key: &[u8]);
 }
