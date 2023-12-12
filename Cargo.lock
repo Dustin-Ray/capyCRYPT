@@ -69,6 +69,7 @@ dependencies = [
  "num",
  "num-bigint",
  "rand",
+ "rayon",
 ]
 
 [[package]]

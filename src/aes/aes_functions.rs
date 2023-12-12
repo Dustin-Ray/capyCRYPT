@@ -280,12 +280,6 @@ pub fn remove_pcks7_padding(input: &mut Vec<u8>) {
     input.truncate(amount_to_remove)
 }
 
-/*pub fn xor_blocks(a: &mut [u8], b: &[u8], block_index: usize) {
-    for i in 0..16 {
-        a[i + block_index] ^= b[i];
-    }
-}*/
-
 pub fn xor_blocks(a: &mut [u8], b: &[u8]) {
     // Determine the minimum length between the two blocks
     let len = a.len().min(b.len());

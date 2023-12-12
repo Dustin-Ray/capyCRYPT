@@ -19,6 +19,8 @@ use crate::{
 };
 use num_bigint::BigInt as Integer;
 
+use rayon::prelude::*;
+
 
 /*
 ============================================================
@@ -610,7 +612,7 @@ impl AesEncryptable for Message {
     /// assert!(input.op_result.unwrap());
     /// ```
     fn aes_decrypt_cbc(&mut self, key: &[u8]) {
-        let mut iv = self.sym_nonce.clone().unwrap();
+        let iv = self.sym_nonce.clone().unwrap();
         let mut ke_ka = iv.clone();
         ke_ka.append(&mut key.to_owned());
         let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", 256);
@@ -619,24 +621,63 @@ impl AesEncryptable for Message {
 
         let key_schedule = AES::new(ke);
 
-        for block_index in (0..self.msg.len()).step_by(16) {
-            let temp = self.msg[block_index..block_index + 16].to_vec();
-            AES::decrypt_block(&mut self.msg, block_index, &key_schedule.round_key);
-            xor_blocks(&mut self.msg[block_index..], &iv);
-            iv = temp;
-        }
+        let msg_copy = self.msg.clone();
 
+        self.msg.par_chunks_mut(16).enumerate().for_each(|(i, block)| {
+            let block_index = i * 16;
+            let xor_block = if block_index >= 16 {
+                &msg_copy[block_index - 16..block_index]
+            } else {
+                &iv // Use IV for the first block
+            };
+            // Decrypt the block in-place without using the output
+            AES::decrypt_block(block, 0, &key_schedule.round_key);
+            // XOR the decrypted block with the previous ciphertext block
+            xor_blocks(block, xor_block);
+        });
+    
         remove_pcks7_padding(&mut self.msg);
 
         let ver = &kmac_xof(ka, &self.msg, 512, "AES", 256);
         self.op_result = Some(self.digest.as_mut().unwrap() == ver);
     }
 
-
-    
+    /// # Symmetric Encryption using AES in CTR Mode
+    /// Encrypts a [`Message`] using the AES algorithm in CTR (Counter) mode.
+    /// For more information, refer to NIST Special Publication 800-38A.
+    /// ## Replaces:
+    /// * `Message.data` with the result of encryption.
+    /// * `Message.digest` with the keyed hash of plaintext.
+    /// * `Message.sym_nonce` with the initialization vector (IV).
+    /// SECURITY NOTE: ciphertext length == plaintext length
+    /// ## Algorithm:
+    /// * iv ← Random(12)
+    /// * (ke || ka) ← kmac_xof(iv || key, “”, 512, “AES”)
+    /// * C1 = P1 ⊕ encrypt_block(IV || CTR1)
+    /// * Cj = Pj ⊕ encrypt_block(IV || CTRj) for j = 2 … n
+    /// Here:
+    /// - P: Represents plaintext blocks.
+    /// - C: Represents ciphertext blocks.
+    /// ## Arguments:
+    /// * `key: &[u8]`: symmetric encryption key.
+    /// ## Usage:
+    /// ```
+    /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
+    /// use capycrypt::{Message, AesEncryptable};
+    /// // Get a random 16-byte key
+    /// let key = get_random_bytes(16);
+    /// // Initialize the Message with some plaintext data
+    /// let mut input = Message::new(get_random_bytes(5242880));
+    /// // Encrypt the Message using AES in CTR mode
+    /// input.aes_encrypt_ctr(&key);
+    /// // Decrypt the Message (need the same key)
+    /// input.aes_decrypt_ctr(&key);
+    /// // Verify operation success
+    /// assert!(input.op_result.unwrap());
+    /// ```
     fn aes_encrypt_ctr(&mut self, key: &[u8]) {
         let iv = get_random_bytes(12);
-        let mut counter = 0u32; 
+        let counter = 0u32; 
         let counter_bytes = (counter as u32).to_be_bytes();
 
         let mut ke_ka = iv.clone();
@@ -652,20 +693,51 @@ impl AesEncryptable for Message {
 
         let key_schedule = AES::new(&ke);
 
-        for block_index in (0..self.msg.len()).step_by(16) {
+        // Parallelize encryption for each block
+        self.msg.par_chunks_mut(16).enumerate().for_each(|(i, block)| {
             let mut temp: Vec<u8> = iv.clone();
+            let counter = i as u32;
             temp.extend_from_slice(&counter.to_be_bytes());
 
             AES::encrypt_block(&mut temp, 0, &key_schedule.round_key);
-            xor_blocks(&mut self.msg[block_index..], &temp);
 
-            counter += 1;
-        }
+            xor_blocks(block, &temp);
+        });
     }
 
+    /// # Symmetric Decryption using AES in CTR Mode
+    /// Decrypts a [`Message`] using the AES algorithm in CTR (Counter) mode.
+    /// For more information, refer to NIST Special Publication 800-38A.
+    /// ## Replaces:
+    /// * `Message.data` with the result of decryption.
+    /// * `Message.digest` with the keyed hash of plaintext.
+    /// SECURITY NOTE: ciphertext length == plaintext length
+    /// ## Algorithm:
+    /// * iv ← Message.sym_nonce
+    /// * (ke || ka) ← kmac_xof(iv || key, “”, 512, “AES”)
+    /// * P1 = C1 ⊕ encrypt_block(IV || CTR1)
+    /// * Pj = Cj ⊕ encrypt_block(IV || CTRj) for j = 2 … n
+    /// Here:
+    /// - P: Represents plaintext blocks.
+    /// - C: Represents ciphertext blocks.
+    /// ## Arguments:
+    /// * `key: &[u8]`: symmetric encryption key.
+    /// ## Usage:
+    /// ```
+    /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
+    /// use capycrypt::{Message, AesEncryptable};
+    /// // Get a random 16-byte key
+    /// let key = get_random_bytes(16);
+    /// // Initialize the Message with some ciphertext data
+    /// let mut input = Message::new(get_random_bytes(5242880));
+    /// // Decrypt the Message using AES in CTR mode
+    /// input.aes_decrypt_ctr(&key);
+    /// // Verify operation success
+    /// assert!(input.op_result.unwrap());
+    /// ```
     fn aes_decrypt_ctr(&mut self, key: &[u8]) {
         let iv = self.sym_nonce.clone().unwrap();
-        let mut counter = 0u32; 
+        let counter = 0u32; 
         let counter_bytes = (counter as u32).to_be_bytes();
 
         let mut ke_ka = iv.clone();
@@ -677,15 +749,16 @@ impl AesEncryptable for Message {
 
         let key_schedule = AES::new(&ke);
 
-        for block_index in (0..self.msg.len()).step_by(16) {
+        // Parallelize decryption for each block
+        self.msg.par_chunks_mut(16).enumerate().for_each(|(i, block)| {
             let mut temp: Vec<u8> = iv.clone();
+            let counter = i as u32;
             temp.extend_from_slice(&counter.to_be_bytes());
 
             AES::encrypt_block(&mut temp, 0, &key_schedule.round_key);
-            xor_blocks(&mut self.msg[block_index..], &temp);
 
-            counter += 1;
-        }
+            xor_blocks(block, &temp);
+        });
 
         let ver = &kmac_xof(&ka, &self.msg, 512, "AES", 256);
         self.op_result = Some(self.digest.as_mut().unwrap() == ver);
