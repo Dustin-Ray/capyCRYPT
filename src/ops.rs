@@ -679,7 +679,7 @@ impl AesEncryptable for Message {
     fn aes_encrypt_ctr(&mut self, key: &[u8]) {
         let iv = get_random_bytes(12);
         let counter = 0u32; 
-        let counter_bytes = (counter as u32).to_be_bytes();
+        let counter_bytes = (counter).to_be_bytes();
 
         let mut ke_ka = iv.clone();
         ke_ka.extend_from_slice(&counter_bytes);
@@ -690,9 +690,9 @@ impl AesEncryptable for Message {
 
         self.sym_nonce = Some(iv.clone());
 
-        self.digest = Some(kmac_xof(&ka, &self.msg, 512, "AES", 256));
+        self.digest = Some(kmac_xof(ka, &self.msg, 512, "AES", 256));
 
-        let key_schedule = AES::new(&ke);
+        let key_schedule = AES::new(ke);
 
         // Parallelize encryption for each block
         self.msg.par_chunks_mut(16).enumerate().for_each(|(i, block)| {
@@ -742,7 +742,7 @@ impl AesEncryptable for Message {
     fn aes_decrypt_ctr(&mut self, key: &[u8]) {
         let iv = self.sym_nonce.clone().unwrap();
         let counter = 0u32; 
-        let counter_bytes = (counter as u32).to_be_bytes();
+        let counter_bytes = (counter).to_be_bytes();
 
         let mut ke_ka = iv.clone();
         ke_ka.extend_from_slice(&counter_bytes);
@@ -751,7 +751,7 @@ impl AesEncryptable for Message {
         let ke = &ke_ka[..key.len()].to_vec(); // Encryption Key
         let ka = &ke_ka[key.len()..].to_vec(); // Authentication Key
 
-        let key_schedule = AES::new(&ke);
+        let key_schedule = AES::new(ke);
 
         // Parallelize decryption for each block
         self.msg.par_chunks_mut(16).enumerate().for_each(|(i, block)| {
@@ -764,7 +764,7 @@ impl AesEncryptable for Message {
             xor_blocks(block, &temp);
         });
 
-        let ver = &kmac_xof(&ka, &self.msg, 512, "AES", 256);
+        let ver = &kmac_xof(ka, &self.msg, 512, "AES", 256);
         self.op_result = Some(self.digest.as_mut().unwrap() == ver);
     }
 }
