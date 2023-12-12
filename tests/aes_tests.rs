@@ -47,15 +47,11 @@ mod aes_modes_tests {
     fn aes_128_ctr() {
         // Get a random key (16 bytes -> 128 bits)
         let key = get_random_bytes(16);
-        //let key = hex::decode("10a58869d74be5a374cf867cfb473859").unwrap().to_vec();
         // Get 5mb random data
         let mut input = Message::new(get_random_bytes(5242880));
-        //let mut input = Message::new(hex::decode("00000000000000000000000000000000").unwrap().to_vec());
 
         input.aes_encrypt_ctr(&key); // Encrypt the input
-        //println!("Encrypted message: {:?}", hex::encode(&*input.msg));
         input.aes_decrypt_ctr(&key); // Decrypt the input
-        //println!("Decrypted message: {:?}", hex::encode(&*input.msg));
 
         assert!(input.op_result.unwrap()); // Verify operation success
     }

@@ -652,6 +652,7 @@ impl AesEncryptable for Message {
     /// SECURITY NOTE: ciphertext length == plaintext length
     /// ## Algorithm:
     /// * iv ← Random(12)
+    /// * CTR ← u32 counter starting at 0
     /// * (ke || ka) ← kmac_xof(iv || key, “”, 512, “AES”)
     /// * C1 = P1 ⊕ encrypt_block(IV || CTR1)
     /// * Cj = Pj ⊕ encrypt_block(IV || CTRj) for j = 2 … n
@@ -714,6 +715,7 @@ impl AesEncryptable for Message {
     /// SECURITY NOTE: ciphertext length == plaintext length
     /// ## Algorithm:
     /// * iv ← Message.sym_nonce
+    /// * CTR ← u32 counter starting at 0
     /// * (ke || ka) ← kmac_xof(iv || key, “”, 512, “AES”)
     /// * P1 = C1 ⊕ encrypt_block(IV || CTR1)
     /// * Pj = Cj ⊕ encrypt_block(IV || CTRj) for j = 2 … n
@@ -730,6 +732,8 @@ impl AesEncryptable for Message {
     /// let key = get_random_bytes(16);
     /// // Initialize the Message with some ciphertext data
     /// let mut input = Message::new(get_random_bytes(5242880));
+    /// // Encrypt the Message using AES in CTR mode
+    /// input.aes_encrypt_ctr(&key);
     /// // Decrypt the Message using AES in CTR mode
     /// input.aes_decrypt_ctr(&key);
     /// // Verify operation success
