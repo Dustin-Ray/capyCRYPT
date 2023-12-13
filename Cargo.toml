@@ -1,25 +1,28 @@
 [package]
 name = "capycrypt"
-version = "0.5.0"
+version = "0.6.5"
 edition = "2021"
 
 license = "MIT"
-keywords = ["cryptography", "fips202", "fips197", "edwards", "sha3", "schnorr", "AES"]
+keywords = ["aes", "sha3", "elliptic-curve", "ed448", "schnorr"]
 readme = "README.md"
 authors = ["Dustin Ray (Dr. Capybara) <dustinray313@gmail.com>", "Hunter Richardson (HLRichardson-Git) <hunter@hunterrichardson.net>"]
-description = "A complete Rust cryptosystem implementing NIST FIPS 202 & NIST FIPS 197 paired with a variety of Edwards curves. An academic exercise in cryptographic algorithm design."
+description = "An academic exercise in cryptographic algorithm design, pairing NIST FIPS 202 with a variety of Edwards curves."
 repository = "https://github.com/drcapybara/capyCRYPT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-num-bigint = { version = "0.4", features = ["rand"] }
-rand = "0.8"
 num = {version = "0.4.0"}
 hex = {version = "0.4.3"}
 byteorder = {version = "1.4.3"}
 chrono = {version = "0.4.23"}
 criterion = "0.3"
+crypto-bigint = "0.5.3"
+fiat-crypto = "0.2.2"
+rand = "0.8"
+num-bigint = { version = "0.4", features = ["rand"] }
+tiny_ed448_goldilocks = "0.1.3"
 aes = "0.8.3"
 rayon = "1.5"
 
@@ -29,11 +32,11 @@ name = "benchmark_sha3"
 harness = false
 
 [[bench]]
-name = "benchmark_e222_224"
+name = "benchmark_e448_224"
 harness = false
 
 [[bench]]
-name = "benchmark_e521_512"
+name = "benchmark_e448_512"
 harness = false
 
 [[bench]]

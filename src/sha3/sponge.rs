@@ -3,9 +3,9 @@ use crate::sha3::keccakf::keccakf_1600;
 /// Absorbs rate amount of data into state and permute. Continue absorbing and permuting until
 /// No more data left in m. Pads to multiple of rate using multi-rate padding.
 ///
-/// * `m`: message to be absorbed
-/// * `capacity`: security parameter which determines rate = ```bit_width``` - ```capacity```
-/// * `return`: a ```state``` consisting of 25 words of 64 bits each.
+/// * m: message to be absorbed
+/// * capacity: security parameter which determines rate = bit_width - capacity
+/// * return: a state consisting of 25 words of 64 bits each.
 pub fn sponge_absorb(m: &mut Vec<u8>, capacity: u64) -> [u64; 25] {
     let r = (1600 - capacity) / 8;
     if (m.len() % r as usize) != 0 {
@@ -16,10 +16,10 @@ pub fn sponge_absorb(m: &mut Vec<u8>, capacity: u64) -> [u64; 25] {
 
 /// Finalizes a state
 ///
-/// * `s`: the state to finalize
-/// * `bit_length`: requested output length in bits
-/// * `rate`: security parameter
-/// * `return: Vec<u8>` digest of permuted states of length `bit_length`.
+/// * s: the state to finalize
+/// * bit_length: requested output length in bits
+/// * rate: security parameter
+/// * return: digest of permuted states of length `bit_length`.
 pub fn sponge_squeeze(s: &mut [u64; 25], bit_length: u64, rate: u64) -> Vec<u8> {
     let mut out: Vec<u8> = Vec::new(); //FIPS 202 Algorithm 8 Step 8
     let block_size: usize = (rate / 64) as usize;
@@ -41,7 +41,7 @@ fn state_to_byte_array(uint64s: &[u64]) -> Vec<u8> {
     result
 }
 
-/// Absorbs 200 bytes of message into constant memory size.
+/// Absorbs 200 bytes of message into fixed memory size.
 fn bytes_to_state(in_val: &mut Vec<u8>, rate_in_bytes: usize) -> [u64; 25] {
     let mut offset: usize = 0;
     let mut s: [u64; 25] = [0; 25];
