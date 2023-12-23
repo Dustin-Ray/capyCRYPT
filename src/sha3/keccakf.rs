@@ -1,11 +1,11 @@
-/** rol64 func rotates x by y */
+// rol64 func rotates x by y
 fn rotate_left64(x: u64, y: u64) -> u64 {
     ((x) << (y)) | ((x) >> (64 - (y)))
 }
 
-/** keccakF1600 applies the Keccak permutation to a 1600b-wide
-state represented as a slice of 25 uint64s.*/
-pub fn keccakf_1600(a: &mut [u64; 25]) {
+/// keccakF1600 applies the Keccak permutation to a 1600b-wide
+/// state represented as a slice of 25 uint64s.
+pub(crate) fn keccakf_1600(a: &mut [u64; 25]) {
     // Implementation translated from Keccak-inplace.c
     // in the keccak reference code.
 

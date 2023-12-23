@@ -1,5 +1,5 @@
 use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-use capycrypt::{KeyEncryptable, KeyPair, Message, SpongeEncryptable, Signable};
+use capycrypt::{KeyEncryptable, KeyPair, Message, Signable, SpongeEncryptable};
 use criterion::{criterion_group, criterion_main, Criterion};
 
 const BIT_SECURITY: u64 = 224;
