@@ -4,7 +4,7 @@ pub mod ops_tests {
 
     use capycrypt::{
         sha3::aux_functions::byte_utils::get_random_bytes, KeyEncryptable, KeyPair, Message,
-        SpongeEncryptable, Signable,
+        Signable, SpongeEncryptable,
     };
 
     #[test]
