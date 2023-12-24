@@ -18,6 +18,34 @@ pub mod aes {
 pub mod ops;
 
 #[derive(Debug)]
+/// A simple error type to report that an unsupported value for the security
+/// parameter was requested.
+pub enum OperationError {
+    UnsupportedSecurityParameter,
+    CShakeError,
+    VerificationFailure,
+    SHA3DecryptionFailure,
+    KeyDecryptionError,
+    EmptyDecryptionError,
+    DigestNotAvailable,
+    SymNonceNotFound,
+    SecurityParameterNotSet,
+    XORFailure,
+    BytesToScalarError,
+    OperationResultNotAvailable,
+    SignatureNotSet,
+}
+impl std::error::Error for OperationError {}
+impl std::fmt::Display for OperationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Invalid value for d. Value must be either 224, 256, 384, or 512"
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
 /// An object containing the necessary fields for Schnorr signatures.
 pub struct Signature {
     /// keyed hash of signed message
@@ -26,16 +54,7 @@ pub struct Signature {
     pub z: Scalar,
 }
 
-impl Clone for Signature {
-    fn clone(&self) -> Signature {
-        Signature {
-            h: self.h.clone(),
-            z: self.z,
-        }
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// An object containing the fields necessary to represent an asymmetric keypair.
 pub struct KeyPair {
     /// String indicating the owner of the key, can be arbitrary
@@ -48,6 +67,18 @@ pub struct KeyPair {
     pub date_created: String,
 }
 
+#[derive(Debug)]
+/// Message type for which cryptographic traits are defined.
+pub struct Message {
+    pub msg: Box<Vec<u8>>,
+    pub d: Option<SecurityParameter>,
+    pub sym_nonce: Option<Vec<u8>>,
+    pub asym_nonce: Option<ExtendedPoint>,
+    pub digest: Result<Vec<u8>, OperationError>,
+    pub op_result: Result<(), OperationError>,
+    pub sig: Option<Signature>,
+}
+
 impl Message {
     pub fn new(data: Vec<u8>) -> Message {
         Message {
@@ -55,48 +86,160 @@ impl Message {
             d: None,
             sym_nonce: None,
             asym_nonce: None,
-            digest: None,
-            op_result: None,
+            digest: Ok(vec![]),
+            op_result: Ok(()),
             sig: None,
         }
     }
 }
 
-#[derive(Debug)]
-/// Message type for which cryptographic traits are defined.
-pub struct Message {
-    pub msg: Box<Vec<u8>>,
-    pub d: Option<u64>,
-    pub sym_nonce: Option<Vec<u8>>,
-    pub asym_nonce: Option<ExtendedPoint>,
-    pub digest: Option<Vec<u8>>,
-    pub op_result: Option<bool>,
-    pub sig: Option<Signature>,
+#[derive(Debug, Clone, Copy)]
+pub enum SecurityParameter {
+    D224 = 224,
+    D256 = 256,
+    D384 = 384,
+    D512 = 512,
+}
+
+impl SecurityParameter {
+    fn bytepad_width(&self) -> u32 {
+        match self {
+            SecurityParameter::D224 => 172,
+            SecurityParameter::D256 => 168,
+            SecurityParameter::D384 => 152,
+            SecurityParameter::D512 => 136,
+        }
+    }
+}
+
+pub struct Capacity {
+    value: u64,
+}
+
+impl Capacity {
+    pub fn new(sp: &SecurityParameter) -> Self {
+        let capacity_value = (*sp as u64) * 2; // Assuming SecurityParameter can be cast to u64
+        Capacity {
+            value: capacity_value,
+        }
+    }
+
+    pub fn value(&self) -> u64 {
+        self.value
+    }
+}
+
+impl BitLength for Capacity {
+    fn bit_length(&self) -> u64 {
+        self.value
+    }
+}
+
+impl BitLength for SecurityParameter {
+    fn bit_length(&self) -> u64 {
+        *self as u64
+    }
+}
+
+impl BitLength for Rate {
+    fn bit_length(&self) -> u64 {
+        self.value
+    }
+}
+
+impl BitLength for OutputLength {
+    fn bit_length(&self) -> u64 {
+        self.value()
+    }
+}
+
+use std::convert::TryFrom;
+
+impl TryFrom<u64> for SecurityParameter {
+    type Error = OperationError; // Assuming OperationError is your custom error type
+
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        match value {
+            224 => Ok(SecurityParameter::D224),
+            256 => Ok(SecurityParameter::D256),
+            384 => Ok(SecurityParameter::D384),
+            512 => Ok(SecurityParameter::D512),
+            _ => Err(OperationError::UnsupportedSecurityParameter), // Replace with appropriate error
+        }
+    }
+}
+
+pub struct OutputLength {
+    value: u64,
+}
+
+impl OutputLength {
+    const MAX_VALUE: u64 = u64::MAX;
+
+    pub fn try_from(value: u64) -> Result<Self, OperationError> {
+        if value < Self::MAX_VALUE {
+            Ok(OutputLength { value })
+        } else {
+            Err(OperationError::UnsupportedSecurityParameter)
+        }
+    }
+
+    pub fn value(&self) -> u64 {
+        self.value
+    }
+}
+
+pub struct Rate {
+    value: u64,
+}
+
+impl Rate {
+    pub fn new<T: BitLength>(sp: &T) -> Self {
+        let rate_value = 1600 - sp.bit_length();
+        Rate { value: rate_value }
+    }
+
+    pub fn value(&self) -> u64 {
+        self.value
+    }
 }
 
 pub trait AesEncryptable {
-    fn aes_encrypt_cbc(&mut self, key: &[u8]);
-    fn aes_decrypt_cbc(&mut self, key: &[u8]);
+    fn aes_encrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError>;
+    fn aes_decrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError>;
 }
 
 pub trait Hashable {
-    fn compute_hash_sha3(&mut self, d: u64);
-    fn compute_tagged_hash(&mut self, pw: &mut Vec<u8>, s: &str, d: u64);
+    fn compute_hash_sha3(&mut self, d: &SecurityParameter) -> Result<(), OperationError>;
+    fn compute_tagged_hash(
+        &mut self,
+        pw: &mut Vec<u8>,
+        s: &str,
+        d: &SecurityParameter,
+    ) -> Result<(), OperationError>;
+}
+
+pub trait BitLength {
+    fn bit_length(&self) -> u64;
 }
 
 pub trait SpongeEncryptable {
-    fn sha3_encrypt(&mut self, pw: &[u8], d: u64);
-    fn sha3_decrypt(&mut self, pw: &[u8]);
+    fn sha3_encrypt(&mut self, pw: &[u8], d: &SecurityParameter) -> Result<(), OperationError>;
+    fn sha3_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError>;
 }
 
 pub trait KeyEncryptable {
-    fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: u64);
-    fn key_decrypt(&mut self, pw: &[u8]);
+    fn key_encrypt(
+        &mut self,
+        pub_key: &ExtendedPoint,
+        d: &SecurityParameter,
+    ) -> Result<(), OperationError>;
+    fn key_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError>;
 }
 
 pub trait Signable {
-    fn sign(&mut self, key: &KeyPair, d: u64);
-    fn verify(&mut self, pub_key: &ExtendedPoint);
+    fn sign(&mut self, key: &KeyPair, d: &SecurityParameter) -> Result<(), OperationError>;
+    fn verify(&mut self, pub_key: &ExtendedPoint) -> Result<(), OperationError>;
 }
 
 #[cfg(test)]

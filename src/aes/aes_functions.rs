@@ -146,26 +146,20 @@ impl AES {
     // The transformation of the state in which the last three rows are
     // cyclically shifted by different offsets.
     fn shift_rows(state: &mut [[u8; 4]; 4]) {
-        for x in 1..4 {
+        for (x, row) in state.iter_mut().enumerate().take(4).skip(1) {
             for _ in 0..x {
-                let first = state[x][0];
-                for y in 0..3 {
-                    state[x][y] = state[x][y + 1];
-                }
-                state[x][3] = first;
+                let first = row[0];
+                row.rotate_left(1); // Rotate the row left by 1
+                row[3] = first;
             }
         }
     }
 
     // The inverse of shift_rows().
     fn inv_shift_rows(state: &mut [[u8; 4]; 4]) {
-        for x in 1..4 {
+        for (x, row) in state.iter_mut().enumerate().take(4).skip(1) {
             for _ in 0..x {
-                let last = state[x][3];
-                for y in (1..4).rev() {
-                    state[x][y] = state[x][y - 1];
-                }
-                state[x][0] = last;
+                row.rotate_right(1); // Rotate the row right by 1
             }
         }
     }

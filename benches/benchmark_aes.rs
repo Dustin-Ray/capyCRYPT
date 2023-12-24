@@ -4,8 +4,8 @@ use criterion::{criterion_group, criterion_main, Criterion};
 
 /// Symmetric encrypt and decrypt roundtrip
 fn sym_enc(key: &mut Vec<u8>, mut msg: Message) {
-    msg.aes_encrypt_cbc(&key);
-    msg.aes_decrypt_cbc(&key);
+    let _ = msg.aes_encrypt_cbc(&key);
+    let _ = msg.aes_decrypt_cbc(&key);
 }
 
 // Benchmark AES encryption and decryption roundtrip

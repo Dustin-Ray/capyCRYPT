@@ -1,13 +1,14 @@
-use capycrypt::{Hashable, Message};
+use capycrypt::{Hashable, Message, SecurityParameter};
 
 use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
+use capycrypt::SecurityParameter::D256;
 use criterion::{criterion_group, criterion_main, Criterion};
 
-const BIT_SECURITY: u64 = 256;
+const BIT_SECURITY: SecurityParameter = D256;
 
 /// hash 5mb of random data with 128 bits of security
 fn sha3_digest(mut msg: Message) {
-    msg.compute_hash_sha3(BIT_SECURITY);
+    let _ = msg.compute_hash_sha3(&BIT_SECURITY);
 }
 
 fn bench_sha3_digest(c: &mut Criterion) {
