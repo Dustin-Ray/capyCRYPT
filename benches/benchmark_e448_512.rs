@@ -1,9 +1,9 @@
 use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-use capycrypt::SecurityParameter::D512;
-use capycrypt::{KeyEncryptable, KeyPair, Message, SecurityParameter, Signable, SpongeEncryptable};
+use capycrypt::SecParam::D512;
+use capycrypt::{KeyEncryptable, KeyPair, Message, SecParam, Signable, SpongeEncryptable};
 use criterion::{criterion_group, criterion_main, Criterion};
 
-const BIT_SECURITY: SecurityParameter = D512;
+const BIT_SECURITY: SecParam = D512;
 
 /// Symmetric encrypt and decrypt roundtrip
 fn sym_enc(pw: &mut Vec<u8>, mut msg: Message) {

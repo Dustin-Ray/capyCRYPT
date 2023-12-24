@@ -6,7 +6,7 @@ use crate::{sha3::keccakf::keccakf_1600, BitLength, Rate};
 /// * m: message to be absorbed
 /// * capacity: security parameter which determines rate = bit_width - capacity
 /// * return: a state consisting of 25 words of 64 bits each.
-pub(crate) fn sponge_absorb<S: BitLength>(m: &mut Vec<u8>, capacity: &S) -> [u64; 25] {
+pub(crate) fn sponge_absorb<S: BitLength + ?Sized>(m: &mut Vec<u8>, capacity: &S) -> [u64; 25] {
     let c = capacity.bit_length();
     let r: u64 = (1600 - c) / 8;
     if (m.len() % r as usize) != 0 {
@@ -21,7 +21,7 @@ pub(crate) fn sponge_absorb<S: BitLength>(m: &mut Vec<u8>, capacity: &S) -> [u64
 /// * bit_length: requested output length in bits
 /// * rate: security parameter
 /// * return: digest of permuted states of length `bit_length`.
-pub(crate) fn sponge_squeeze<S: BitLength>(
+pub(crate) fn sponge_squeeze<S: BitLength + ?Sized>(
     s: &mut [u64; 25],
     bit_length: &S,
     rate: Rate,
@@ -193,12 +193,9 @@ mod sponge_tests {
     #[test]
     fn test_sponge() {
         let res = sponge_squeeze(
-            &mut sponge_absorb(
-                &mut "test".as_bytes().to_vec(),
-                &crate::SecurityParameter::D256,
-            ),
-            &crate::SecurityParameter::D512,
-            Rate::new(&crate::SecurityParameter::D512),
+            &mut sponge_absorb(&mut "test".as_bytes().to_vec(), &crate::SecParam::D256),
+            &crate::SecParam::D512,
+            Rate::new(&crate::SecParam::D512),
         );
 
         let expected: [u8; 64] = [

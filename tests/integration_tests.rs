@@ -4,7 +4,7 @@ pub mod ops_tests {
 
     use capycrypt::{
         sha3::aux_functions::byte_utils::get_random_bytes, KeyEncryptable, KeyPair, Message,
-        SecurityParameter, Signable, SpongeEncryptable,
+        SecParam, Signable, SpongeEncryptable,
     };
 
     #[test]
@@ -12,7 +12,7 @@ pub mod ops_tests {
         let pw = get_random_bytes(64);
         let mut msg = Message::new(get_random_bytes(5242880));
 
-        let _ = msg.sha3_encrypt(&pw, &SecurityParameter::D256);
+        let _ = msg.sha3_encrypt(&pw, &SecParam::D256);
         let _ = msg.sha3_decrypt(&pw);
 
         assert!(msg.op_result.is_ok());
@@ -22,7 +22,7 @@ pub mod ops_tests {
         let pw = get_random_bytes(64);
         let mut msg = Message::new(get_random_bytes(5242880));
 
-        let _ = msg.sha3_encrypt(&pw, &SecurityParameter::D256);
+        let _ = msg.sha3_encrypt(&pw, &SecParam::D256);
         let _ = msg.sha3_decrypt(&pw);
 
         assert!(msg.op_result.is_ok());
@@ -33,11 +33,11 @@ pub mod ops_tests {
         let key_pair = KeyPair::new(
             &get_random_bytes(64),
             "test key".to_string(),
-            &SecurityParameter::D256,
+            &SecParam::D256,
         )
         .unwrap();
 
-        let _ = msg.key_encrypt(&key_pair.pub_key, &SecurityParameter::D256);
+        let _ = msg.key_encrypt(&key_pair.pub_key, &SecParam::D256);
         let _ = msg.key_decrypt(&key_pair.priv_key);
 
         assert!(msg.op_result.is_ok());
@@ -49,11 +49,11 @@ pub mod ops_tests {
         let key_pair = KeyPair::new(
             &get_random_bytes(32),
             "test key".to_string(),
-            &SecurityParameter::D512,
+            &SecParam::D512,
         )
         .unwrap();
 
-        let _ = msg.key_encrypt(&key_pair.pub_key, &SecurityParameter::D512);
+        let _ = msg.key_encrypt(&key_pair.pub_key, &SecParam::D512);
         let _ = msg.key_decrypt(&key_pair.priv_key);
 
         assert!(msg.op_result.is_ok());
@@ -62,9 +62,9 @@ pub mod ops_tests {
     pub fn test_signature_256() {
         let mut msg = Message::new(get_random_bytes(5242880));
         let pw = get_random_bytes(64);
-        let key_pair = KeyPair::new(&pw, "test key".to_string(), &SecurityParameter::D256).unwrap();
+        let key_pair = KeyPair::new(&pw, "test key".to_string(), &SecParam::D256).unwrap();
 
-        let _ = msg.sign(&key_pair, &SecurityParameter::D256);
+        let _ = msg.sign(&key_pair, &SecParam::D256);
         let _ = msg.verify(&key_pair.pub_key);
 
         assert!(msg.op_result.is_ok());
@@ -80,11 +80,10 @@ pub mod ops_tests {
         for i in 0..10 {
             let mut msg = Message::new(get_random_bytes(5242880));
             let pw = get_random_bytes(1 << i);
-            let key_pair =
-                KeyPair::new(&pw, "test key".to_string(), &SecurityParameter::D512).unwrap();
+            let key_pair = KeyPair::new(&pw, "test key".to_string(), &SecParam::D512).unwrap();
 
             let now = Instant::now();
-            let _ = msg.sign(&key_pair, &SecurityParameter::D512);
+            let _ = msg.sign(&key_pair, &SecParam::D512);
             println!("{} needed {} microseconds", i, now.elapsed().as_micros());
             let _ = msg.verify(&key_pair.pub_key);
             assert!(msg.op_result.is_ok());
