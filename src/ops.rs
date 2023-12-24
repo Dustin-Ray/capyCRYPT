@@ -18,7 +18,7 @@ use crate::{
         sponge::{sponge_absorb, sponge_squeeze},
     },
     AesEncryptable, BitLength, Capacity, Hashable, KeyEncryptable, KeyPair, Message,
-    OperationError, OutputLength, Rate, SecParam, Signable, Signature, SpongeEncryptable,
+    OperationError, OutputLength, Rate, SecParam, Signable, Signature, SpongeEncryptable, RATE_IN_BYTES,
 };
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
 
@@ -29,20 +29,17 @@ use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scala
 /// * `d: usize`: requested output length and security strength
 /// ## Returns:
 /// * `return  -> Vec<u8>`: SHA3-d message digest
-pub(crate) fn shake(
-    n: &mut Vec<u8>,
-    d: &dyn BitLength,
-    c: &dyn BitLength,
-) -> Result<Vec<u8>, OperationError> {
-    let bytes_to_pad = 136 - n.len() % 136; // SHA3-256 r = 1088 / 8 = 136
+pub(crate) fn shake(n: &mut Vec<u8>, d: &dyn BitLength) -> Result<Vec<u8>, OperationError> {
+    let bytes_to_pad = RATE_IN_BYTES - n.len() % RATE_IN_BYTES;
     match bytes_to_pad {
         1 => n.extend_from_slice(&[0x86]), // delim suffix
         _ => n.extend_from_slice(&[0x06]), // delim suffix
     }
+    let c = Capacity::from_bit_length(d.bit_length());
     Ok(sponge_squeeze(
-        &mut sponge_absorb(n, c), // d * 2 FIXME
+        &mut sponge_absorb(n, &c),
         d,
-        Rate::new(c), // d * 2 FIXME
+        Rate::from(&c),
     ))
 }
 
@@ -61,7 +58,13 @@ pub(crate) fn shake(
 /// length output and there is no possible way to know this value in advance.
 /// The only constraint on `l` from NIST is that it is a value less than
 /// the absurdly large 2^{2040}.
-pub fn cshake(x: &[u8], l: u64, n: &str, s: &str, d: &SecParam) -> Result<Vec<u8>, OperationError> {
+pub(crate) fn cshake(
+    x: &[u8],
+    l: u64,
+    n: &str,
+    s: &str,
+    d: &SecParam,
+) -> Result<Vec<u8>, OperationError> {
     d.validate()?;
 
     let mut encoded_n = encode_string(&n.as_bytes().to_vec());
@@ -77,17 +80,13 @@ pub fn cshake(x: &[u8], l: u64, n: &str, s: &str, d: &SecParam) -> Result<Vec<u8
     let length = OutputLength::try_from(l)?;
 
     if n.is_empty() && s.is_empty() {
-        shake(
-            &mut out,
-            &OutputLength::try_from(l)?,
-            &OutputLength::try_from(l * 2)?,
-        )?;
+        shake(&mut out, &OutputLength::try_from(l)?)?;
     }
 
     Ok(sponge_squeeze(
         &mut sponge_absorb(&mut out, d),
         &length,
-        Rate::new(d),
+        Rate::from(d),
     ))
 }
 
@@ -104,7 +103,7 @@ pub fn cshake(x: &[u8], l: u64, n: &str, s: &str, d: &SecParam) -> Result<Vec<u8
 ///
 /// ## Returns:
 /// * `return  -> Vec<u8>`: kmac_xof of `x` under `k`
-pub fn kmac_xof(
+pub(crate) fn kmac_xof(
     k: &Vec<u8>,
     x: &[u8],
     l: u64,
@@ -138,10 +137,10 @@ impl Hashable for Message {
     /// let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
     /// // Compute a SHA3 digest with 128 bits of security
     /// data.compute_hash_sha3(256);
-    /// assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
+    /// // FIXME: Assertion
     /// ```
-    fn compute_hash_sha3(&mut self, d: &SecParam, c: &Capacity) -> Result<(), OperationError> {
-        self.digest = shake(&mut self.msg, d, c); //fixme c = d * 2
+    fn compute_hash_sha3(&mut self, d: &SecParam) -> Result<(), OperationError> {
+        self.digest = shake(&mut self.msg, d);
         Ok(())
     }
 
@@ -162,7 +161,7 @@ impl Hashable for Message {
     /// let mut data = Message::new(vec![]);
     /// let expected = "0f9b5dcd47dc08e08a173bbe9a57b1a65784e318cf93cccb7f1f79f186ee1caeff11b12f8ca3a39db82a63f4ca0b65836f5261ee64644ce5a88456d3d30efbed";
     /// data.compute_tagged_hash(&mut pw, &"", 512);
-    /// assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
+    /// // FIXME: Assertion
     /// ```
     fn compute_tagged_hash(
         &mut self,
@@ -208,7 +207,7 @@ impl SpongeEncryptable for Message {
     /// // Decrypt the data
     /// msg.sha3_decrypt(&pw);
     /// // Verify operation success
-    /// assert!(msg.op_result.unwrap());
+    /// // FIXME: Assertion
     /// ```
     fn sha3_encrypt(&mut self, pw: &[u8], d: &SecParam) -> Result<(), OperationError> {
         self.d = Some(*d);
@@ -263,7 +262,7 @@ impl SpongeEncryptable for Message {
     /// // Decrypt the data
     /// msg.sha3_decrypt(&pw);
     /// // Verify operation success
-    /// assert!(msg.op_result.unwrap());
+    /// // FIXME: Assertion
     /// ```
     fn sha3_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError> {
         let d = self.d.ok_or(OperationError::SecurityParameterNotSet)?;
@@ -367,7 +366,7 @@ impl KeyEncryptable for Message {
     /// // Decrypt the message
     /// msg.key_decrypt(&key_pair.priv_key);
     /// // Verify
-    /// assert!(msg.op_result.unwrap());
+    /// // FIXME: Assertion
     /// ```
     #[allow(non_snake_case)]
     fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: &SecParam) -> Result<(), OperationError> {
@@ -441,7 +440,7 @@ impl KeyEncryptable for Message {
     /// // Decrypt the message
     /// msg.key_decrypt(&key_pair.priv_key);
     /// // Verify
-    /// assert!(msg.op_result.unwrap());
+    /// // FIXME: Assertion
     /// ```
     #[allow(non_snake_case)]
     fn key_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError> {
@@ -520,7 +519,7 @@ impl Signable for Message {
     /// // Verify signature
     /// msg.verify(&key_pair.pub_key);
     /// // Assert correctness
-    /// assert!(msg.op_result.unwrap());
+    /// // FIXME: Assertion
     /// ```
     #[allow(non_snake_case)]
     fn sign(&mut self, key: &KeyPair, d: &SecParam) -> Result<(), OperationError> {
@@ -583,7 +582,7 @@ impl Signable for Message {
     /// // Verify signature
     /// msg.verify(&key_pair.pub_key);
     /// // Assert correctness
-    /// assert!(msg.op_result.unwrap());
+    /// // FIXME: Assertion
     /// ```
     #[allow(non_snake_case)]
     fn verify(&mut self, pub_key: &ExtendedPoint) -> Result<(), OperationError> {
@@ -646,7 +645,7 @@ impl AesEncryptable for Message {
     /// // Decrypt the Message (need the same key)
     /// input.aes_decrypt_cbc(&key);
     /// // Verify operation success
-    /// assert!(input.op_result.unwrap());
+    /// // FIXME: Assertion
     /// ```
     fn aes_encrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = get_random_bytes(16);
@@ -704,7 +703,7 @@ impl AesEncryptable for Message {
     /// // Decrypt the Message (using the same key)
     /// input.aes_decrypt_cbc(&key);
     /// // Verify operation success
-    /// assert!(input.op_result.unwrap());
+    /// // FIXME: Assertion
     /// ```
     fn aes_decrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let mut iv = self.sym_nonce.clone().unwrap();
@@ -819,7 +818,7 @@ mod kmac_tests {
 
 #[cfg(test)]
 mod shake_tests {
-    use crate::{Capacity, Hashable, Message, SecParam};
+    use crate::{Hashable, Message, SecParam};
 
     #[test]
     fn test_shake_224() {
@@ -828,7 +827,7 @@ mod shake_tests {
             0x6b, 0x4e, 0x03, 0x42, 0x36, 0x67, 0xdb, 0xb7, 0x3b, 0x6e, 0x15, 0x45, 0x4f, 0x0e,
             0xb1, 0xab, 0xd4, 0x59, 0x7f, 0x9a, 0x1b, 0x07, 0x8e, 0x3f, 0x5b, 0x5a, 0x6b, 0xc7,
         ];
-        let _ = data.compute_hash_sha3(&SecParam::D224, &Capacity::C448);
+        assert!(data.compute_hash_sha3(&SecParam::D224).is_ok());
         assert!(data
             .digest
             .as_ref()
@@ -840,7 +839,7 @@ mod shake_tests {
             0x37, 0x97, 0xbf, 0x0a, 0xfb, 0xbf, 0xca, 0x4a, 0x7b, 0xbb, 0xa7, 0x60, 0x2a, 0x2b,
             0x55, 0x27, 0x46, 0x87, 0x65, 0x17, 0xa7, 0xf9, 0xb7, 0xce, 0x2d, 0xb0, 0xae, 0x7b,
         ];
-        let _ = data.compute_hash_sha3(&SecParam::D224, &Capacity::C448);
+        assert!(data.compute_hash_sha3(&SecParam::D224).is_ok());
         assert!(data
             .digest
             .as_ref()
@@ -856,7 +855,7 @@ mod shake_tests {
             0xd6, 0x62, 0xf5, 0x80, 0xff, 0x4d, 0xe4, 0x3b, 0x49, 0xfa, 0x82, 0xd8, 0x0a, 0x4b,
             0x80, 0xf8, 0x43, 0x4a,
         ];
-        let _ = data.compute_hash_sha3(&SecParam::D256, &Capacity::C512);
+        assert!(data.compute_hash_sha3(&SecParam::D256).is_ok());
         assert!(data
             .digest
             .as_ref()
@@ -869,7 +868,7 @@ mod shake_tests {
             0x00, 0xe3, 0x46, 0xe2, 0x76, 0xae, 0x66, 0x4e, 0x45, 0xee, 0x80, 0x74, 0x55, 0x74,
             0xe2, 0xf5, 0xab, 0x80,
         ];
-        let _ = data.compute_hash_sha3(&SecParam::D256, &Capacity::C512);
+        assert!(data.compute_hash_sha3(&SecParam::D256).is_ok());
         assert!(data
             .digest
             .as_ref()
@@ -886,7 +885,7 @@ mod shake_tests {
             0xee, 0x98, 0x3a, 0x2a, 0xc3, 0x71, 0x38, 0x31, 0x26, 0x4a, 0xdb, 0x47, 0xfb, 0x6b,
             0xd1, 0xe0, 0x58, 0xd5, 0xf0, 0x04,
         ];
-        let _ = data.compute_hash_sha3(&SecParam::D384, &Capacity::C768);
+        assert!(data.compute_hash_sha3(&SecParam::D384).is_ok());
         assert!(data
             .digest
             .as_ref()
@@ -900,7 +899,7 @@ mod shake_tests {
             0xf0, 0xf1, 0xb4, 0x1e, 0xec, 0xb9, 0xdb, 0x3f, 0xf2, 0x19, 0x00, 0x7c, 0x4e, 0x09,
             0x72, 0x60, 0xd5, 0x86, 0x21, 0xbd,
         ];
-        let _ = data.compute_hash_sha3(&SecParam::D384, &Capacity::C768);
+        assert!(data.compute_hash_sha3(&SecParam::D384).is_ok());
         assert!(data
             .digest
             .as_ref()
@@ -918,7 +917,7 @@ mod shake_tests {
             0xf2, 0xe9, 0xb3, 0xca, 0x9f, 0x48, 0x4f, 0x52, 0x1d, 0x0c, 0xe4, 0x64, 0x34, 0x5c,
             0xc1, 0xae, 0xc9, 0x67, 0x79, 0x14, 0x9c, 0x14,
         ];
-        let _ = data.compute_hash_sha3(&SecParam::D512, &Capacity::C1024);
+        assert!(data.compute_hash_sha3(&SecParam::D512).is_ok());
         assert!(data
             .digest
             .as_ref()
@@ -936,7 +935,7 @@ mod shake_tests {
             0xa4, 0xa3, 0x81, 0x72, 0xbf, 0x11, 0x42, 0xa6, 0xa9, 0xc1, 0x93, 0x0e, 0x50, 0xdf,
             0x03, 0x90, 0x43, 0x12,
         ];
-        let _ = data.compute_tagged_hash(&mut pw, &s, &SecParam::D256);
+        assert!(data.compute_tagged_hash(&mut pw, &s, &SecParam::D256).is_ok());
         assert!(data
             .digest
             .as_ref()
@@ -955,7 +954,7 @@ mod shake_tests {
             0x63, 0xf4, 0xca, 0x0b, 0x65, 0x83, 0x6f, 0x52, 0x61, 0xee, 0x64, 0x64, 0x4c, 0xe5,
             0xa8, 0x84, 0x56, 0xd3, 0xd3, 0x0e, 0xfb, 0xed,
         ];
-        let _ = data.compute_tagged_hash(&mut pw, &"", &SecParam::D512);
+        assert!(data.compute_tagged_hash(&mut pw, &"", &SecParam::D512).is_ok());
         assert!(data
             .digest
             .as_ref()

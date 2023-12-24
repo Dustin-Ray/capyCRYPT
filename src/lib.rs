@@ -93,11 +93,22 @@ pub enum SecParam {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum Capacity {
+pub(crate) enum Capacity {
     C448 = 448,
     C512 = 512,
     C768 = 768,
     C1024 = 1024,
+}
+
+impl Capacity {
+    fn from_bit_length(bit_length: u64) -> Self {
+        match bit_length * 2 {
+            x if x <= 448 => Capacity::C448,
+            x if x <= 512 => Capacity::C512,
+            x if x <= 768 => Capacity::C768,
+            _ => Capacity::C1024,
+        }
+    }
 }
 
 impl SecParam {
@@ -166,9 +177,10 @@ pub struct Rate {
 }
 
 impl Rate {
-    pub fn new<R: BitLength + ?Sized>(sp: &R) -> Self {
-        let rate_value = 1600 - sp.bit_length();
-        Rate { value: rate_value }
+    pub fn from<R: BitLength + ?Sized>(sp: &R) -> Self {
+        Rate {
+            value: (1600 - sp.bit_length()),
+        }
     }
 
     pub fn value(&self) -> u64 {
@@ -186,7 +198,7 @@ pub trait BitLength {
 }
 
 pub trait Hashable {
-    fn compute_hash_sha3(&mut self, d: &SecParam, c: &Capacity) -> Result<(), OperationError>;
+    fn compute_hash_sha3(&mut self, d: &SecParam) -> Result<(), OperationError>;
     fn compute_tagged_hash(
         &mut self,
         pw: &mut Vec<u8>,
@@ -209,6 +221,8 @@ pub trait Signable {
     fn sign(&mut self, key: &KeyPair, d: &SecParam) -> Result<(), OperationError>;
     fn verify(&mut self, pub_key: &ExtendedPoint) -> Result<(), OperationError>;
 }
+
+const RATE_IN_BYTES: usize = 136; // SHA3-256 r = 1088 / 8 = 136
 
 #[cfg(test)]
 const NIST_DATA_SPONGE_INIT: [u8; 200] = [
