@@ -70,6 +70,18 @@ pub mod ops_tests {
         assert!(msg.op_result.is_ok());
     }
 
+    #[test]
+    pub fn test_signature_512() {
+        let mut msg = Message::new(get_random_bytes(5242880));
+        let pw = get_random_bytes(64);
+        let key_pair = KeyPair::new(&pw, "test key".to_string(), &SecParam::D512).unwrap();
+
+        assert!(msg.sign(&key_pair, &SecParam::D512).is_ok());
+        assert!(msg.verify(&key_pair.pub_key).is_ok());
+
+        assert!(msg.op_result.is_ok());
+    }
+
     // This test shouldnt have a huge variation between key sizes due to the fixed-time
     // nature of the lookup table being used for scalar decomposition in the
     // variable_base multiplication algorithm.

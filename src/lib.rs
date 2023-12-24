@@ -17,12 +17,13 @@ pub mod aes {
 /// Module for encrypt, decrypt, and sign functions.
 pub mod ops;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 /// A simple error type
 pub enum OperationError {
     UnsupportedSecurityParameter,
     CShakeError,
-    VerificationFailure,
+    KmacError,
+    SignatureVerificationFailure,
     SHA3DecryptionFailure,
     KeyDecryptionError,
     EmptyDecryptionError,
@@ -199,12 +200,7 @@ pub trait BitLength {
 
 pub trait Hashable {
     fn compute_hash_sha3(&mut self, d: &SecParam) -> Result<(), OperationError>;
-    fn compute_tagged_hash(
-        &mut self,
-        pw: &mut Vec<u8>,
-        s: &str,
-        d: &SecParam,
-    ) -> Result<(), OperationError>;
+    fn compute_tagged_hash(&mut self, pw: &[u8], s: &str, d: &SecParam);
 }
 
 pub trait SpongeEncryptable {

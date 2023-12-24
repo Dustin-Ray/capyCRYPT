@@ -18,7 +18,8 @@ use crate::{
         sponge::{sponge_absorb, sponge_squeeze},
     },
     AesEncryptable, BitLength, Capacity, Hashable, KeyEncryptable, KeyPair, Message,
-    OperationError, OutputLength, Rate, SecParam, Signable, Signature, SpongeEncryptable, RATE_IN_BYTES,
+    OperationError, OutputLength, Rate, SecParam, Signable, Signature, SpongeEncryptable,
+    RATE_IN_BYTES,
 };
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
 
@@ -36,11 +37,7 @@ pub(crate) fn shake(n: &mut Vec<u8>, d: &dyn BitLength) -> Result<Vec<u8>, Opera
         _ => n.extend_from_slice(&[0x06]), // delim suffix
     }
     let c = Capacity::from_bit_length(d.bit_length());
-    Ok(sponge_squeeze(
-        &mut sponge_absorb(n, &c),
-        d,
-        Rate::from(&c),
-    ))
+    Ok(sponge_squeeze(&mut sponge_absorb(n, &c), d, Rate::from(&c)))
 }
 
 /// # Customizable SHAKE
@@ -68,8 +65,7 @@ pub(crate) fn cshake(
     d.validate()?;
 
     let mut encoded_n = encode_string(&n.as_bytes().to_vec());
-    let encoded_s = encode_string(&s.as_bytes().to_vec());
-    encoded_n.extend_from_slice(&encoded_s);
+    encoded_n.extend_from_slice(&encode_string(&s.as_bytes().to_vec()));
 
     let bytepad_w = d.bytepad_value();
 
@@ -80,7 +76,7 @@ pub(crate) fn cshake(
     let length = OutputLength::try_from(l)?;
 
     if n.is_empty() && s.is_empty() {
-        shake(&mut out, &OutputLength::try_from(l)?)?;
+        shake(&mut out, &length)?;
     }
 
     Ok(sponge_squeeze(
@@ -163,14 +159,8 @@ impl Hashable for Message {
     /// data.compute_tagged_hash(&mut pw, &"", 512);
     /// // FIXME: Assertion
     /// ```
-    fn compute_tagged_hash(
-        &mut self,
-        pw: &mut Vec<u8>,
-        s: &str,
-        d: &SecParam,
-    ) -> Result<(), OperationError> {
-        self.digest = kmac_xof(pw, &self.msg, d.bit_length(), s, d);
-        Ok(())
+    fn compute_tagged_hash(&mut self, pw: &[u8], s: &str, d: &SecParam) {
+        self.digest = kmac_xof(&pw.to_owned(), &self.msg, d.bit_length(), s, d);
     }
 }
 
@@ -214,20 +204,17 @@ impl SpongeEncryptable for Message {
         let z = get_random_bytes(512);
 
         let mut ke_ka = z.clone();
-        ke_ka.append(&mut pw.to_owned());
-        let ke_ka = kmac_xof(&ke_ka, &[], 1024, "S", d);
-        let vec = ke_ka.map_err(|_| OperationError::DigestNotAvailable)?; // Converts OperationError
-        let ke = &vec[..64].to_vec();
-        let ka = &vec[64..].to_vec();
+        ke_ka.extend_from_slice(pw);
 
-        self.digest = kmac_xof(ka, &self.msg, 512, "SKA", d);
+        let ke_ka = kmac_xof(&ke_ka, &[], 1024, "S", d).map_err(|_| OperationError::KmacError)?;
+        let (ke, ka) = ke_ka.split_at(64);
 
-        match &kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "SKE", d) {
-            Ok(vec) => {
-                xor_bytes(&mut self.msg, vec);
-            }
-            Err(_) => return Err(OperationError::XORFailure),
-        }
+        self.digest = kmac_xof(&ka.to_vec(), &self.msg, 512, "SKA", d);
+
+        let m = kmac_xof(&ke.to_vec(), &[], (self.msg.len() * 8) as u64, "SKE", d)
+            .map_err(|_| OperationError::XORFailure)?;
+        xor_bytes(&mut self.msg, &m);
+
         self.sym_nonce = Some(z);
         Ok(())
     }
@@ -265,25 +252,36 @@ impl SpongeEncryptable for Message {
     /// // FIXME: Assertion
     /// ```
     fn sha3_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError> {
-        let d = self.d.ok_or(OperationError::SecurityParameterNotSet)?;
+        let d = self
+            .d
+            .as_ref()
+            .ok_or(OperationError::SecurityParameterNotSet)?;
 
         let mut z_pw = self
             .sym_nonce
-            .clone()
-            .ok_or(OperationError::SymNonceNotSet)?;
-        z_pw.append(&mut pw.to_owned());
-        let ke_ka = kmac_xof(&z_pw, &[], 1024, "S", &d)?;
-        let ke = &mut ke_ka[..64].to_vec();
-        let ka = &mut ke_ka[64..].to_vec();
+            .as_ref()
+            .ok_or(OperationError::SymNonceNotSet)?
+            .clone();
+        z_pw.extend_from_slice(pw);
 
-        let m = kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "SKE", &d)?;
+        let ke_ka = kmac_xof(&z_pw, &[], 1024, "S", d)?;
+        let (ke, ka) = ke_ka.split_at(64);
+
+        let m = kmac_xof(&ke.to_vec(), &[], (self.msg.len() * 8) as u64, "SKE", d)?;
         xor_bytes(&mut self.msg, &m);
-        let new_t = &kmac_xof(ka, &self.msg, 512, "SKA", &d)?;
-        self.op_result = match self.digest.as_ref() {
-            Ok(digest) if digest == new_t => Ok(()),
-            Ok(_) => Err(OperationError::OperationResultNotSet),
-            Err(_) => Err(OperationError::SHA3DecryptionFailure),
+
+        let new_t = kmac_xof(&ka.to_vec(), &self.msg, 512, "SKA", d)?;
+
+        self.op_result = if self
+            .digest
+            .as_ref()
+            .map_or(false, |digest| digest == &new_t)
+        {
+            Ok(())
+        } else {
+            Err(OperationError::SHA3DecryptionFailure)
         };
+
         Ok(())
     }
 }
@@ -308,18 +306,10 @@ impl KeyPair {
     /// ```  
     /// ```
     #[allow(non_snake_case)]
-    pub fn new(pw: &Vec<u8>, owner: String, d: &SecParam) -> Result<KeyPair, OperationError> {
-        // ensure a fixed-bitsize to mitigate sidechannel
-
-        let data = match kmac_xof(pw, &[], 448, "SK", d) {
-            Ok(result) => result,
-            Err(error) => return Err(error),
-        };
-
+    pub fn new(pw: &[u8], owner: String, d: &SecParam) -> Result<KeyPair, OperationError> {
+        let data = kmac_xof(&pw.to_vec(), &[], 448, "SK", d)?;
         let s: Scalar = bytes_to_scalar(data).mul_mod_r(&Scalar::from(4_u64));
-
         let V = ExtendedPoint::tw_generator() * s;
-
         Ok(KeyPair {
             owner,
             pub_key: V,
@@ -375,21 +365,17 @@ impl KeyEncryptable for Message {
         let w = (*pub_key * k).to_affine();
         let Z = (ExtendedPoint::tw_generator() * k).to_affine();
 
-        let ke_ka: Result<Vec<u8>, OperationError> =
-            kmac_xof(&w.x.to_bytes().to_vec(), &[], 448 * 2, "PK", d);
-        let ke_ka = ke_ka.expect("Error getting ke_ka");
-        let ke_len = ke_ka.len();
-        let ke: &mut Vec<u8> = &mut ke_ka[..ke_len / 2].to_vec();
-        let ka: &mut Vec<u8> = &mut ke_ka[ke_len / 2..].to_vec();
+        let ke_ka = kmac_xof(&w.x.to_bytes().to_vec(), &[], 448 * 2, "PK", d)?;
+        let (ke, ka) = ke_ka.split_at(ke_ka.len() / 2);
 
-        let t: Result<Vec<u8>, OperationError> = kmac_xof(ka, &self.msg, 448, "PKA", d);
+        let t = kmac_xof(&ka.to_vec(), &self.msg, 448, "PKA", d);
 
-        match &kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "PKE", d) {
-            Ok(vec) => {
-                xor_bytes(&mut self.msg, vec);
-            }
-            Err(_) => return Err(OperationError::XORFailure),
-        }
+        let msg_len = self.msg.len();
+        xor_bytes(
+            &mut self.msg,
+            &kmac_xof(&ke.to_vec(), &[], (msg_len * 8) as u64, "PKE", d)
+                .map_err(|_| OperationError::XORFailure)?,
+        );
 
         self.digest = t;
         self.asym_nonce = Some(Z.to_extended());
@@ -444,39 +430,30 @@ impl KeyEncryptable for Message {
     /// ```
     #[allow(non_snake_case)]
     fn key_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError> {
-        let Z = self.asym_nonce.unwrap();
-        // Ensure that self.d is not None before proceeding
-        let d = match self.d.as_ref() {
-            Some(d) => d,
-            None => return Err(OperationError::SecurityParameterNotSet), // Replace with an appropriate error
-        };
+        let Z = self.asym_nonce.ok_or(OperationError::SymNonceNotSet)?;
+        let d = self
+            .d
+            .as_ref()
+            .ok_or(OperationError::SecurityParameterNotSet)?;
 
-        let s: Scalar = match kmac_xof(&pw.to_owned(), &[], 448, "SK", d) {
-            Ok(bytes) => bytes_to_scalar(bytes),
-            Err(_) => return Err(OperationError::BytesToScalarError),
-        };
-
-        let s = s.mul_mod_r(&Scalar::from(4_u64));
+        let s_bytes = kmac_xof(&pw.to_vec(), &[], 448, "SK", d)
+            .map_err(|_| OperationError::BytesToScalarError)?;
+        let s = bytes_to_scalar(s_bytes).mul_mod_r(&Scalar::from(4_u64));
         let Z = (Z * s).to_affine();
 
-        let ke_ka = kmac_xof(&Z.x.to_bytes().to_vec(), &[], 448 * 2, "PK", d);
-        let vec = ke_ka?;
-        let ke = &mut vec[..vec.len() / 2].to_vec();
-        let ka = &mut vec[vec.len() / 2..].to_vec();
+        let ke_ka = kmac_xof(&Z.x.to_bytes().to_vec(), &[], 448 * 2, "PK", d)?;
+        let (ke, ka) = ke_ka.split_at(ke_ka.len() / 2);
 
-        match kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "PKE", d) {
-            Ok(ref vec) => {
-                xor_bytes(&mut self.msg, vec);
-            }
-            Err(_) => {
-                return Err(OperationError::KeyDecryptionError);
-            }
-        }
-        let t_p = kmac_xof(ka, &self.msg, 448, "PKA", d);
-        self.op_result = match (self.digest.as_deref(), &t_p) {
-            (Ok(digest), Ok(t_p_vec)) if digest == t_p_vec => Ok(()),
-            (Ok(_), _) => Err(OperationError::KeyDecryptionError),
-            (Err(_), _) => Err(OperationError::EmptyDecryptionError),
+        let xor_result = kmac_xof(&ke.to_vec(), &[], (self.msg.len() * 8) as u64, "PKE", d)
+            .map_err(|_| OperationError::KeyDecryptionError)?;
+        xor_bytes(&mut self.msg, &xor_result);
+
+        let t_p = kmac_xof(&ka.to_vec(), &self.msg, 448, "PKA", d)?;
+
+        self.op_result = if self.digest.as_ref() == Ok(&t_p) {
+            Ok(())
+        } else {
+            Err(OperationError::KeyDecryptionError)
         };
 
         Ok(())
@@ -523,30 +500,22 @@ impl Signable for Message {
     /// ```
     #[allow(non_snake_case)]
     fn sign(&mut self, key: &KeyPair, d: &SecParam) -> Result<(), OperationError> {
-        let s: Scalar = match kmac_xof(&key.priv_key, &[], 448, "SK", d) {
-            Ok(bytes) => bytes_to_scalar(bytes),
-            Err(_) => {
-                return Err(OperationError::BytesToScalarError);
-            }
-        };
-
-        let s = s.mul_mod_r(&Scalar::from(4_u64));
-
+        let s_bytes = kmac_xof(&key.priv_key, &[], 448, "SK", d)
+            .map_err(|_| OperationError::BytesToScalarError)?;
+        let s = bytes_to_scalar(s_bytes).mul_mod_r(&Scalar::from(4_u64));
         let s_bytes = scalar_to_bytes(&s);
 
-        let k: Scalar = match kmac_xof(&s_bytes, &self.msg, 448, "N", d) {
-            Ok(bytes) => bytes_to_scalar(bytes) * Scalar::from(4_u64),
-            Err(_) => {
-                return Err(OperationError::BytesToScalarError);
-            }
-        };
+        let k_bytes = kmac_xof(&s_bytes, &self.msg, 448, "N", d)
+            .map_err(|_| OperationError::BytesToScalarError)?;
+        let k = bytes_to_scalar(k_bytes) * Scalar::from(4_u64);
 
         let U = ExtendedPoint::tw_generator() * k;
-        let ux_bytes = U.to_affine().x.to_bytes().to_vec();
-        let h = kmac_xof(&ux_bytes, &self.msg, 448, "T", d)?;
+        let ux_bytes = U.to_affine().x.to_bytes();
+
+        let h = kmac_xof(&ux_bytes.to_vec(), &self.msg, 448, "T", d)?;
         let h_big = bytes_to_scalar(h.clone());
-        //(a % b + b) % b
-        let z = k - (h_big.mul_mod_r(&s));
+
+        let z = k - h_big.mul_mod_r(&s);
         self.sig = Some(Signature { h, z });
         self.d = Some(*d);
         Ok(())
@@ -586,27 +555,21 @@ impl Signable for Message {
     /// ```
     #[allow(non_snake_case)]
     fn verify(&mut self, pub_key: &ExtendedPoint) -> Result<(), OperationError> {
-        // Ensure self.sig is Some before proceeding
-        let sig = match self.sig.as_ref() {
-            Some(sig) => sig,
-            None => return Err(OperationError::SignatureNotSet),
-        };
+        let sig = self.sig.as_ref().ok_or(OperationError::SignatureNotSet)?;
+        let d = self
+            .d
+            .as_ref()
+            .ok_or(OperationError::SecurityParameterNotSet)?;
 
-        // Ensure self.d is not None before proceeding
-        let d = match self.d.as_ref() {
-            Some(d) => d,
-            None => return Err(OperationError::SecurityParameterNotSet),
-        };
+        let h_scalar = bytes_to_scalar(sig.h.clone());
+        let U = ExtendedPoint::tw_generator() * sig.z + (*pub_key * h_scalar);
 
-        let mut U = ExtendedPoint::tw_generator() * sig.z;
-        let hv = *pub_key * bytes_to_scalar(sig.h.clone());
-        U = U + hv;
-        let h_p = kmac_xof(&U.to_affine().x.to_bytes().to_vec(), &self.msg, 448, "T", d);
+        let h_p = kmac_xof(&U.to_affine().x.to_bytes().to_vec(), &self.msg, 448, "T", d)?;
 
-        self.op_result = match h_p {
-            Ok(ref h_p_vec) if h_p_vec == &sig.h => Ok(()),
-            Ok(_) => Err(OperationError::OperationResultNotSet),
-            Err(_) => Err(OperationError::VerificationFailure),
+        self.op_result = if &h_p == &sig.h {
+            Ok(())
+        } else {
+            Err(OperationError::SignatureVerificationFailure)
         };
 
         Ok(())
@@ -728,7 +691,7 @@ impl AesEncryptable for Message {
         self.op_result = match self.digest.as_mut() {
             Ok(digest) if ver == *digest => Ok(()),
             Ok(_) => Err(OperationError::OperationResultNotSet),
-            Err(_) => Err(OperationError::VerificationFailure),
+            Err(_) => Err(OperationError::SignatureVerificationFailure),
         };
         Ok(())
     }
@@ -935,7 +898,8 @@ mod shake_tests {
             0xa4, 0xa3, 0x81, 0x72, 0xbf, 0x11, 0x42, 0xa6, 0xa9, 0xc1, 0x93, 0x0e, 0x50, 0xdf,
             0x03, 0x90, 0x43, 0x12,
         ];
-        assert!(data.compute_tagged_hash(&mut pw, &s, &SecParam::D256).is_ok());
+        data.compute_tagged_hash(&mut pw, &s, &SecParam::D256);
+
         assert!(data
             .digest
             .as_ref()
@@ -954,7 +918,8 @@ mod shake_tests {
             0x63, 0xf4, 0xca, 0x0b, 0x65, 0x83, 0x6f, 0x52, 0x61, 0xee, 0x64, 0x64, 0x4c, 0xe5,
             0xa8, 0x84, 0x56, 0xd3, 0xd3, 0x0e, 0xfb, 0xed,
         ];
-        assert!(data.compute_tagged_hash(&mut pw, &"", &SecParam::D512).is_ok());
+        data.compute_tagged_hash(&mut pw, &"", &SecParam::D512);
+
         assert!(data
             .digest
             .as_ref()
