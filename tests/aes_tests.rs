@@ -1,5 +1,4 @@
 #[cfg(test)]
-
 mod aes_modes_tests {
     use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
     use capycrypt::{AesEncryptable, Message};
@@ -11,10 +10,10 @@ mod aes_modes_tests {
         // Get 5mb random data
         let mut input = Message::new(get_random_bytes(5242880));
 
-        input.aes_encrypt_cbc(&key); // Encrypt the input
-        input.aes_decrypt_cbc(&key); // Decrypt the input
+        let _ = input.aes_encrypt_cbc(&key); // Encrypt the input
+        let _ = input.aes_decrypt_cbc(&key); // Decrypt the input
 
-        assert!(input.op_result.unwrap()); // Verify operation success
+        assert!(input.op_result.is_ok()); // Verify operation success
     }
 
     #[test]
@@ -24,10 +23,9 @@ mod aes_modes_tests {
         // Get 5mb random data
         let mut input = Message::new(get_random_bytes(5242880));
 
-        input.aes_encrypt_cbc(&key); // Encrypt the input
-        input.aes_decrypt_cbc(&key); // Decrypt the input
-
-        assert!(input.op_result.unwrap()); // Verify operation success
+        let _ = input.aes_encrypt_cbc(&key); // Encrypt the input
+        let _ = input.aes_decrypt_cbc(&key); // Decrypt the input
+        assert!(input.op_result.is_ok()); // Verify operation success
     }
 
     #[test]
@@ -37,10 +35,9 @@ mod aes_modes_tests {
         // Get 5mb random data
         let mut input = Message::new(get_random_bytes(5242880));
 
-        input.aes_encrypt_cbc(&key); // Encrypt the input
-        input.aes_decrypt_cbc(&key); // Decrypt the input
-
-        assert!(input.op_result.unwrap()); // Verify operation success
+        let _ = input.aes_encrypt_cbc(&key); // Encrypt the input
+        let _ = input.aes_decrypt_cbc(&key); // Decrypt the input
+        assert!(input.op_result.is_ok()); // Verify operation success
     }
 
     #[test]

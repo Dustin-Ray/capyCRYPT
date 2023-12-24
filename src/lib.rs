@@ -17,7 +17,27 @@ pub mod aes {
 /// Module for encrypt, decrypt, and sign functions.
 pub mod ops;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
+/// A simple error type
+pub enum OperationError {
+    UnsupportedSecurityParameter,
+    CShakeError,
+    KmacError,
+    SignatureVerificationFailure,
+    SHA3DecryptionFailure,
+    KeyDecryptionError,
+    EmptyDecryptionError,
+    DigestNotAvailable,
+    SymNonceNotSet,
+    SecurityParameterNotSet,
+    XORFailure,
+    BytesToScalarError,
+    OperationResultNotSet,
+    SignatureNotSet,
+    UnsupportedCapacity,
+}
+
+#[derive(Debug, Clone)]
 /// An object containing the necessary fields for Schnorr signatures.
 pub struct Signature {
     /// keyed hash of signed message
@@ -26,16 +46,7 @@ pub struct Signature {
     pub z: Scalar,
 }
 
-impl Clone for Signature {
-    fn clone(&self) -> Signature {
-        Signature {
-            h: self.h.clone(),
-            z: self.z,
-        }
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// An object containing the fields necessary to represent an asymmetric keypair.
 pub struct KeyPair {
     /// String indicating the owner of the key, can be arbitrary
@@ -48,6 +59,18 @@ pub struct KeyPair {
     pub date_created: String,
 }
 
+#[derive(Debug)]
+/// Message type for which cryptographic traits are defined.
+pub struct Message {
+    pub msg: Box<Vec<u8>>,
+    pub d: Option<SecParam>,
+    pub sym_nonce: Option<Vec<u8>>,
+    pub asym_nonce: Option<ExtendedPoint>,
+    pub digest: Result<Vec<u8>, OperationError>,
+    pub op_result: Result<(), OperationError>,
+    pub sig: Option<Signature>,
+}
+
 impl Message {
     pub fn new(data: Vec<u8>) -> Message {
         Message {
@@ -55,51 +78,149 @@ impl Message {
             d: None,
             sym_nonce: None,
             asym_nonce: None,
-            digest: None,
-            op_result: None,
+            digest: Ok(vec![]),
+            op_result: Ok(()),
             sig: None,
         }
     }
 }
 
-#[derive(Debug)]
-/// Message type for which cryptographic traits are defined.
-pub struct Message {
-    pub msg: Box<Vec<u8>>,
-    pub d: Option<u64>,
-    pub sym_nonce: Option<Vec<u8>>,
-    pub asym_nonce: Option<ExtendedPoint>,
-    pub digest: Option<Vec<u8>>,
-    pub op_result: Option<bool>,
-    pub sig: Option<Signature>,
+#[derive(Debug, Clone, Copy)]
+pub enum SecParam {
+    D224 = 224,
+    D256 = 256,
+    D384 = 384,
+    D512 = 512,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum Capacity {
+    C448 = 448,
+    C512 = 512,
+    C768 = 768,
+    C1024 = 1024,
+}
+
+impl Capacity {
+    fn from_bit_length(bit_length: u64) -> Self {
+        match bit_length * 2 {
+            x if x <= 448 => Capacity::C448,
+            x if x <= 512 => Capacity::C512,
+            x if x <= 768 => Capacity::C768,
+            _ => Capacity::C1024,
+        }
+    }
+}
+
+impl SecParam {
+    fn bytepad_value(&self) -> u32 {
+        match self {
+            SecParam::D224 => 172,
+            SecParam::D256 => 168,
+            SecParam::D384 => 152,
+            SecParam::D512 => 136,
+        }
+    }
+
+    pub fn validate(&self) -> Result<(), OperationError> {
+        match self {
+            SecParam::D224 | SecParam::D256 | SecParam::D384 | SecParam::D512 => Ok(()),
+        }
+    }
+}
+
+impl BitLength for Capacity {
+    fn bit_length(&self) -> u64 {
+        *self as u64
+    }
+}
+
+impl BitLength for SecParam {
+    fn bit_length(&self) -> u64 {
+        *self as u64
+    }
+}
+
+impl BitLength for Rate {
+    fn bit_length(&self) -> u64 {
+        self.value
+    }
+}
+
+impl BitLength for OutputLength {
+    fn bit_length(&self) -> u64 {
+        self.value()
+    }
+}
+
+pub struct OutputLength {
+    value: u64,
+}
+
+impl OutputLength {
+    const MAX_VALUE: u64 = u64::MAX;
+
+    pub fn try_from(value: u64) -> Result<Self, OperationError> {
+        if value < Self::MAX_VALUE {
+            Ok(OutputLength { value })
+        } else {
+            Err(OperationError::UnsupportedSecurityParameter)
+        }
+    }
+
+    pub fn value(&self) -> u64 {
+        self.value
+    }
+}
+
+pub struct Rate {
+    value: u64,
+}
+
+impl Rate {
+    pub fn from<R: BitLength + ?Sized>(sp: &R) -> Self {
+        Rate {
+            value: (1600 - sp.bit_length()),
+        }
+    }
+
+    pub fn value(&self) -> u64 {
+        self.value
+    }
 }
 
 pub trait AesEncryptable {
-    fn aes_encrypt_cbc(&mut self, key: &[u8]);
-    fn aes_decrypt_cbc(&mut self, key: &[u8]);
+    fn aes_encrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError>;
+    fn aes_decrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError>;
     fn aes_encrypt_ctr(&mut self, key: &[u8]);
     fn aes_decrypt_ctr(&mut self, key: &[u8]);
 }
 
+pub trait BitLength {
+    fn bit_length(&self) -> u64;
+}
+
 pub trait Hashable {
-    fn compute_hash_sha3(&mut self, d: u64);
-    fn compute_tagged_hash(&mut self, pw: &mut Vec<u8>, s: &str, d: u64);
+    fn compute_hash_sha3(&mut self, d: &SecParam) -> Result<(), OperationError>;
+    fn compute_tagged_hash(&mut self, pw: &[u8], s: &str, d: &SecParam);
 }
 
 pub trait SpongeEncryptable {
-    fn sha3_encrypt(&mut self, pw: &[u8], d: u64);
-    fn sha3_decrypt(&mut self, pw: &[u8]);
+    fn sha3_encrypt(&mut self, pw: &[u8], d: &SecParam) -> Result<(), OperationError>;
+    fn sha3_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError>;
 }
 
 pub trait KeyEncryptable {
-    fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: u64);
-    fn key_decrypt(&mut self, pw: &[u8]);
+    fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: &SecParam) -> Result<(), OperationError>;
+    fn key_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError>;
 }
 
 pub trait Signable {
-    fn sign(&mut self, key: &KeyPair, d: u64);
-    fn verify(&mut self, pub_key: &ExtendedPoint);
+    fn sign(&mut self, key: &KeyPair, d: &SecParam) -> Result<(), OperationError>;
+    fn verify(&mut self, pub_key: &ExtendedPoint) -> Result<(), OperationError>;
 }
+
+const RATE_IN_BYTES: usize = 136; // SHA3-256 r = 1088 / 8 = 136
 
 #[cfg(test)]
 const NIST_DATA_SPONGE_INIT: [u8; 200] = [

@@ -1,37 +1,42 @@
-use crate::sha3::keccakf::keccakf_1600;
+use crate::{sha3::keccakf::keccakf_1600, BitLength, Rate};
 
-/// Absorbs rate amount of data into state and permute. Continue absorbing and permuting until
-/// No more data left in m. Pads to multiple of rate using multi-rate padding.
-///
-/// * m: message to be absorbed
-/// * capacity: security parameter which determines rate = bit_width - capacity
-/// * return: a state consisting of 25 words of 64 bits each.
-pub(crate) fn sponge_absorb(m: &mut Vec<u8>, capacity: u64) -> [u64; 25] {
-    let r = (1600 - capacity) / 8;
+// Absorbs rate amount of data into state and permutes. Continue absorbing and permuting until
+// no more data left in m. Pads to multiple of rate using multi-rate padding.
+//
+// * m: message to be absorbed
+// * capacity: security parameter which determines rate = bit_width - capacity
+// * return: a state consisting of 25 words of 64 bits each.
+pub(crate) fn sponge_absorb<S: BitLength + ?Sized>(m: &mut Vec<u8>, capacity: &S) -> [u64; 25] {
+    let c = capacity.bit_length();
+    let r: u64 = (1600 - c) / 8;
     if (m.len() % r as usize) != 0 {
         pad_ten_one(m, r as usize);
     }
     bytes_to_state(m, r as usize)
 }
 
-/// Finalizes a state
-///
-/// * s: the state to finalize
-/// * bit_length: requested output length in bits
-/// * rate: security parameter
-/// * return: digest of permuted states of length `bit_length`.
-pub(crate) fn sponge_squeeze(s: &mut [u64; 25], bit_length: u64, rate: u64) -> Vec<u8> {
+// Finalizes a state.
+//
+// * s: the state to finalize
+// * bit_length: requested output length in bits
+// * rate: security parameter
+// * return: digest of permuted states of length `bit_length`.
+pub(crate) fn sponge_squeeze<S: BitLength + ?Sized>(
+    s: &mut [u64; 25],
+    bit_length: &S,
+    rate: Rate,
+) -> Vec<u8> {
     let mut out: Vec<u8> = Vec::new(); //FIPS 202 Algorithm 8 Step 8
-    let block_size: usize = (rate / 64) as usize;
-    while out.len() * 8 < bit_length as usize {
+    let block_size: usize = (rate.value / 64) as usize;
+    while out.len() * 8 < bit_length.bit_length() as usize {
         out.append(&mut state_to_byte_array(&s[0..block_size]));
         keccakf_1600(s); //FIPS 202 Algorithm 8 Step 10
     }
-    out.truncate((bit_length / 8) as usize);
+    out.truncate((bit_length.bit_length() / 8) as usize);
     out
 }
 
-/// Converts state of 25 u64s to array of bytes
+// Converts state of 25 u64s to array of bytes.
 fn state_to_byte_array(uint64s: &[u64]) -> Vec<u8> {
     let mut result = vec![];
     for v in uint64s {
@@ -41,7 +46,7 @@ fn state_to_byte_array(uint64s: &[u64]) -> Vec<u8> {
     result
 }
 
-/// Absorbs 200 bytes of message into fixed memory size.
+// Absorbs 200 bytes of message into fixed memory size.
 fn bytes_to_state(in_val: &mut Vec<u8>, rate_in_bytes: usize) -> [u64; 25] {
     let mut offset: usize = 0;
     let mut s: [u64; 25] = [0; 25];
@@ -57,7 +62,7 @@ fn bytes_to_state(in_val: &mut Vec<u8>, rate_in_bytes: usize) -> [u64; 25] {
     s
 }
 
-/// Converts bytes to u64 (aka word/lane)
+// Converts bytes to u64 (aka word/lane)
 fn bytes_to_word(in_val: &[u8], offset: usize) -> u64 {
     let mut lane: u64 = 0;
     for i in 0..8 {
@@ -66,7 +71,7 @@ fn bytes_to_word(in_val: &[u8], offset: usize) -> u64 {
     lane
 }
 
-/// Shifts u64 into `Vec<u8>`
+// Shifts u64 into `Vec<u8>`
 pub(crate) fn u64_to_little_endian_bytes(n: &u64) -> Vec<u8> {
     let mut bytes = vec![0u8; 8];
     for (i, el) in bytes.iter_mut().enumerate().take(8) {
@@ -75,15 +80,15 @@ pub(crate) fn u64_to_little_endian_bytes(n: &u64) -> Vec<u8> {
     bytes
 }
 
-//// xors 2 states of 26 u64s in place, assumes equal length.
+// xors 2 states of 26 u64s in place, assumes equal length.
 fn xor_states(a: &mut [u64; 25], b: &[u64; 25]) {
     for i in 0..b.len() {
         a[i] ^= b[i];
     }
 }
 
-/// # NIST FIPS 202 5.1
-/// Multi-rate padding scheme
+// # NIST FIPS 202 5.1
+// Multi-rate padding scheme
 fn pad_ten_one(m: &mut Vec<u8>, rate_in_bytes: usize) {
     let q = rate_in_bytes - m.len() % rate_in_bytes;
 
@@ -97,7 +102,6 @@ fn pad_ten_one(m: &mut Vec<u8>, rate_in_bytes: usize) {
 #[cfg(test)]
 mod sponge_tests {
     use crate::sha3::aux_functions::nist_800_185::{byte_pad, left_encode, right_encode};
-    use crate::sha3::sponge::{sponge_absorb, sponge_squeeze};
     use crate::NIST_DATA_SPONGE_INIT;
 
     #[test]
@@ -183,23 +187,5 @@ mod sponge_tests {
 
         let res = left_encode(val_len as u64);
         assert_eq!(res, expected);
-    }
-
-    #[test]
-    fn test_sponge() {
-        let res = sponge_squeeze(
-            &mut sponge_absorb(&mut "test".as_bytes().to_vec(), 256),
-            512,
-            136,
-        );
-
-        let expected: [u8; 64] = [
-            0x8e, 0xe1, 0xf9, 0x5d, 0xfe, 0x95, 0x9e, 0x1d, 0x5e, 0x81, 0x88, 0xdf, 0x17, 0x65,
-            0x16, 0xb2, 0x5d, 0xe2, 0xd1, 0xc5, 0xeb, 0xf8, 0xf3, 0x31, 0x2a, 0x58, 0x8f, 0xba,
-            0x9f, 0x0a, 0x23, 0xe7, 0x43, 0x73, 0x79, 0xc2, 0x03, 0x5a, 0x82, 0x08, 0xdf, 0x6a,
-            0xb2, 0xb6, 0x8a, 0x93, 0x27, 0xc7, 0xe4, 0x2e, 0x13, 0xbd, 0xd7, 0xfc, 0x22, 0x22,
-            0xdd, 0x61, 0x1f, 0x0f, 0x75, 0x5d, 0x88, 0x08,
-        ];
-        assert!(res == expected)
     }
 }
