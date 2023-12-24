@@ -33,16 +33,20 @@ use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scala
 /// * `d: usize`: requested output length and security strength
 /// ## Returns:
 /// * `return  -> Vec<u8>`: SHA3-d message digest
-pub(crate) fn shake<T: BitLength>(n: &mut Vec<u8>, d: &T) -> Result<Vec<u8>, OperationError> {
+pub(crate) fn shake<S: BitLength>(
+    n: &mut Vec<u8>,
+    d: &S,
+    c: &S,
+) -> Result<Vec<u8>, OperationError> {
     let bytes_to_pad = 136 - n.len() % 136; // SHA3-256 r = 1088 / 8 = 136
     match bytes_to_pad {
         1 => n.extend_from_slice(&[0x86]), // delim suffix
         _ => n.extend_from_slice(&[0x06]), // delim suffix for other cases
     }
     Ok(sponge_squeeze(
-        &mut sponge_absorb(n, d), // d * 2 FIXME
+        &mut sponge_absorb(n, c), // d * 2 FIXME
         d,
-        Rate::new(d), // d * 2 FIXME
+        Rate::new(c), // d * 2 FIXME
     ))
 }
 
@@ -86,9 +90,10 @@ pub fn cshake(
     out.push(0x04);
 
     let length = OutputLength::try_from(l)?;
+    let c = OutputLength::try_from(l * 2)?;
 
     if n.is_empty() && s.is_empty() {
-        let _ = shake(&mut out, &length); // TODO: check for errors here
+        let _ = shake(&mut out, &length, &c); // TODO: check for errors here
     }
 
     Ok(sponge_squeeze(
@@ -119,7 +124,7 @@ pub fn kmac_xof(
     d: &SecurityParameter,
 ) -> Result<Vec<u8>, OperationError> {
     let mut encode_k = encode_string(k);
-    let bytepad_w = d.bytepad_width();
+    let bytepad_w = d.bytepad_value();
     let mut bp = byte_pad(&mut encode_k, bytepad_w);
 
     // Extend bp with contents of x and right_encode(0)
@@ -148,8 +153,8 @@ impl Hashable for Message {
     /// assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
     /// ```
     fn compute_hash_sha3(&mut self, d: &SecurityParameter) -> Result<(), OperationError> {
-        self.digest = match d.bytepad_width() {
-            224 | 256 | 384 | 512 => shake(&mut self.msg, d),
+        self.digest = match d.bit_length() {
+            224 | 256 | 384 | 512 => shake(&mut self.msg, d, d), //fixme c = d * 2
             _ => return Err(OperationError::UnsupportedSecurityParameter),
         };
         Ok(())
@@ -180,25 +185,11 @@ impl Hashable for Message {
         s: &str,
         d: &SecurityParameter,
     ) -> Result<(), OperationError> {
-        if let Some(value) = self.check_d(*d, pw, s) {
-            return value;
-        }
-        Ok(())
-    }
-}
-
-impl Message {
-    fn check_d(
-        &mut self,
-        d: SecurityParameter,
-        pw: &mut Vec<u8>,
-        s: &str,
-    ) -> Option<Result<(), OperationError>> {
-        self.digest = match d.bytepad_width() {
-            224 | 256 | 384 | 512 => kmac_xof(pw, &self.msg, d.bytepad_width().into(), s, &d),
-            _ => return Some(Err(OperationError::UnsupportedSecurityParameter)),
+        self.digest = match d.bytepad_value() {
+            224 | 256 | 384 | 512 => kmac_xof(pw, &self.msg, d.bytepad_value().into(), s, d),
+            _ => return Err(OperationError::UnsupportedSecurityParameter),
         };
-        None
+        Ok(())
     }
 }
 
@@ -244,14 +235,13 @@ impl SpongeEncryptable for Message {
         let mut ke_ka = z.clone();
         ke_ka.append(&mut pw.to_owned());
         let ke_ka = kmac_xof(&ke_ka, &[], 1024, "S", d);
-        let vec = ke_ka.map_err(|_| OperationError::DigestNotAvailable)?; // Converts OperationError to NoDigestResult
+        let vec = ke_ka.map_err(|_| OperationError::DigestNotAvailable)?; // Converts OperationError
         let ke = &vec[..64].to_vec();
         let ka = &vec[64..].to_vec();
 
         self.digest = kmac_xof(ka, &self.msg, 512, "SKA", d);
 
-        let c = kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "SKE", d);
-        match &c {
+        match &kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "SKE", d) {
             Ok(vec) => {
                 xor_bytes(&mut self.msg, vec);
             }
@@ -299,7 +289,7 @@ impl SpongeEncryptable for Message {
         let mut z_pw = self
             .sym_nonce
             .clone()
-            .ok_or(OperationError::SymNonceNotFound)?;
+            .ok_or(OperationError::SymNonceNotSet)?;
         z_pw.append(&mut pw.to_owned());
         let ke_ka = kmac_xof(&z_pw, &[], 1024, "S", &d)?;
         let ke = &mut ke_ka[..64].to_vec();
@@ -310,7 +300,7 @@ impl SpongeEncryptable for Message {
         let new_t = &kmac_xof(ka, &self.msg, 512, "SKA", &d)?;
         self.op_result = match self.digest.as_ref() {
             Ok(digest) if digest == new_t => Ok(()),
-            Ok(_) => Err(OperationError::SHA3DecryptionFailure),
+            Ok(_) => Err(OperationError::OperationResultNotSet),
             Err(_) => Err(OperationError::SHA3DecryptionFailure),
         };
         Ok(())
@@ -420,10 +410,8 @@ impl KeyEncryptable for Message {
         let ka: &mut Vec<u8> = &mut ke_ka[ke_len / 2..].to_vec();
 
         let t: Result<Vec<u8>, OperationError> = kmac_xof(ka, &self.msg, 448, "PKA", d);
-        let c: Result<Vec<u8>, OperationError> =
-            kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "PKE", d);
 
-        match &c {
+        match &kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "PKE", d) {
             Ok(vec) => {
                 xor_bytes(&mut self.msg, vec);
             }
@@ -503,9 +491,7 @@ impl KeyEncryptable for Message {
         let ke = &mut vec[..vec.len() / 2].to_vec();
         let ka = &mut vec[vec.len() / 2..].to_vec();
 
-        let m = Box::new(kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "PKE", d));
-
-        match *m {
+        match kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "PKE", d) {
             Ok(ref vec) => {
                 xor_bytes(&mut self.msg, vec);
             }
@@ -646,7 +632,7 @@ impl Signable for Message {
 
         self.op_result = match h_p {
             Ok(ref h_p_vec) if h_p_vec == &sig.h => Ok(()),
-            Ok(_) => Err(OperationError::OperationResultNotAvailable),
+            Ok(_) => Err(OperationError::OperationResultNotSet),
             Err(_) => Err(OperationError::VerificationFailure),
         };
 
@@ -768,7 +754,7 @@ impl AesEncryptable for Message {
         let ver = kmac_xof(ka, &self.msg, 512, "AES", &SecurityParameter::D256)?;
         self.op_result = match self.digest.as_mut() {
             Ok(digest) if ver == *digest => Ok(()),
-            Ok(_) => Err(OperationError::OperationResultNotAvailable),
+            Ok(_) => Err(OperationError::OperationResultNotSet),
             Err(_) => Err(OperationError::VerificationFailure),
         };
         Ok(())

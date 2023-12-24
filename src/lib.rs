@@ -28,12 +28,13 @@ pub enum OperationError {
     KeyDecryptionError,
     EmptyDecryptionError,
     DigestNotAvailable,
-    SymNonceNotFound,
+    SymNonceNotSet,
     SecurityParameterNotSet,
     XORFailure,
     BytesToScalarError,
-    OperationResultNotAvailable,
+    OperationResultNotSet,
     SignatureNotSet,
+    UnsupportedCapacity,
 }
 impl std::error::Error for OperationError {}
 impl std::fmt::Display for OperationError {
@@ -101,8 +102,14 @@ pub enum SecurityParameter {
     D512 = 512,
 }
 
+#[derive(Clone, Copy)]
+pub enum Capacity {
+    C512 = 512,
+    C1024 = 1024,
+}
+
 impl SecurityParameter {
-    fn bytepad_width(&self) -> u32 {
+    fn bytepad_value(&self) -> u32 {
         match self {
             SecurityParameter::D224 => 172,
             SecurityParameter::D256 => 168,
@@ -112,26 +119,9 @@ impl SecurityParameter {
     }
 }
 
-pub struct Capacity {
-    value: u64,
-}
-
-impl Capacity {
-    pub fn new(sp: &SecurityParameter) -> Self {
-        let capacity_value = (*sp as u64) * 2; // Assuming SecurityParameter can be cast to u64
-        Capacity {
-            value: capacity_value,
-        }
-    }
-
-    pub fn value(&self) -> u64 {
-        self.value
-    }
-}
-
 impl BitLength for Capacity {
     fn bit_length(&self) -> u64 {
-        self.value
+        *self as u64
     }
 }
 

@@ -1,5 +1,4 @@
 #[cfg(test)]
-
 mod aes_modes_tests {
     use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
     use capycrypt::{AesEncryptable, Message};
