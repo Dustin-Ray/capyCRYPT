@@ -207,13 +207,12 @@ impl SpongeEncryptable for Message {
         let mut ke_ka = z.clone();
         ke_ka.extend_from_slice(pw);
 
-        let ke_ka = kmac_xof(&ke_ka, &[], 1024, "S", d).map_err(|_| OperationError::KmacError)?;
+        let ke_ka = kmac_xof(&ke_ka, &[], 1024, "S", d)?;
         let (ke, ka) = ke_ka.split_at(64);
 
         self.digest = kmac_xof(&ka.to_vec(), &self.msg, 512, "SKA", d);
 
-        let m = kmac_xof(&ke.to_vec(), &[], (self.msg.len() * 8) as u64, "SKE", d)
-            .map_err(|_| OperationError::XORFailure)?;
+        let m = kmac_xof(&ke.to_vec(), &[], (self.msg.len() * 8) as u64, "SKE", d)?;
         xor_bytes(&mut self.msg, &m);
 
         self.sym_nonce = Some(z);
@@ -374,8 +373,7 @@ impl KeyEncryptable for Message {
         let msg_len = self.msg.len();
         xor_bytes(
             &mut self.msg,
-            &kmac_xof(&ke.to_vec(), &[], (msg_len * 8) as u64, "PKE", d)
-                .map_err(|_| OperationError::XORFailure)?,
+            &kmac_xof(&ke.to_vec(), &[], (msg_len * 8) as u64, "PKE", d)?
         );
 
         self.digest = t;
@@ -437,16 +435,14 @@ impl KeyEncryptable for Message {
             .as_ref()
             .ok_or(OperationError::SecurityParameterNotSet)?;
 
-        let s_bytes = kmac_xof(&pw.to_vec(), &[], 448, "SK", d)
-            .map_err(|_| OperationError::BytesToScalarError)?;
+        let s_bytes = kmac_xof(&pw.to_vec(), &[], 448, "SK", d)?;
         let s = bytes_to_scalar(s_bytes).mul_mod_r(&Scalar::from(4_u64));
         let Z = (Z * s).to_affine();
 
         let ke_ka = kmac_xof(&Z.x.to_bytes().to_vec(), &[], 448 * 2, "PK", d)?;
         let (ke, ka) = ke_ka.split_at(ke_ka.len() / 2);
 
-        let xor_result = kmac_xof(&ke.to_vec(), &[], (self.msg.len() * 8) as u64, "PKE", d)
-            .map_err(|_| OperationError::KeyDecryptionError)?;
+        let xor_result = kmac_xof(&ke.to_vec(), &[], (self.msg.len() * 8) as u64, "PKE", d)?;
         xor_bytes(&mut self.msg, &xor_result);
 
         let t_p = kmac_xof(&ka.to_vec(), &self.msg, 448, "PKA", d)?;
@@ -501,13 +497,11 @@ impl Signable for Message {
     /// ```
     #[allow(non_snake_case)]
     fn sign(&mut self, key: &KeyPair, d: &SecParam) -> Result<(), OperationError> {
-        let s_bytes = kmac_xof(&key.priv_key, &[], 448, "SK", d)
-            .map_err(|_| OperationError::BytesToScalarError)?;
+        let s_bytes = kmac_xof(&key.priv_key, &[], 448, "SK", d)?;
         let s = bytes_to_scalar(s_bytes).mul_mod_r(&Scalar::from(4_u64));
         let s_bytes = scalar_to_bytes(&s);
 
-        let k_bytes = kmac_xof(&s_bytes, &self.msg, 448, "N", d)
-            .map_err(|_| OperationError::BytesToScalarError)?;
+        let k_bytes = kmac_xof(&s_bytes, &self.msg, 448, "N", d)?;
         let k = bytes_to_scalar(k_bytes) * Scalar::from(4_u64);
 
         let U = ExtendedPoint::tw_generator() * k;
@@ -572,7 +566,6 @@ impl Signable for Message {
         } else {
             Err(OperationError::SignatureVerificationFailure)
         };
-
         Ok(())
     }
 }
@@ -670,7 +663,7 @@ impl AesEncryptable for Message {
     /// // FIXME: Assertion
     /// ```
     fn aes_decrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError> {
-        let mut iv = self.sym_nonce.clone().unwrap();
+        let iv = self.sym_nonce.clone().unwrap();
         let mut ke_ka = iv.clone();
         ke_ka.append(&mut key.to_owned());
         let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", &SecParam::D256)?;
@@ -739,36 +732,36 @@ impl AesEncryptable for Message {
     /// // Verify operation success
     /// assert!(input.op_result.unwrap());
     /// ```
-    fn aes_encrypt_ctr(&mut self, key: &[u8]) {
+    fn aes_encrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = get_random_bytes(12);
-        let counter = 0u32; 
-        let counter_bytes = (counter).to_be_bytes();
-
+        let counter = 0u32;
+        let counter_bytes = counter.to_be_bytes();
+    
         let mut ke_ka = iv.clone();
         ke_ka.extend_from_slice(&counter_bytes);
-        ke_ka.append(&mut key.to_owned());
-        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", 256);
-        let ke = &ke_ka[..key.len()].to_vec(); // Encryption Key
-        let ka = &ke_ka[key.len()..].to_vec(); // Authentication Key
-
+        ke_ka.extend_from_slice(key);
+        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", &SecParam::D256)?;
+    
+        let (ke, ka) = ke_ka.split_at(key.len());
+    
         self.sym_nonce = Some(iv.clone());
-
-        self.digest = Some(kmac_xof(ka, &self.msg, 512, "AES", 256));
-
-        let key_schedule = AES::new(ke);
-
+        self.digest = Ok(kmac_xof(&ka.to_vec(), &self.msg, 512, "AES", &SecParam::D256)?);
+    
+        let key_schedule = AES::new(&ke.to_vec());
+    
         // Parallelize encryption for each block
         self.msg.par_chunks_mut(16).enumerate().for_each(|(i, block)| {
-            let mut temp: Vec<u8> = iv.clone();
+            let mut temp = iv.clone();
             let counter = i as u32;
             temp.extend_from_slice(&counter.to_be_bytes());
-
+    
             AES::encrypt_block(&mut temp, 0, &key_schedule.round_key);
-
+    
             xor_blocks(block, &temp);
         });
+    
+        Ok(())
     }
-
     /// # Symmetric Decryption using AES in CTR Mode
     /// Decrypts a [`Message`] using the AES algorithm in CTR (Counter) mode.
     /// For more information, refer to NIST Special Publication 800-38A.
@@ -802,40 +795,48 @@ impl AesEncryptable for Message {
     /// // Verify operation success
     /// assert!(input.op_result.unwrap());
     /// ```
-    fn aes_decrypt_ctr(&mut self, key: &[u8]) {
-        let iv = self.sym_nonce.clone().unwrap();
-        let counter = 0u32; 
-        let counter_bytes = (counter).to_be_bytes();
-
+    fn aes_decrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError> {
+        let iv = self.sym_nonce.clone().ok_or(OperationError::SymNonceNotSet)?;
+        let counter = 0u32;
+        let counter_bytes = counter.to_be_bytes();
+    
         let mut ke_ka = iv.clone();
         ke_ka.extend_from_slice(&counter_bytes);
-        ke_ka.append(&mut key.to_owned());
-        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", 256);
-        let ke = &ke_ka[..key.len()].to_vec(); // Encryption Key
-        let ka = &ke_ka[key.len()..].to_vec(); // Authentication Key
-
-        let key_schedule = AES::new(ke);
-
+        ke_ka.extend_from_slice(key);
+        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", &SecParam::D256)?;
+    
+        let (ke, ka) = ke_ka.split_at(key.len());
+    
+        let key_schedule = AES::new(&ke.to_vec());
+    
         // Parallelize decryption for each block
         self.msg.par_chunks_mut(16).enumerate().for_each(|(i, block)| {
-            let mut temp: Vec<u8> = iv.clone();
+            let mut temp = iv.clone();
             let counter = i as u32;
             temp.extend_from_slice(&counter.to_be_bytes());
-
+    
             AES::encrypt_block(&mut temp, 0, &key_schedule.round_key);
-
+    
             xor_blocks(block, &temp);
         });
-
-        let ver = &kmac_xof(ka, &self.msg, 512, "AES", 256);
-        self.op_result = Some(self.digest.as_mut().unwrap() == ver);
+    
+        let ver = kmac_xof(&ka.to_vec(), &self.msg, 512, "AES", &SecParam::D256)?;
+        self.op_result = if let Ok(digest) = self.digest.as_ref() {
+            if digest == &ver {
+                Ok(())
+            } else {
+                Err(OperationError::AESCTRDecryptionFailure)
+            }
+        } else {
+            Err(OperationError::DigestNotSet)
+        };
+        Ok(())
     }
 }
 
 ///
 /// TESTS
 ///
-
 #[cfg(test)]
 mod cshake_tests {
     use crate::{ops::cshake, SecParam, NIST_DATA_SPONGE_INIT};
