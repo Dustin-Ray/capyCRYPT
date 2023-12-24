@@ -27,7 +27,7 @@ pub enum OperationError {
     SHA3DecryptionFailure,
     KeyDecryptionError,
     EmptyDecryptionError,
-    DigestNotAvailable,
+    DigestNotSet,
     SymNonceNotSet,
     SecurityParameterNotSet,
     XORFailure,
@@ -35,6 +35,7 @@ pub enum OperationError {
     OperationResultNotSet,
     SignatureNotSet,
     UnsupportedCapacity,
+    AESCTRDecryptionFailure,
 }
 
 #[derive(Debug, Clone)]
@@ -93,25 +94,6 @@ pub enum SecParam {
     D512 = 512,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub(crate) enum Capacity {
-    C448 = 448,
-    C512 = 512,
-    C768 = 768,
-    C1024 = 1024,
-}
-
-impl Capacity {
-    fn from_bit_length(bit_length: u64) -> Self {
-        match bit_length * 2 {
-            x if x <= 448 => Capacity::C448,
-            x if x <= 512 => Capacity::C512,
-            x if x <= 768 => Capacity::C768,
-            _ => Capacity::C1024,
-        }
-    }
-}
-
 impl SecParam {
     fn bytepad_value(&self) -> u32 {
         match self {
@@ -129,27 +111,22 @@ impl SecParam {
     }
 }
 
-impl BitLength for Capacity {
-    fn bit_length(&self) -> u64 {
-        *self as u64
-    }
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum Capacity {
+    C448 = 448,
+    C512 = 512,
+    C768 = 768,
+    C1024 = 1024,
 }
 
-impl BitLength for SecParam {
-    fn bit_length(&self) -> u64 {
-        *self as u64
-    }
-}
-
-impl BitLength for Rate {
-    fn bit_length(&self) -> u64 {
-        self.value
-    }
-}
-
-impl BitLength for OutputLength {
-    fn bit_length(&self) -> u64 {
-        self.value()
+impl Capacity {
+    fn from_bit_length(bit_length: u64) -> Self {
+        match bit_length * 2 {
+            x if x <= 448 => Capacity::C448,
+            x if x <= 512 => Capacity::C512,
+            x if x <= 768 => Capacity::C768,
+            _ => Capacity::C1024,
+        }
     }
 }
 
@@ -189,11 +166,35 @@ impl Rate {
     }
 }
 
+impl BitLength for Capacity {
+    fn bit_length(&self) -> u64 {
+        *self as u64
+    }
+}
+
+impl BitLength for SecParam {
+    fn bit_length(&self) -> u64 {
+        *self as u64
+    }
+}
+
+impl BitLength for Rate {
+    fn bit_length(&self) -> u64 {
+        self.value
+    }
+}
+
+impl BitLength for OutputLength {
+    fn bit_length(&self) -> u64 {
+        self.value()
+    }
+}
+
 pub trait AesEncryptable {
     fn aes_encrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError>;
     fn aes_decrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError>;
-    fn aes_encrypt_ctr(&mut self, key: &[u8]);
-    fn aes_decrypt_ctr(&mut self, key: &[u8]);
+    fn aes_encrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError>;
+    fn aes_decrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError>;
 }
 
 pub trait BitLength {
