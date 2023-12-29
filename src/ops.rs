@@ -561,7 +561,7 @@ impl Signable for Message {
 
         let h_p = kmac_xof(&U.to_affine().x.to_bytes().to_vec(), &self.msg, 448, "T", d)?;
 
-        self.op_result = if &h_p == &sig.h {
+        self.op_result = if h_p == sig.h {
             Ok(())
         } else {
             Err(OperationError::SignatureVerificationFailure)
