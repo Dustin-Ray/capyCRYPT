@@ -52,7 +52,7 @@ pub(crate) fn shake(n: &mut Vec<u8>, d: &dyn BitLength) -> Result<Vec<u8>, Opera
 /// ## Returns:
 /// * SHA3XOF hash of length `l` of input message `x`
 /// ## Remark:
-/// We can't make `l` generic here because we need to be able to produce an arbitrary
+/// We can't enumerate `l` here because we need to be able to produce an arbitrary
 /// length output and there is no possible way to know this value in advance.
 /// The only constraint on `l` from NIST is that it is a value less than
 /// the absurdly large 2^{2040}.
