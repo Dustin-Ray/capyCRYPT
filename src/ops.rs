@@ -194,11 +194,11 @@ impl SpongeEncryptable for Message {
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Encrypt the data with 512 bits of security
-    /// msg.sha3_encrypt(&pw, 512);
+    /// msg.sha3_encrypt(&pw, D512);
     /// // Decrypt the data
     /// msg.sha3_decrypt(&pw);
     /// // Verify operation success
-    /// // FIXME: Assertion
+    /// // FIXME: Assertion 
     /// ```
     fn sha3_encrypt(&mut self, pw: &[u8], d: &SecParam) -> Result<(), OperationError> {
         self.d = Some(*d);
@@ -238,18 +238,20 @@ impl SpongeEncryptable for Message {
     /// use capycrypt::{
     ///     Message,
     ///     SpongeEncryptable,
-    ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}}
+    ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}},
+    ///     SecParam::D512,
     /// };
     /// // Get a random password
     /// let pw = get_random_bytes(64);
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Encrypt the data with 512 bits of security
-    /// msg.sha3_encrypt(&pw, 512);
+    /// msg.sha3_encrypt(&pw, &D512);
     /// // Decrypt the data
     /// msg.sha3_decrypt(&pw);
     /// // Verify operation success
     /// // FIXME: Assertion
+    /// assert_eq!(Ok(()), msg.sha3_decrypt(&pw))
     /// ```
     fn sha3_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError> {
         let d = self
@@ -268,6 +270,9 @@ impl SpongeEncryptable for Message {
         let (ke, ka) = ke_ka.split_at(64);
 
         let m = kmac_xof(&ke.to_vec(), &[], (self.msg.len() * 8) as u64, "SKE", d)?;
+        
+        // create a copy of the original message
+        let original_msg = self.msg.clone();
         xor_bytes(&mut self.msg, &m);
 
         let new_t = kmac_xof(&ka.to_vec(), &self.msg, 512, "SKA", d)?;
@@ -279,7 +284,12 @@ impl SpongeEncryptable for Message {
         {
             Ok(())
         } else {
+            self.msg = original_msg;
             Err(OperationError::SHA3DecryptionFailure)
+
+            // TODO: I need to restore the message after the bad encryption damages the previous good message
+            // TODO: Create a test to ensure that message is restored from a bad decryption message.
+            // Err( xor_bytes(&mut self.msg, &m));
         };
 
         Ok(())
