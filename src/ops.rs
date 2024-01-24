@@ -187,18 +187,20 @@ impl SpongeEncryptable for Message {
     /// use capycrypt::{
     ///     Message,
     ///     SpongeEncryptable,
-    ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}}
+    ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}},
+    ///     SecParam::D512,
     /// };
     /// // Get a random password
     /// let pw = get_random_bytes(64);
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Encrypt the data with 512 bits of security
-    /// msg.sha3_encrypt(&pw, D512);
+    /// msg.sha3_encrypt(&pw, &D512);
     /// // Decrypt the data
     /// msg.sha3_decrypt(&pw);
     /// // Verify operation success
     /// // FIXME: Assertion 
+    /// assert_eq!(Ok(()), msg.sha3_decrypt(&pw))
     /// ```
     fn sha3_encrypt(&mut self, pw: &[u8], d: &SecParam) -> Result<(), OperationError> {
         self.d = Some(*d);
@@ -316,16 +318,16 @@ impl KeyPair {
     /// ```  
     /// ```
     #[allow(non_snake_case)]
-    pub fn new(pw: &[u8], owner: String, d: &SecParam) -> Result<KeyPair, OperationError> {
+    pub fn new(pw: &[u8], owner: String, d: &SecParam) -> KeyPair {
         let data = kmac_xof(&pw.to_vec(), &[], 448, "SK", d)?;
         let s: Scalar = bytes_to_scalar(data).mul_mod_r(&Scalar::from(4_u64));
         let V = ExtendedPoint::tw_generator() * s;
-        Ok(KeyPair {
+        KeyPair {
             owner,
             pub_key: V,
             priv_key: pw.to_vec(),
             date_created: get_date_and_time_as_string(),
-        })
+        }
     }
 }
 
@@ -353,20 +355,22 @@ impl KeyEncryptable for Message {
     ///     KeyEncryptable,
     ///     KeyPair,
     ///     Message,
-    ///     sha3::aux_functions::byte_utils::get_random_bytes
+    ///     sha3::aux_functions::byte_utils::get_random_bytes,
+    ///     SecParam::D512,
     /// };
     ///
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Create a new private/public keypair
-    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), 512);
+    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512);
     ///
     /// // Encrypt the message
-    /// msg.key_encrypt(&key_pair.pub_key, 512);
+    /// msg.key_encrypt(&key_pair.pub_key, &D512);
     /// // Decrypt the message
     /// msg.key_decrypt(&key_pair.priv_key);
     /// // Verify
     /// // FIXME: Assertion
+    /// assert_eq!(Ok(()), msg.key_decrypt(&key_pair.priv_key)); // is Ok(()) a type of Result<(), Operation>
     /// ```
     #[allow(non_snake_case)]
     fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: &SecParam) -> Result<(), OperationError> {
@@ -452,6 +456,9 @@ impl KeyEncryptable for Message {
         let ke_ka = kmac_xof(&Z.x.to_bytes().to_vec(), &[], 448 * 2, "PK", d)?;
         let (ke, ka) = ke_ka.split_at(ke_ka.len() / 2);
 
+        // Create a copy of the original message
+        let original_msg = self.msg.clone(); // can nefarious actors access this clone?
+
         let xor_result = kmac_xof(&ke.to_vec(), &[], (self.msg.len() * 8) as u64, "PKE", d)?;
         xor_bytes(&mut self.msg, &xor_result);
 
@@ -460,6 +467,7 @@ impl KeyEncryptable for Message {
         self.op_result = if self.digest.as_ref() == Ok(&t_p) {
             Ok(())
         } else {
+            // self.msg = original_msg;
             Err(OperationError::KeyDecryptionError)
         };
 
@@ -543,20 +551,22 @@ impl Signable for Message {
     ///     Signable,
     ///     KeyPair,
     ///     Message,
-    ///     sha3::aux_functions::byte_utils::get_random_bytes
+    ///     sha3::aux_functions::byte_utils::get_random_bytes,
+    ///     SecParam::D512,
     /// };
     /// // Get random 5mb
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Get a random password
     /// let pw = get_random_bytes(64);
     /// // Generate a signing keypair
-    /// let key_pair = KeyPair::new(&pw, "test key".to_string(), 512);
+    /// let key_pair = KeyPair::new(&pw, "test key".to_string(), &D512);
     /// // Sign with 256 bits of security
-    /// msg.sign(&key_pair, 512);
+    /// msg.sign(&key_pair, &D512);
     /// // Verify signature
     /// msg.verify(&key_pair.pub_key);
     /// // Assert correctness
     /// // FIXME: Assertion
+    /// assert_eq!(Ok(()), msg.verify(&key_pair.pub_key));
     /// ```
     #[allow(non_snake_case)]
     fn verify(&mut self, pub_key: &ExtendedPoint) -> Result<(), OperationError> {
