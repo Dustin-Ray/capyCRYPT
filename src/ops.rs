@@ -273,8 +273,8 @@ impl SpongeEncryptable for Message {
 
         let m = kmac_xof(&ke.to_vec(), &[], (self.msg.len() * 8) as u64, "SKE", d)?;
         
-        // create a copy of the original message
-        let original_msg = self.msg.clone();
+        // // create a copy of the original message
+        // let original_msg = self.msg.clone();
         xor_bytes(&mut self.msg, &m);
 
         let new_t = kmac_xof(&ka.to_vec(), &self.msg, 512, "SKA", d)?;
@@ -286,7 +286,7 @@ impl SpongeEncryptable for Message {
         {
             Ok(())
         } else {
-            self.msg = original_msg;
+            xor_bytes(&mut self.msg, &m);
             Err(OperationError::SHA3DecryptionFailure)
 
             // TODO: I need to restore the message after the bad encryption damages the previous good message
@@ -318,16 +318,16 @@ impl KeyPair {
     /// ```  
     /// ```
     #[allow(non_snake_case)]
-    pub fn new(pw: &[u8], owner: String, d: &SecParam) -> KeyPair {
-        let data = kmac_xof(&pw.to_vec(), &[], 448, "SK", d)?;
+    pub fn new(pw: &[u8], owner: String, d: &SecParam) -> Result<KeyPair, OperationError> {
+        let data = kmac_xof(&pw.to_vec(), &[], 448, "SK", d)?; 
         let s: Scalar = bytes_to_scalar(data).mul_mod_r(&Scalar::from(4_u64));
         let V = ExtendedPoint::tw_generator() * s;
-        KeyPair {
+        Ok(KeyPair {
             owner,
             pub_key: V,
             priv_key: pw.to_vec(),
             date_created: get_date_and_time_as_string(),
-        }
+        })
     }
 }
 
@@ -933,6 +933,36 @@ mod kmac_tests {
         ];
         assert_eq!(res, expected)
     }
+}
+
+#[cfg(test)]
+mod decryption_test {
+    // Ensure to test if there are if & else cases: write two tests for each if and else case
+    use crate::{
+        Message,
+        SecParam::D512,
+        SpongeEncryptable,
+        sha3::{aux_functions::{byte_utils::get_random_bytes}}
+    };
+    #[test]
+    fn test_sha3_decrypt_handling_bad_input() {
+        // let message
+        let mut msg = Message::new(get_random_bytes(523)); // mutable
+        // let message (2nd option)
+        // let mut msg = Message::new(get_random_bytes(5238492)).clone();
+        let msg2 = msg.clone();
+        // let msg3 = msg.clone();
+        // create a copy of message, and pass the copy of message into the encryption & decryption
+        let pw1 = get_random_bytes(64);
+        let pw2 = get_random_bytes(64);
+        // encrypted_message with password1
+        msg.sha3_encrypt(&pw1, &D512);
+        // decrypt message with password2
+        msg.sha3_decrypt(&pw2);
+        // after decryption, message is still preserved without being affected
+        assert_eq!(msg2, msg);
+    }
+
 }
 
 #[cfg(test)]
