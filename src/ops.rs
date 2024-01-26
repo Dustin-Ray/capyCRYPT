@@ -52,7 +52,7 @@ pub(crate) fn shake(n: &mut Vec<u8>, d: &dyn BitLength) -> Result<Vec<u8>, Opera
 /// ## Returns:
 /// * SHA3XOF hash of length `l` of input message `x`
 /// ## Remark:
-/// We can't make `l` generic here because we need to be able to produce an arbitrary
+/// We can't enumerate `l` here because we need to be able to produce an arbitrary
 /// length output and there is no possible way to know this value in advance.
 /// The only constraint on `l` from NIST is that it is a value less than
 /// the absurdly large 2^{2040}.
@@ -240,16 +240,20 @@ impl SpongeEncryptable for Message {
     ///     SpongeEncryptable,
     ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}}
     /// };
+    /// use capycrypt::SecParam;
     /// // Get a random password
     /// let pw = get_random_bytes(64);
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Encrypt the data with 512 bits of security
-    /// msg.sha3_encrypt(&pw, 512);
+    /// msg.sha3_encrypt(&pw, &SecParam::D512);
     /// // Decrypt the data
     /// msg.sha3_decrypt(&pw);
-    /// // Verify operation success
-    /// // FIXME: Assertion
+    ///
+    /// // Verify operation success using map
+    /// msg.op_result.as_ref().map(|_| {
+    ///     assert!(msg.op_result.is_ok(), "Decryption failed");
+    /// }).expect("SHA3 decryption encountered an error");
     /// ```
     fn sha3_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError> {
         let d = self
@@ -373,7 +377,7 @@ impl KeyEncryptable for Message {
         let msg_len = self.msg.len();
         xor_bytes(
             &mut self.msg,
-            &kmac_xof(&ke.to_vec(), &[], (msg_len * 8) as u64, "PKE", d)?
+            &kmac_xof(&ke.to_vec(), &[], (msg_len * 8) as u64, "PKE", d)?,
         );
 
         self.digest = t;
@@ -561,7 +565,7 @@ impl Signable for Message {
 
         let h_p = kmac_xof(&U.to_affine().x.to_bytes().to_vec(), &self.msg, 448, "T", d)?;
 
-        self.op_result = if &h_p == &sig.h {
+        self.op_result = if h_p == sig.h {
             Ok(())
         } else {
             Err(OperationError::SignatureVerificationFailure)
@@ -620,7 +624,10 @@ impl AesEncryptable for Message {
         apply_pcks7_padding(&mut self.msg);
 
         for block_index in (0..self.msg.len()).step_by(16) {
-            xor_blocks(&mut self.msg[block_index..], self.sym_nonce.as_mut().unwrap());
+            xor_blocks(
+                &mut self.msg[block_index..],
+                self.sym_nonce.as_mut().unwrap(),
+            );
             AES::encrypt_block(&mut self.msg, block_index, &key_schedule.round_key);
             *self.sym_nonce.as_mut().unwrap() = self.msg[block_index..block_index + 16].to_vec();
         }
@@ -674,19 +681,22 @@ impl AesEncryptable for Message {
 
         let msg_copy = self.msg.clone();
 
-        self.msg.par_chunks_mut(16).enumerate().for_each(|(i, block)| {
-            let block_index = i * 16;
-            let xor_block = if block_index >= 16 {
-                &msg_copy[block_index - 16..block_index]
-            } else {
-                &iv // Use IV for the first block
-            };
-            // Decrypt the block in-place without using the output
-            AES::decrypt_block(block, 0, &key_schedule.round_key);
-            // XOR the decrypted block with the previous ciphertext block
-            xor_blocks(block, xor_block);
-        });
-    
+        self.msg
+            .par_chunks_mut(16)
+            .enumerate()
+            .for_each(|(i, block)| {
+                let block_index = i * 16;
+                let xor_block = if block_index >= 16 {
+                    &msg_copy[block_index - 16..block_index]
+                } else {
+                    &iv // Use IV for the first block
+                };
+                // Decrypt the block in-place without using the output
+                AES::decrypt_block(block, 0, &key_schedule.round_key);
+                // XOR the decrypted block with the previous ciphertext block
+                xor_blocks(block, xor_block);
+            });
+
         remove_pcks7_padding(&mut self.msg);
 
         let ver = kmac_xof(ka, &self.msg, 512, "AES", &SecParam::D256)?;
@@ -736,30 +746,39 @@ impl AesEncryptable for Message {
         let iv = get_random_bytes(12);
         let counter = 0u32;
         let counter_bytes = counter.to_be_bytes();
-    
+
         let mut ke_ka = iv.clone();
         ke_ka.extend_from_slice(&counter_bytes);
         ke_ka.extend_from_slice(key);
         let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", &SecParam::D256)?;
-    
+
         let (ke, ka) = ke_ka.split_at(key.len());
-    
+
         self.sym_nonce = Some(iv.clone());
-        self.digest = Ok(kmac_xof(&ka.to_vec(), &self.msg, 512, "AES", &SecParam::D256)?);
-    
+        self.digest = Ok(kmac_xof(
+            &ka.to_vec(),
+            &self.msg,
+            512,
+            "AES",
+            &SecParam::D256,
+        )?);
+
         let key_schedule = AES::new(&ke.to_vec());
-    
+
         // Parallelize encryption for each block
-        self.msg.par_chunks_mut(16).enumerate().for_each(|(i, block)| {
-            let mut temp = iv.clone();
-            let counter = i as u32;
-            temp.extend_from_slice(&counter.to_be_bytes());
-    
-            AES::encrypt_block(&mut temp, 0, &key_schedule.round_key);
-    
-            xor_blocks(block, &temp);
-        });
-    
+        self.msg
+            .par_chunks_mut(16)
+            .enumerate()
+            .for_each(|(i, block)| {
+                let mut temp = iv.clone();
+                let counter = i as u32;
+                temp.extend_from_slice(&counter.to_be_bytes());
+
+                AES::encrypt_block(&mut temp, 0, &key_schedule.round_key);
+
+                xor_blocks(block, &temp);
+            });
+
         Ok(())
     }
     /// # Symmetric Decryption using AES in CTR Mode
@@ -796,30 +815,36 @@ impl AesEncryptable for Message {
     /// assert!(input.op_result.unwrap());
     /// ```
     fn aes_decrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError> {
-        let iv = self.sym_nonce.clone().ok_or(OperationError::SymNonceNotSet)?;
+        let iv = self
+            .sym_nonce
+            .clone()
+            .ok_or(OperationError::SymNonceNotSet)?;
         let counter = 0u32;
         let counter_bytes = counter.to_be_bytes();
-    
+
         let mut ke_ka = iv.clone();
         ke_ka.extend_from_slice(&counter_bytes);
         ke_ka.extend_from_slice(key);
         let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", &SecParam::D256)?;
-    
+
         let (ke, ka) = ke_ka.split_at(key.len());
-    
+
         let key_schedule = AES::new(&ke.to_vec());
-    
+
         // Parallelize decryption for each block
-        self.msg.par_chunks_mut(16).enumerate().for_each(|(i, block)| {
-            let mut temp = iv.clone();
-            let counter = i as u32;
-            temp.extend_from_slice(&counter.to_be_bytes());
-    
-            AES::encrypt_block(&mut temp, 0, &key_schedule.round_key);
-    
-            xor_blocks(block, &temp);
-        });
-    
+        self.msg
+            .par_chunks_mut(16)
+            .enumerate()
+            .for_each(|(i, block)| {
+                let mut temp = iv.clone();
+                let counter = i as u32;
+                temp.extend_from_slice(&counter.to_be_bytes());
+
+                AES::encrypt_block(&mut temp, 0, &key_schedule.round_key);
+
+                xor_blocks(block, &temp);
+            });
+
         let ver = kmac_xof(&ka.to_vec(), &self.msg, 512, "AES", &SecParam::D256)?;
         self.op_result = if let Ok(digest) = self.digest.as_ref() {
             if digest == &ver {
