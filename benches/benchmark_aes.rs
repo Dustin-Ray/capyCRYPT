@@ -1,14 +1,11 @@
+use capycrypt::aes::aes_functions::{apply_pcks7_padding, remove_pcks7_padding};
 use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
 use capycrypt::{AesEncryptable, Message};
-use rand::{distributions::Alphanumeric, Rng};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use capycrypt::aes::aes_functions::{apply_pcks7_padding, remove_pcks7_padding};
+use rand::{distributions::Alphanumeric, Rng};
 
+use aes::cipher::{generic_array::GenericArray, BlockDecrypt, BlockEncrypt, KeyInit};
 use aes::Aes256;
-use aes::cipher::{
-    BlockEncrypt, BlockDecrypt, KeyInit,
-    generic_array::GenericArray,
-};
 
 fn generate_random_data(size: usize) -> Vec<u8> {
     rand::thread_rng()
@@ -79,8 +76,6 @@ fn sym_enc_rust_aes(key: &[u8], data: &[u8]) -> Vec<u8> {
     result
 }
 
-
-
 /// Symmetric encrypt and decrypt roundtrip
 fn sym_cbc_enc(key: &mut Vec<u8>, data: &[u8]) {
     let mut msg = Message::new(data.to_owned());
@@ -97,7 +92,6 @@ fn sym_ctr_enc(key: &mut Vec<u8>, data: &[u8]) {
 
 // Benchmark AES encryption and decryption roundtrip
 fn bench_aes_cbc_enc(c: &mut Criterion) {
-
     let data = generate_random_data(5 * 1024 * 1024);
     let mut key = get_random_bytes(32); // Generate key if needed
 
@@ -116,7 +110,6 @@ fn bench_aes_cbc_enc(c: &mut Criterion) {
 
 // Benchmark AES encryption and decryption roundtrip
 fn bench_aes_ctr_enc(c: &mut Criterion) {
-
     let data = generate_random_data(5 * 1024 * 1024);
     let mut key = get_random_bytes(32); // Generate key if needed
 
