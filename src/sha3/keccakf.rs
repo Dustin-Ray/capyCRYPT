@@ -1,14 +1,25 @@
-// rol64 func rotates x by y
+/// # Rotate Left
+/// Rotate a 64-bit unsigned integer to the left by a specified number of bits.
+///
+/// # Arguments:
+/// * `x` - The 64-bit unsigned integer to rotate.
+/// * `y` - The number of bits to rotate `x` by.
+///
+/// # Returns:
+/// The rotated 64-bit unsigned integer.
 fn rotate_left64(x: u64, y: u64) -> u64 {
+    // The expression ((x) >> (64 - (y))) effectively adds the y most significant bits of the input x as the least significant bits of the shifted value.
     ((x) << (y)) | ((x) >> (64 - (y)))
 }
 
-/// keccakF1600 applies the Keccak permutation to a 1600b-wide
-/// state represented as a slice of 25 uint64s.
+/// # Keccak Permutation
+/// Applies the Keccak permutation to a 1600-bit wide.
+/// State represented as a slice of 25 `u64` integers.
+/// # Arguments:
+/// * `a` - A mutable reference to an array representing the 1600-bit state.
+/// # Implementation Details:
+/// The implementation is translated from Keccak-inplace.c in the Keccak reference code.
 pub(crate) fn keccakf_1600(a: &mut [u64; 25]) {
-    // Implementation translated from Keccak-inplace.c
-    // in the keccak reference code.
-
     let rc = [
         0x0000000000000001,
         0x0000000000008082,
