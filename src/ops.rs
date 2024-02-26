@@ -942,7 +942,12 @@ mod kmac_tests {
 mod decryption_test {
     // Ensure to test if there are if & else cases: write two tests for each if and else case
     use crate::{
-        sha3::aux_functions::byte_utils::get_random_bytes, KeyEncryptable, KeyPair, Message, SecParam::{D224, D256, D384, D512}, SpongeEncryptable
+        sha3::aux_functions::byte_utils::get_random_bytes, 
+        KeyEncryptable, 
+        KeyPair, 
+        Message, 
+        SecParam::{D224, D256, D384, D512}, 
+        SpongeEncryptable
     };
     #[test]
     ///
@@ -1008,16 +1013,154 @@ mod decryption_test {
         assert_eq!(msg_384.msg, msg2_384);
     }
 
-    // #[test]
-    // ///
-    // /// Testing if bad password reverts the original message back to its state
-    // fn test_key_decrypt_handling_bad_input() {
-    //     let mut new_msg = Message::new(get_random_bytes(5242880));
-    //     let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512);
-        
-    //     // Encrypt the message with public key
-    //     new_msg.key_encrypt(&key_pair.pub_key, &D512);
-    // }
+    #[test]
+    ///
+    /// Testing if bad password reverts the original message back to its state
+    fn test_key_decrypt_handling_bad_input() {
+        let mut new_msg = Message::new(get_random_bytes(125));
+        // D512
+
+        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512);
+        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512);
+        // check if creating the key pair was successful
+        match key_pair1 {
+            Ok(key_pair1) => {
+
+                // Encrypt the message with public key
+                new_msg.key_encrypt(&key_pair1.pub_key, &D512);
+
+                let new_msg2 = new_msg.msg.clone(); // cloning for test purposes
+                
+                match key_pair2 {
+                    Ok(key_pair2) => {
+                        new_msg.key_decrypt(&key_pair2.priv_key);
+                    }
+                    Err(err) => {
+                        println!("Error creating key pair2: {:?}", err);
+                    }
+                }
+
+                assert_eq!(new_msg.msg, new_msg2);
+            }
+            Err(err) => {
+                println!("Error creating key pair: {:?}", err);
+            }
+        }
+
+        // D224
+        let mut new_msg_224 = Message::new(get_random_bytes(125));
+        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D224);
+        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test string 2".to_string(), &D224);
+
+        match key_pair1 {
+            Ok(key_pair1) => {
+
+                // encrypt message with public key
+                new_msg_224.key_encrypt(&key_pair1.pub_key, &D224);
+
+                // cloned message appears to be the same only after the message has been encrypted
+                let msg2_224 = new_msg_224.msg.clone();
+                match key_pair2 {
+                    Ok(key_pair2) => {
+                        new_msg_224.key_decrypt(&key_pair2.priv_key);
+                    }
+                    Err(err) => {
+                        println!("Error creating key pair: {:?}", err);
+                    }
+                }
+                // Check if retrieved message is the same after using a wrong password
+                assert_eq!(msg2_224, new_msg_224.msg);
+            }
+            Err(err) => {
+                println!("Error creating key pair: {:?}", err);
+            }
+        }
+
+        // D256
+        let mut new_msg_256 = Message::new(get_random_bytes(125));
+        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D256);
+        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test string 2".to_string(), &D256);
+
+        match key_pair1 {
+            Ok(key_pair1) => {
+
+                // encrypt message with public key
+                new_msg_256.key_encrypt(&key_pair1.pub_key, &D256);
+
+                // cloned message appears to be the same only after the message has been encrypted
+                let msg2_256 = new_msg_256.msg.clone();
+                match key_pair2 {
+                    Ok(key_pair2) => {
+                        new_msg_256.key_decrypt(&key_pair2.priv_key);
+                    }
+                    Err(err) => {
+                        println!("Error creating key pair: {:?}", err);
+                    }
+                }
+                // Check if retrieved message is the same after using a wrong password
+                assert_eq!(msg2_256, new_msg_256.msg);
+            }
+            Err(err) => {
+                println!("Error creating key pair: {:?}", err);
+            }
+        }
+            // D256
+        let mut new_msg_256 = Message::new(get_random_bytes(125));
+        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D256);
+        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test string 2".to_string(), &D256);
+
+        match key_pair1 {
+            Ok(key_pair1) => {
+
+                // encrypt message with public key
+                new_msg_256.key_encrypt(&key_pair1.pub_key, &D256);
+
+                // cloned message appears to be the same only after the message has been encrypted
+                let msg2_256 = new_msg_256.msg.clone();
+                match key_pair2 {
+                    Ok(key_pair2) => {
+                        new_msg_256.key_decrypt(&key_pair2.priv_key);
+                    }
+                    Err(err) => {
+                        println!("Error creating key pair: {:?}", err);
+                    }
+                }
+                // Check if retrieved message is the same after using a wrong password
+                assert_eq!(msg2_256, new_msg_256.msg);
+            }
+            Err(err) => {
+                println!("Error creating key pair: {:?}", err);
+            }
+        }
+        // D384
+        let mut new_msg_384 = Message::new(get_random_bytes(125));
+        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D384);
+        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test string 2".to_string(), &D384);
+
+        match key_pair1 {
+            Ok(key_pair1) => {
+
+                // encrypt message with public key
+                new_msg_384.key_encrypt(&key_pair1.pub_key, &D384);
+
+                // cloned message appears to be the same only after the message has been encrypted
+                let msg2_384 = new_msg_384.msg.clone();
+                match key_pair2 {
+                    Ok(key_pair2) => {
+                        new_msg_384.key_decrypt(&key_pair2.priv_key);
+                    }
+                    Err(err) => {
+                        println!("Error creating key pair: {:?}", err);
+                    }
+                }
+                // Check if retrieved message is the same after using a wrong password
+                assert_eq!(msg2_384, new_msg_384.msg);
+            }
+            Err(err) => {
+                println!("Error creating key pair: {:?}", err);
+            }
+        }
+    }
 
 }
 
