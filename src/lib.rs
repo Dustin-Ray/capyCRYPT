@@ -17,7 +17,7 @@ pub mod aes {
 /// Module for encrypt, decrypt, and sign functions.
 pub mod ops;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq)]
 /// A simple error type
 pub enum OperationError {
     UnsupportedSecurityParameter,
@@ -38,7 +38,7 @@ pub enum OperationError {
     AESCTRDecryptionFailure,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 /// An object containing the necessary fields for Schnorr signatures.
 pub struct Signature {
     /// keyed hash of signed message
@@ -60,7 +60,7 @@ pub struct KeyPair {
     pub date_created: String,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug)]
 /// Message type for which cryptographic traits are defined.
 pub struct Message {
     pub msg: Box<Vec<u8>>,
@@ -86,7 +86,12 @@ impl Message {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+// impl PartialEq for Message {
+//     fn eq(&self, other: &self) -> bool {
+//         self.msg == other.msg;
+//     }
+// }
+#[derive(Debug, Clone, Copy)]
 pub enum SecParam {
     D224 = 224,
     D256 = 256,

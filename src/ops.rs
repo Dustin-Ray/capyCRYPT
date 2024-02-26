@@ -468,6 +468,9 @@ impl KeyEncryptable for Message {
             Ok(())
         } else {
             // self.msg = original_msg;
+            // revert back to the encrypted message
+            xor_bytes(&mut self.msg, &xor_result);
+
             Err(OperationError::KeyDecryptionError)
         };
 
@@ -939,29 +942,82 @@ mod kmac_tests {
 mod decryption_test {
     // Ensure to test if there are if & else cases: write two tests for each if and else case
     use crate::{
-        Message,
-        SecParam::D512,
-        SpongeEncryptable,
-        sha3::{aux_functions::{byte_utils::get_random_bytes}}
+        sha3::aux_functions::byte_utils::get_random_bytes, KeyEncryptable, KeyPair, Message, SecParam::{D224, D256, D384, D512}, SpongeEncryptable
     };
     #[test]
+    ///
+    /// Testing if the failed decryption preserves the same message
+    /// if password1 not_equal password2,
+    /// then the original encrypted message should be the same.
     fn test_sha3_decrypt_handling_bad_input() {
-        // let message
-        let mut msg = Message::new(get_random_bytes(523)); // mutable
-        // let message (2nd option)
-        // let mut msg = Message::new(get_random_bytes(5238492)).clone();
-        let msg2 = msg.clone();
-        // let msg3 = msg.clone();
+        let mut new_msg = Message::new(get_random_bytes(523)); // mutable
+
         // create a copy of message, and pass the copy of message into the encryption & decryption
         let pw1 = get_random_bytes(64);
         let pw2 = get_random_bytes(64);
         // encrypted_message with password1
-        msg.sha3_encrypt(&pw1, &D512);
+        new_msg.sha3_encrypt(&pw1, &D512);
+
+        // cloned after encryption for testing purpose only
+        let msg2 = new_msg.msg.clone(); 
+
         // decrypt message with password2
-        msg.sha3_decrypt(&pw2);
+        new_msg.sha3_decrypt(&pw2);
         // after decryption, message is still preserved without being affected
-        assert_eq!(msg2, msg);
+
+        // let differ = Differ::new();
+        // let msg_text = stringify msg.split(" ").collect::<Vec&str>>();
+        // let msg2_text = stringify msg2.split(" ").collect::<Vec&str>>();
+        // let diff = differ.compare(&msg_text, &msg2_text);
+        // for line in &diff {
+            // println!("{:?}, line");
+        //}
+        println!("{:?}", new_msg.msg);
+
+        assert_eq!(msg2, new_msg.msg);
+
+        let mut msg_224 = Message::new(get_random_bytes(225));
+        // encrypt text with password 1
+        msg_224.sha3_encrypt(&pw1, &D224);
+
+        let msg2_224 = msg_224.msg.clone(); // clone for test purposes
+        // decrypt text with password 2
+        msg_224.sha3_decrypt(&pw2); // decrypted with a wrong password
+
+        assert_eq!(msg_224.msg, msg2_224);
+
+        // D256
+        let mut msg_256 = Message::new(get_random_bytes(260));
+        // encrypt text with password 1
+        msg_256.sha3_encrypt(&pw1, &D256);
+
+        let msg2_256 = msg_256.msg.clone(); // clone for test purposes
+        msg_256.sha3_decrypt(&pw2); // decrypt with password 2
+
+        assert_eq!(msg_256.msg, msg2_256);
+
+        // D384
+        let mut msg_384 = Message::new(get_random_bytes(390));
+
+
+        msg_384.sha3_encrypt(&pw1, &D384); // encrypt text with password 1
+        let msg2_384 = msg_384.msg.clone();
+
+        msg_384.sha3_decrypt(&pw2); // decrypt with password 2
+
+        assert_eq!(msg_384.msg, msg2_384);
     }
+
+    // #[test]
+    // ///
+    // /// Testing if bad password reverts the original message back to its state
+    // fn test_key_decrypt_handling_bad_input() {
+    //     let mut new_msg = Message::new(get_random_bytes(5242880));
+    //     let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512);
+        
+    //     // Encrypt the message with public key
+    //     new_msg.key_encrypt(&key_pair.pub_key, &D512);
+    // }
 
 }
 
