@@ -153,11 +153,11 @@ impl Hashable for Message {
     /// bitstrengths are 224, 256, 384, or 512.
     /// ## Usage:
     /// ```
-    /// use capycrypt::{Hashable, Message};
+    /// use capycrypt::{Hashable, Message, SecParam::{D512}};
     /// let mut pw = "test".as_bytes().to_vec();
     /// let mut data = Message::new(vec![]);
     /// let expected = "0f9b5dcd47dc08e08a173bbe9a57b1a65784e318cf93cccb7f1f79f186ee1caeff11b12f8ca3a39db82a63f4ca0b65836f5261ee64644ce5a88456d3d30efbed";
-    /// data.compute_tagged_hash(&mut pw, &"", 512);
+    /// data.compute_tagged_hash(&mut pw, &"", &D512);
     /// // FIXME: Assertion
     /// ```
     fn compute_tagged_hash(&mut self, pw: &[u8], s: &str, d: &SecParam) {
@@ -187,18 +187,19 @@ impl SpongeEncryptable for Message {
     /// use capycrypt::{
     ///     Message,
     ///     SpongeEncryptable,
-    ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}}
+    ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}},
     /// };
+    /// use capycrypt::SecParam;
     /// // Get a random password
     /// let pw = get_random_bytes(64);
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Encrypt the data with 512 bits of security
-    /// msg.sha3_encrypt(&pw, 512);
+    /// msg.sha3_encrypt(&pw, &SecParam::D512);
     /// // Decrypt the data
     /// msg.sha3_decrypt(&pw);
-    /// // Verify operation success
-    /// // FIXME: Assertion
+    /// // Verify operation success using map
+    /// msg.op_result.as_ref().map(|_| { assert!(msg.op_result.is_ok(), "Decryption failed"); }).expect("SHA3 decryption encountered an error");
     /// ```
     fn sha3_encrypt(&mut self, pw: &[u8], d: &SecParam) -> Result<(), OperationError> {
         self.d = Some(*d);
@@ -238,18 +239,20 @@ impl SpongeEncryptable for Message {
     /// use capycrypt::{
     ///     Message,
     ///     SpongeEncryptable,
-    ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}}
+    ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}},
+    ///     SecParam
     /// };
     /// // Get a random password
     /// let pw = get_random_bytes(64);
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Encrypt the data with 512 bits of security
-    /// msg.sha3_encrypt(&pw, 512);
+    /// msg.sha3_encrypt(&pw, &SecParam::D512);
     /// // Decrypt the data
     /// msg.sha3_decrypt(&pw);
     /// // Verify operation success
     /// // FIXME: Assertion
+    /// msg.op_result.as_ref().map(|_| { assert!(msg.op_result.is_ok(), "Decryption failed");}).expect("SHA3 decryption encountered an error");
     /// ```
     fn sha3_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError> {
         let d = self
