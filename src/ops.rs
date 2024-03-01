@@ -611,7 +611,7 @@ impl AesEncryptable for Message {
     /// // Decrypt the Message (need the same key)
     /// input.aes_decrypt_cbc(&key);
     /// // Verify operation success
-    /// // FIXME: Assertion
+    /// input.op_result.as_ref().map(|_| { assert!(input.op_result.is_ok(), "AES decryption in Cipher Block Chaining Mode failed");}).expect("AES decryption in CBC Mode encountered an error");
     /// ```
     fn aes_encrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = get_random_bytes(16);
@@ -668,8 +668,8 @@ impl AesEncryptable for Message {
     /// input.aes_encrypt_cbc(&key);
     /// // Decrypt the Message (using the same key)
     /// input.aes_decrypt_cbc(&key);
-    /// // Verify operation success
-    /// // FIXME: Assertion
+    /// // Verify operation success using map
+    /// input.op_result.as_ref().map(|_| { assert!(input.op_result.is_ok(), "AES decryption in Cipher Block Chaining Mode failed");}).expect("AES decryption in CBC Mode encountered an error");
     /// ```
     fn aes_decrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = self.sym_nonce.clone().unwrap();
@@ -736,10 +736,10 @@ impl AesEncryptable for Message {
     /// let mut input = Message::new(get_random_bytes(5242880));
     /// // Encrypt the Message using AES in CTR mode
     /// input.aes_encrypt_ctr(&key);
-    /// // Decrypt the Message (need the same key)
+    /// // Decrypt the Message (using the same key)
     /// input.aes_decrypt_ctr(&key);
-    /// // Verify operation success
-    /// assert!(input.op_result.unwrap());
+    /// // Verify operation success using map
+    /// input.op_result.as_ref().map(|_| { assert!(input.op_result.is_ok(), "AES Decryption in Counter Mode failed");}).expect("AES Decryption in CTR Mode encountered an error");
     /// ```
     fn aes_encrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = get_random_bytes(12);
@@ -801,8 +801,8 @@ impl AesEncryptable for Message {
     /// input.aes_encrypt_ctr(&key);
     /// // Decrypt the Message using AES in CTR mode
     /// input.aes_decrypt_ctr(&key);
-    /// // Verify operation success
-    /// assert!(input.op_result.unwrap());
+    /// // Verify operation success using map
+    /// input.op_result.as_ref().map(|_| { assert!(input.op_result.is_ok(), "AES Decryption in Counter Mode failed");}).expect("AES decryption in CTR Mode encountered an error");
     /// ```
     fn aes_decrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = self.sym_nonce.clone().ok_or(OperationError::SymNonceNotSet)?;
