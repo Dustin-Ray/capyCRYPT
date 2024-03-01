@@ -346,20 +346,21 @@ impl KeyEncryptable for Message {
     ///     KeyEncryptable,
     ///     KeyPair,
     ///     Message,
-    ///     sha3::aux_functions::byte_utils::get_random_bytes
+    ///     sha3::aux_functions::byte_utils::get_random_bytes,
+    ///     SecParam,
     /// };
     ///
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Create a new private/public keypair
-    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), 512);
+    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &SecParam::D512).expect("Failed to create key pair");
     ///
     /// // Encrypt the message
-    /// msg.key_encrypt(&key_pair.pub_key, 512);
-    /// // Decrypt the message
+    /// msg.key_encrypt(&key_pair.pub_key, &SecParam::D512);
+    //  Decrypt the message
     /// msg.key_decrypt(&key_pair.priv_key);
     /// // Verify
-    /// // FIXME: Assertion
+    /// msg.op_result.as_ref().map(|_| { assert!(msg.op_result.is_ok(), "Asymmetric Decryption failed");}).expect("Key decryption encountered an error");
     /// ```
     #[allow(non_snake_case)]
     fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: &SecParam) -> Result<(), OperationError> {
@@ -411,25 +412,28 @@ impl KeyEncryptable for Message {
     ///
     /// ## Usage:
     /// ```
+    ///
+    /// ```
     /// use capycrypt::{
     ///     KeyEncryptable,
     ///     KeyPair,
     ///     Message,
-    ///     sha3::aux_functions::byte_utils::get_random_bytes
+    ///     sha3::aux_functions::byte_utils::get_random_bytes,
+    ///     SecParam,
     /// };
     ///
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Create a new private/public keypair
-    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), 512);
+    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &SecParam::D512).expect("Failed to create Key Pair");
     ///
     /// // Encrypt the message
-    /// msg.key_encrypt(&key_pair.pub_key, 512);
+    /// msg.key_encrypt(&key_pair.pub_key, &SecParam::D512);
     /// // Decrypt the message
     /// msg.key_decrypt(&key_pair.priv_key);
     /// // Verify
-    /// // FIXME: Assertion
-    /// ```
+    /// msg.op_result.as_ref().map(|_| { assert!(msg.op_result.is_ok(), "Asymmetric Decryption failed");}).expect("Key decryption encountered an error");
+    ///
     #[allow(non_snake_case)]
     fn key_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError> {
         let Z = self.asym_nonce.ok_or(OperationError::SymNonceNotSet)?;
@@ -483,20 +487,21 @@ impl Signable for Message {
     ///     Signable,
     ///     KeyPair,
     ///     Message,
-    ///     sha3::aux_functions::byte_utils::get_random_bytes
+    ///     sha3::aux_functions::byte_utils::get_random_bytes,
+    ///     SecParam,
     /// };
     /// // Get random 5mb
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Get a random password
     /// let pw = get_random_bytes(64);
     /// // Generate a signing keypair
-    /// let key_pair = KeyPair::new(&pw, "test key".to_string(), 512);
+    /// let key_pair = KeyPair::new(&pw, "test key".to_string(), &SecParam::D512).expect("Failed to generate Key Pair");
     /// // Sign with 256 bits of security
-    /// msg.sign(&key_pair, 512);
+    /// msg.sign(&key_pair, &SecParam::D512);
     /// // Verify signature
     /// msg.verify(&key_pair.pub_key);
     /// // Assert correctness
-    /// // FIXME: Assertion
+    /// msg.op_result.as_ref().map(|_| { assert!(msg.op_result.is_ok(), "Verifying a signature failed");}).expect("Verifying a signature encountered an error");
     /// ```
     #[allow(non_snake_case)]
     fn sign(&mut self, key: &KeyPair, d: &SecParam) -> Result<(), OperationError> {
@@ -536,20 +541,21 @@ impl Signable for Message {
     ///     Signable,
     ///     KeyPair,
     ///     Message,
-    ///     sha3::aux_functions::byte_utils::get_random_bytes
+    ///     sha3::aux_functions::byte_utils::get_random_bytes,
+    ///     SecParam,
     /// };
     /// // Get random 5mb
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Get a random password
     /// let pw = get_random_bytes(64);
     /// // Generate a signing keypair
-    /// let key_pair = KeyPair::new(&pw, "test key".to_string(), 512);
+    /// let key_pair = KeyPair::new(&pw, "test key".to_string(), &SecParam::D512).expect("Failed to generate Key Pair");
     /// // Sign with 256 bits of security
-    /// msg.sign(&key_pair, 512);
+    /// msg.sign(&key_pair, &SecParam::D512);
     /// // Verify signature
     /// msg.verify(&key_pair.pub_key);
     /// // Assert correctness
-    /// // FIXME: Assertion
+    /// msg.op_result.as_ref().map(|_| { assert!(msg.op_result.is_ok(), "Verifying a signature failed");}).expect("Verifying a signature encountered an error");
     /// ```
     #[allow(non_snake_case)]
     fn verify(&mut self, pub_key: &ExtendedPoint) -> Result<(), OperationError> {
