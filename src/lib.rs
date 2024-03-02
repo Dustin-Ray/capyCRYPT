@@ -86,6 +86,11 @@ impl Message {
     }
 }
 
+// impl PartialEq for Message {
+//     fn eq(&self, other: &self) -> bool {
+//         self.msg == other.msg;
+//     }
+// }
 #[derive(Debug, Clone, Copy)]
 pub enum SecParam {
     D224 = 224,

@@ -190,6 +190,7 @@ impl SpongeEncryptable for Message {
     ///     Message,
     ///     SpongeEncryptable,
     ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}},
+    ///     SecParam::D512,
     /// };
     /// use capycrypt::SecParam;
     /// // Get a random password
@@ -197,11 +198,11 @@ impl SpongeEncryptable for Message {
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Encrypt the data with 512 bits of security
-    /// msg.sha3_encrypt(&pw, &SecParam::D512);
+    /// msg.sha3_encrypt(&pw, &D512);
     /// // Decrypt the data
     /// msg.sha3_decrypt(&pw);
-    /// // Verify successful operation using map
-    /// msg.op_result.as_ref().map(|_| { assert!(msg.op_result.is_ok(), "Decryption failed"); }).expect("SHA3 decryption encountered an error");
+    /// // Verify successful operation
+    /// assert!(msg.sha3_decrypt(&pw).is_ok(), "Decryption Failure");
     /// ```
     fn sha3_encrypt(&mut self, pw: &[u8], d: &SecParam) -> Result<(), OperationError> {
         self.d = Some(*d);
@@ -242,7 +243,7 @@ impl SpongeEncryptable for Message {
     ///     Message,
     ///     SpongeEncryptable,
     ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}},
-    ///     SecParam::D512
+    ///     SecParam::D512,
     /// };
     /// use capycrypt::SecParam;
     /// // Get a random password
@@ -253,8 +254,8 @@ impl SpongeEncryptable for Message {
     /// msg.sha3_encrypt(&pw, &D512);
     /// // Decrypt the data
     /// msg.sha3_decrypt(&pw);
-    /// // Verify successful operation using map
-    /// msg.op_result.as_ref().map(|_| { assert!(msg.op_result.is_ok(), "Decryption failed");}).expect("SHA3 decryption encountered an error");
+    /// // Verify successful operation
+    /// assert!(msg.sha3_decrypt(&pw).is_ok(), "Decryption Failure");
     /// ```
     fn sha3_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError> {
         let d = self
@@ -273,6 +274,7 @@ impl SpongeEncryptable for Message {
         let (ke, ka) = ke_ka.split_at(64);
 
         let m = kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "SKE", d)?;
+
         xor_bytes(&mut self.msg, &m);
 
         let new_t = kmac_xof(ka, &self.msg, 512, "SKA", d)?;
@@ -284,6 +286,7 @@ impl SpongeEncryptable for Message {
         {
             Ok(())
         } else {
+            xor_bytes(&mut self.msg, &m);
             Err(OperationError::SHA3DecryptionFailure)
         };
 
@@ -362,7 +365,7 @@ impl KeyEncryptable for Message {
     //  Decrypt the message
     /// msg.key_decrypt(&key_pair.priv_key);
     /// // Verify successful operation using map
-    /// msg.op_result.as_ref().map(|_| { assert!(msg.op_result.is_ok(), "Asymmetric Decryption failed");}).expect("Key decryption encountered an error");
+    /// msg.op_result.expect("Asymmetric decryption failed");    
     /// ```
     #[allow(non_snake_case)]
     fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: &SecParam) -> Result<(), OperationError> {
@@ -414,8 +417,6 @@ impl KeyEncryptable for Message {
     ///
     /// ## Usage:
     /// ```
-    ///
-    /// ```
     /// use capycrypt::{
     ///     KeyEncryptable,
     ///     KeyPair,
@@ -427,15 +428,15 @@ impl KeyEncryptable for Message {
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Create a new private/public keypair
-    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &SecParam::D512).expect("Failed to create Key Pair");
+    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &SecParam::D512).expect("Failed to create key pair");
     ///
     /// // Encrypt the message
     /// msg.key_encrypt(&key_pair.pub_key, &SecParam::D512);
-    /// // Decrypt the message
+    //  Decrypt the message
     /// msg.key_decrypt(&key_pair.priv_key);
     /// // Verify successful operation using map
-    /// msg.op_result.as_ref().map(|_| { assert!(msg.op_result.is_ok(), "Asymmetric Decryption failed");}).expect("Key decryption encountered an error");
-    ///
+    /// msg.op_result.expect("Asymmetric decryption failed");    
+    /// ```
     #[allow(non_snake_case)]
     fn key_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError> {
         let Z = self.asym_nonce.ok_or(OperationError::SymNonceNotSet)?;
@@ -459,6 +460,9 @@ impl KeyEncryptable for Message {
         self.op_result = if self.digest.as_ref() == Ok(&t_p) {
             Ok(())
         } else {
+            // revert back to the encrypted message
+            xor_bytes(&mut self.msg, &xor_result);
+
             Err(OperationError::KeyDecryptionError)
         };
 
@@ -503,7 +507,7 @@ impl Signable for Message {
     /// // Verify signature
     /// msg.verify(&key_pair.pub_key);
     /// // Assert correctness using map
-    /// msg.op_result.as_ref().map(|_| { assert!(msg.op_result.is_ok(), "Verifying a signature failed");}).expect("Verifying a signature encountered an error");
+    /// msg.op_result.expect("Signature verification failed");    
     /// ```
     #[allow(non_snake_case)]
     fn sign(&mut self, key: &KeyPair, d: &SecParam) -> Result<(), OperationError> {
@@ -557,7 +561,7 @@ impl Signable for Message {
     /// // Verify signature
     /// msg.verify(&key_pair.pub_key);
     /// // Assert correctness using map
-    /// msg.op_result.as_ref().map(|_| { assert!(msg.op_result.is_ok(), "Verifying a signature failed");}).expect("Verifying a signature encountered an error");
+    /// msg.op_result.expect("Signature verification failed");    
     /// ```
     #[allow(non_snake_case)]
     fn verify(&mut self, pub_key: &ExtendedPoint) -> Result<(), OperationError> {
@@ -613,7 +617,7 @@ impl AesEncryptable for Message {
     /// // Decrypt the Message (need the same key)
     /// input.aes_decrypt_cbc(&key);
     /// // Verify successful operation using map
-    /// input.op_result.as_ref().map(|_| { assert!(input.op_result.is_ok(), "AES decryption in Cipher Block Chaining Mode failed");}).expect("AES decryption in CBC Mode encountered an error");
+    /// input.op_result.expect("AES decryption in CBC Mode encountered an error");
     /// ```
     fn aes_encrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = get_random_bytes(16);
@@ -674,7 +678,7 @@ impl AesEncryptable for Message {
     /// // Decrypt the Message (using the same key)
     /// input.aes_decrypt_cbc(&key);
     /// // Verify successful operation using map
-    /// input.op_result.as_ref().map(|_| { assert!(input.op_result.is_ok(), "AES decryption in Cipher Block Chaining Mode failed");}).expect("AES decryption in CBC Mode encountered an error");
+    /// input.op_result.expect("AES decryption in CBC Mode encountered an error");
     /// ```
     fn aes_decrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = self.sym_nonce.clone().unwrap();
@@ -747,7 +751,7 @@ impl AesEncryptable for Message {
     /// // Decrypt the Message (using the same key)
     /// input.aes_decrypt_ctr(&key);
     /// // Verify successful operation using map
-    /// input.op_result.as_ref().map(|_| { assert!(input.op_result.is_ok(), "AES Decryption in Counter Mode failed");}).expect("AES Decryption in CTR Mode encountered an error");
+    /// input.op_result.expect("AES Decryption in CTR Mode encountered an error");
     /// ```
     fn aes_encrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = get_random_bytes(12);
@@ -813,7 +817,7 @@ impl AesEncryptable for Message {
     /// // Decrypt the Message using AES in CTR mode
     /// input.aes_decrypt_ctr(&key);
     /// // Verify successful operation using map
-    /// input.op_result.as_ref().map(|_| { assert!(input.op_result.is_ok(), "AES Decryption in Counter Mode failed");}).expect("AES decryption in CTR Mode encountered an error");
+    /// input.op_result.expect("AES decryption in CTR Mode encountered an error");
     /// ```
     fn aes_decrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = self
@@ -938,6 +942,61 @@ mod kmac_tests {
             0x97, 0xde, 0x28, 0x1d, 0xcc, 0x30, 0x30, 0x5d,
         ];
         assert_eq!(res, expected)
+    }
+}
+
+#[cfg(test)]
+mod decryption_test {
+    // Ensure to test if there are if & else cases: write two tests for each if and else case
+    use crate::{
+        sha3::aux_functions::byte_utils::get_random_bytes,
+        KeyEncryptable, KeyPair, Message,
+        SecParam::D512,
+        SpongeEncryptable,
+    };
+    #[test]
+    /// Testing a security parameters whether the failed decryption preserves
+    /// the original encrypted text. If an encrypted text is decrypted with a wrong password,
+    /// then the original encrypted message should remain the same.
+    ///
+    /// Note: Message were cloned for the test purposes, but in a production setting,
+    /// clone() will not be used, as the operation is done in memory.
+    /// Although a single security parameter is tested,
+    /// it should work on the remaining security parameters.
+    fn test_sha3_decrypt_handling_bad_input() {
+        let pw1 = get_random_bytes(64);
+        let pw2 = get_random_bytes(64);
+
+        // D512
+        let mut new_msg = Message::new(get_random_bytes(523));
+        let _ = new_msg.sha3_encrypt(&pw1, &D512);
+        let msg2 = new_msg.msg.clone();
+        let _ = new_msg.sha3_decrypt(&pw2);
+
+        assert_eq!(msg2, new_msg.msg);
+    }
+
+    #[test]
+    /// Testing a security parameters whether the failed decryption preserves
+    /// the original encrypted text. If an encrypted text is decrypted with a wrong password,
+    /// then the original encrypted message should remain the same.
+    ///
+    /// Note: Message were cloned for the test purposes, but in a production setting,
+    /// clone() will not be used, as the operation is done in memory.
+    /// Although a single security parameter is tested,
+    /// it should work on the remaining security parameters.
+    fn test_key_decrypt_handling_bad_input() {
+        let mut new_msg = Message::new(get_random_bytes(125));
+
+        // D512
+        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512).unwrap();
+        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512).unwrap();
+
+        let _ = new_msg.key_encrypt(&key_pair1.pub_key, &D512);
+        let new_msg2 = new_msg.msg.clone();
+        let _ = new_msg.key_decrypt(&key_pair2.priv_key);
+
+        assert_eq!(*new_msg.msg, *new_msg2, "Message after reverting a failed decryption does not match the original encrypted message");
     }
 }
 
