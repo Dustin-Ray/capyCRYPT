@@ -155,9 +155,9 @@ pub struct Rate {
 }
 
 impl Rate {
-    pub fn from<R: BitLength + ?Sized>(sp: &R) -> Self {
+    pub fn from<R: BitLength + ?Sized>(sec_param: &R) -> Self {
         Rate {
-            value: (1600 - sp.bit_length()),
+            value: (1600 - sec_param.bit_length()),
         }
     }
 
