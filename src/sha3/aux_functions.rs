@@ -21,9 +21,9 @@ pub(crate) mod nist_800_185 {
     /// The encode_string function is used to encode bit strings in a way that may be parsed
     /// unambiguously from the beginning of the string.
     /// * `return`: left_encode(len(`s`)) + `s`
-    pub(crate) fn encode_string(s: &Vec<u8>) -> Vec<u8> {
+    pub(crate) fn encode_string(s: &[u8]) -> Vec<u8> {
         let mut encoded = left_encode((s.len() * 8) as u64);
-        encoded.append(&mut s.clone());
+        encoded.append(&mut s.to_owned());
         encoded
     }
 
@@ -102,7 +102,7 @@ pub mod byte_utils {
     /// * `a`: reference to `Vec<u8>`, will be replaced with result of XOR
     /// * `b`: immut ref to `Vec<u8>`, dropped after function returns
     /// * `Remark`: Probable bottleneck unless impl with SIMD.
-    pub(crate) fn xor_bytes(a: &mut Vec<u8>, b: &Vec<u8>) {
+    pub(crate) fn xor_bytes(a: &mut [u8], b: &[u8]) {
         assert_eq!(a.len(), b.len());
         a.iter_mut().zip(b.iter()).for_each(|(x1, x2)| *x1 ^= *x2);
     }

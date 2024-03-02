@@ -65,8 +65,8 @@ pub(crate) fn cshake(
 ) -> Result<Vec<u8>, OperationError> {
     d.validate()?;
 
-    let mut encoded_n = encode_string(&n.as_bytes().to_vec());
-    encoded_n.extend_from_slice(&encode_string(&s.as_bytes().to_vec()));
+    let mut encoded_n = encode_string(n.as_bytes());
+    encoded_n.extend_from_slice(&encode_string(s.as_bytes()));
 
     let bytepad_w = d.bytepad_value();
 
@@ -101,7 +101,7 @@ pub(crate) fn cshake(
 /// ## Returns:
 /// * `return  -> Vec<u8>`: kmac_xof of `x` under `k`
 pub(crate) fn kmac_xof(
-    k: &Vec<u8>,
+    k: &[u8],
     x: &[u8],
     l: u64,
     s: &str,
@@ -163,7 +163,7 @@ impl Hashable for Message {
     /// data.op_result.as_ref().map(|_| { assert!(data.op_result.is_ok(), "Computing an Authentication Tag failed");}).expect("Computing an Authentication Tag encountered an error");
     /// ```
     fn compute_tagged_hash(&mut self, pw: &[u8], s: &str, d: &SecParam) {
-        self.digest = kmac_xof(&pw.to_owned(), &self.msg, d.bit_length(), s, d);
+        self.digest = kmac_xof(pw, &self.msg, d.bit_length(), s, d);
     }
 }
 
@@ -213,9 +213,9 @@ impl SpongeEncryptable for Message {
         let ke_ka = kmac_xof(&ke_ka, &[], 1024, "S", d)?;
         let (ke, ka) = ke_ka.split_at(64);
 
-        self.digest = kmac_xof(&ka.to_vec(), &self.msg, 512, "SKA", d);
+        self.digest = kmac_xof(ka, &self.msg, 512, "SKA", d);
 
-        let m = kmac_xof(&ke.to_vec(), &[], (self.msg.len() * 8) as u64, "SKE", d)?;
+        let m = kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "SKE", d)?;
         xor_bytes(&mut self.msg, &m);
 
         self.sym_nonce = Some(z);
@@ -242,7 +242,7 @@ impl SpongeEncryptable for Message {
     ///     Message,
     ///     SpongeEncryptable,
     ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}},
-    ///     SecParam
+    ///     SecParam::D512
     /// };
     /// use capycrypt::SecParam;
     /// // Get a random password
@@ -250,7 +250,7 @@ impl SpongeEncryptable for Message {
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Encrypt the data with 512 bits of security
-    /// msg.sha3_encrypt(&pw, &SecParam::D512);
+    /// msg.sha3_encrypt(&pw, &D512);
     /// // Decrypt the data
     /// msg.sha3_decrypt(&pw);
     /// // Verify successful operation using map
@@ -272,10 +272,10 @@ impl SpongeEncryptable for Message {
         let ke_ka = kmac_xof(&z_pw, &[], 1024, "S", d)?;
         let (ke, ka) = ke_ka.split_at(64);
 
-        let m = kmac_xof(&ke.to_vec(), &[], (self.msg.len() * 8) as u64, "SKE", d)?;
+        let m = kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "SKE", d)?;
         xor_bytes(&mut self.msg, &m);
 
-        let new_t = kmac_xof(&ka.to_vec(), &self.msg, 512, "SKA", d)?;
+        let new_t = kmac_xof(ka, &self.msg, 512, "SKA", d)?;
 
         self.op_result = if self
             .digest
@@ -312,7 +312,7 @@ impl KeyPair {
     /// ```
     #[allow(non_snake_case)]
     pub fn new(pw: &[u8], owner: String, d: &SecParam) -> Result<KeyPair, OperationError> {
-        let data = kmac_xof(&pw.to_vec(), &[], 448, "SK", d)?;
+        let data = kmac_xof(pw, &[], 448, "SK", d)?;
         let s: Scalar = bytes_to_scalar(data).mul_mod_r(&Scalar::from(4_u64));
         let V = ExtendedPoint::tw_generator() * s;
         Ok(KeyPair {
@@ -371,15 +371,15 @@ impl KeyEncryptable for Message {
         let w = (*pub_key * k).to_affine();
         let Z = (ExtendedPoint::tw_generator() * k).to_affine();
 
-        let ke_ka = kmac_xof(&w.x.to_bytes().to_vec(), &[], 448 * 2, "PK", d)?;
+        let ke_ka = kmac_xof(&w.x.to_bytes(), &[], 448 * 2, "PK", d)?;
         let (ke, ka) = ke_ka.split_at(ke_ka.len() / 2);
 
-        let t = kmac_xof(&ka.to_vec(), &self.msg, 448, "PKA", d);
+        let t = kmac_xof(ka, &self.msg, 448, "PKA", d);
 
         let msg_len = self.msg.len();
         xor_bytes(
             &mut self.msg,
-            &kmac_xof(&ke.to_vec(), &[], (msg_len * 8) as u64, "PKE", d)?,
+            &kmac_xof(ke, &[], (msg_len * 8) as u64, "PKE", d)?,
         );
 
         self.digest = t;
@@ -444,17 +444,17 @@ impl KeyEncryptable for Message {
             .as_ref()
             .ok_or(OperationError::SecurityParameterNotSet)?;
 
-        let s_bytes = kmac_xof(&pw.to_vec(), &[], 448, "SK", d)?;
+        let s_bytes = kmac_xof(pw, &[], 448, "SK", d)?;
         let s = bytes_to_scalar(s_bytes).mul_mod_r(&Scalar::from(4_u64));
         let Z = (Z * s).to_affine();
 
-        let ke_ka = kmac_xof(&Z.x.to_bytes().to_vec(), &[], 448 * 2, "PK", d)?;
+        let ke_ka = kmac_xof(&Z.x.to_bytes(), &[], 448 * 2, "PK", d)?;
         let (ke, ka) = ke_ka.split_at(ke_ka.len() / 2);
 
-        let xor_result = kmac_xof(&ke.to_vec(), &[], (self.msg.len() * 8) as u64, "PKE", d)?;
+        let xor_result = kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "PKE", d)?;
         xor_bytes(&mut self.msg, &xor_result);
 
-        let t_p = kmac_xof(&ka.to_vec(), &self.msg, 448, "PKA", d)?;
+        let t_p = kmac_xof(ka, &self.msg, 448, "PKA", d)?;
 
         self.op_result = if self.digest.as_ref() == Ok(&t_p) {
             Ok(())
@@ -517,7 +517,7 @@ impl Signable for Message {
         let U = ExtendedPoint::tw_generator() * k;
         let ux_bytes = U.to_affine().x.to_bytes();
 
-        let h = kmac_xof(&ux_bytes.to_vec(), &self.msg, 448, "T", d)?;
+        let h = kmac_xof(&ux_bytes, &self.msg, 448, "T", d)?;
         let h_big = bytes_to_scalar(h.clone());
 
         let z = k - h_big.mul_mod_r(&s);
@@ -570,7 +570,7 @@ impl Signable for Message {
         let h_scalar = bytes_to_scalar(sig.h.clone());
         let U = ExtendedPoint::tw_generator() * sig.z + (*pub_key * h_scalar);
 
-        let h_p = kmac_xof(&U.to_affine().x.to_bytes().to_vec(), &self.msg, 448, "T", d)?;
+        let h_p = kmac_xof(&U.to_affine().x.to_bytes(), &self.msg, 448, "T", d)?;
 
         self.op_result = if h_p == sig.h {
             Ok(())
@@ -762,15 +762,9 @@ impl AesEncryptable for Message {
         let (ke, ka) = ke_ka.split_at(key.len());
 
         self.sym_nonce = Some(iv.clone());
-        self.digest = Ok(kmac_xof(
-            &ka.to_vec(),
-            &self.msg,
-            512,
-            "AES",
-            &SecParam::D256,
-        )?);
+        self.digest = Ok(kmac_xof(ka, &self.msg, 512, "AES", &SecParam::D256)?);
 
-        let key_schedule = AES::new(&ke.to_vec());
+        let key_schedule = AES::new(ke);
 
         // Parallelize encryption for each block
         self.msg
@@ -836,7 +830,7 @@ impl AesEncryptable for Message {
 
         let (ke, ka) = ke_ka.split_at(key.len());
 
-        let key_schedule = AES::new(&ke.to_vec());
+        let key_schedule = AES::new(ke);
 
         // Parallelize decryption for each block
         self.msg
@@ -852,7 +846,7 @@ impl AesEncryptable for Message {
                 xor_blocks(block, &temp);
             });
 
-        let ver = kmac_xof(&ka.to_vec(), &self.msg, 512, "AES", &SecParam::D256)?;
+        let ver = kmac_xof(ka, &self.msg, 512, "AES", &SecParam::D256)?;
         self.op_result = if let Ok(digest) = self.digest.as_ref() {
             if digest == &ver {
                 Ok(())

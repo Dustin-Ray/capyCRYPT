@@ -10,7 +10,7 @@ pub struct AES {
 
 // FIPS 197 compliant functions.
 impl AES {
-    pub fn new(key: &Vec<u8>) -> Self {
+    pub fn new(key: &[u8]) -> Self {
         // Convert bytes to bits
         let key_length = key.len() * 8;
         // set values of n_w and n_r based on key bit length.
@@ -34,7 +34,7 @@ impl AES {
     }
 
     // Cipher function to encrypt a state block.
-    pub fn encrypt_block(input: &mut [u8], block_index: usize, round_keys: &Vec<u8>) {
+    pub fn encrypt_block(input: &mut [u8], block_index: usize, round_keys: &[u8]) {
         // Number of columns in the state matrix
         const NB: usize = 4;
 
@@ -74,7 +74,7 @@ impl AES {
     }
 
     // InvCipher function to decrypt a state block.
-    pub fn decrypt_block(input: &mut [u8], block_index: usize, round_keys: &Vec<u8>) {
+    pub fn decrypt_block(input: &mut [u8], block_index: usize, round_keys: &[u8]) {
         // Number of columns in the state matrix
         const NB: usize = 4;
 
