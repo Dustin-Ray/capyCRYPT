@@ -198,9 +198,8 @@ impl SpongeEncryptable for Message {
     /// msg.sha3_encrypt(&pw, &D512);
     /// // Decrypt the data
     /// msg.sha3_decrypt(&pw);
-    /// // Verify operation success
-    /// // FIXME: Assertion 
-    /// assert_eq!(Ok(()), msg.sha3_decrypt(&pw))
+    /// // Verify successful operation
+    /// assert!(msg.sha3_decrypt(&pw).is_ok(), "Decryption Failure");
     /// ```
     fn sha3_encrypt(&mut self, pw: &[u8], d: &SecParam) -> Result<(), OperationError> {
         self.d = Some(*d);
@@ -251,9 +250,8 @@ impl SpongeEncryptable for Message {
     /// msg.sha3_encrypt(&pw, &D512);
     /// // Decrypt the data
     /// msg.sha3_decrypt(&pw);
-    /// // Verify operation success
-    /// // FIXME: Assertion
-    /// assert_eq!(Ok(()), msg.sha3_decrypt(&pw))
+    /// // Verify successful operation
+    /// assert!(msg.sha3_decrypt(&pw).is_ok(), "Decryption Failure");
     /// ```
     fn sha3_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError> {
         let d = self
@@ -272,9 +270,7 @@ impl SpongeEncryptable for Message {
         let (ke, ka) = ke_ka.split_at(64);
 
         let m = kmac_xof(&ke.to_vec(), &[], (self.msg.len() * 8) as u64, "SKE", d)?;
-        
-        // // create a copy of the original message
-        // let original_msg = self.msg.clone();
+
         xor_bytes(&mut self.msg, &m);
 
         let new_t = kmac_xof(&ka.to_vec(), &self.msg, 512, "SKA", d)?;
@@ -288,10 +284,6 @@ impl SpongeEncryptable for Message {
         } else {
             xor_bytes(&mut self.msg, &m);
             Err(OperationError::SHA3DecryptionFailure)
-
-            // TODO: I need to restore the message after the bad encryption damages the previous good message
-            // TODO: Create a test to ensure that message is restored from a bad decryption message.
-            // Err( xor_bytes(&mut self.msg, &m));
         };
 
         Ok(())
@@ -319,7 +311,7 @@ impl KeyPair {
     /// ```
     #[allow(non_snake_case)]
     pub fn new(pw: &[u8], owner: String, d: &SecParam) -> Result<KeyPair, OperationError> {
-        let data = kmac_xof(&pw.to_vec(), &[], 448, "SK", d)?; 
+        let data = kmac_xof(&pw.to_vec(), &[], 448, "SK", d)?;
         let s: Scalar = bytes_to_scalar(data).mul_mod_r(&Scalar::from(4_u64));
         let V = ExtendedPoint::tw_generator() * s;
         Ok(KeyPair {
@@ -368,9 +360,8 @@ impl KeyEncryptable for Message {
     /// msg.key_encrypt(&key_pair.pub_key, &D512);
     /// // Decrypt the message
     /// msg.key_decrypt(&key_pair.priv_key);
-    /// // Verify
-    /// // FIXME: Assertion
-    /// assert_eq!(Ok(()), msg.key_decrypt(&key_pair.priv_key)); // is Ok(()) a type of Result<(), Operation>
+    /// // Verify successful operation using map
+    /// msg.op_result.as_ref().map(|_| { assert!(msg.op_result.is_ok(), "Key pair decryption failed");}).expect("Key pair decryption encountered an error");
     /// ```
     #[allow(non_snake_case)]
     fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: &SecParam) -> Result<(), OperationError> {
@@ -387,7 +378,7 @@ impl KeyEncryptable for Message {
         let msg_len = self.msg.len();
         xor_bytes(
             &mut self.msg,
-            &kmac_xof(&ke.to_vec(), &[], (msg_len * 8) as u64, "PKE", d)?
+            &kmac_xof(&ke.to_vec(), &[], (msg_len * 8) as u64, "PKE", d)?,
         );
 
         self.digest = t;
@@ -438,8 +429,8 @@ impl KeyEncryptable for Message {
     /// msg.key_encrypt(&key_pair.pub_key, 512);
     /// // Decrypt the message
     /// msg.key_decrypt(&key_pair.priv_key);
-    /// // Verify
-    /// // FIXME: Assertion
+    /// // Verify successful operation using map
+    /// msg.op_result.as_ref().map(|_| { assert!(msg.op_result.is_ok(), "Key pair decryption failed");}).expect("Key pair decryption encountered an error");
     /// ```
     #[allow(non_snake_case)]
     fn key_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError> {
@@ -456,9 +447,6 @@ impl KeyEncryptable for Message {
         let ke_ka = kmac_xof(&Z.x.to_bytes().to_vec(), &[], 448 * 2, "PK", d)?;
         let (ke, ka) = ke_ka.split_at(ke_ka.len() / 2);
 
-        // Create a copy of the original message
-        let original_msg = self.msg.clone(); // can nefarious actors access this clone?
-
         let xor_result = kmac_xof(&ke.to_vec(), &[], (self.msg.len() * 8) as u64, "PKE", d)?;
         xor_bytes(&mut self.msg, &xor_result);
 
@@ -467,7 +455,6 @@ impl KeyEncryptable for Message {
         self.op_result = if self.digest.as_ref() == Ok(&t_p) {
             Ok(())
         } else {
-            // self.msg = original_msg;
             // revert back to the encrypted message
             xor_bytes(&mut self.msg, &xor_result);
 
@@ -568,7 +555,6 @@ impl Signable for Message {
     /// // Verify signature
     /// msg.verify(&key_pair.pub_key);
     /// // Assert correctness
-    /// // FIXME: Assertion
     /// assert_eq!(Ok(()), msg.verify(&key_pair.pub_key));
     /// ```
     #[allow(non_snake_case)]
@@ -643,7 +629,10 @@ impl AesEncryptable for Message {
         apply_pcks7_padding(&mut self.msg);
 
         for block_index in (0..self.msg.len()).step_by(16) {
-            xor_blocks(&mut self.msg[block_index..], self.sym_nonce.as_mut().unwrap());
+            xor_blocks(
+                &mut self.msg[block_index..],
+                self.sym_nonce.as_mut().unwrap(),
+            );
             AES::encrypt_block(&mut self.msg, block_index, &key_schedule.round_key);
             *self.sym_nonce.as_mut().unwrap() = self.msg[block_index..block_index + 16].to_vec();
         }
@@ -697,19 +686,22 @@ impl AesEncryptable for Message {
 
         let msg_copy = self.msg.clone();
 
-        self.msg.par_chunks_mut(16).enumerate().for_each(|(i, block)| {
-            let block_index = i * 16;
-            let xor_block = if block_index >= 16 {
-                &msg_copy[block_index - 16..block_index]
-            } else {
-                &iv // Use IV for the first block
-            };
-            // Decrypt the block in-place without using the output
-            AES::decrypt_block(block, 0, &key_schedule.round_key);
-            // XOR the decrypted block with the previous ciphertext block
-            xor_blocks(block, xor_block);
-        });
-    
+        self.msg
+            .par_chunks_mut(16)
+            .enumerate()
+            .for_each(|(i, block)| {
+                let block_index = i * 16;
+                let xor_block = if block_index >= 16 {
+                    &msg_copy[block_index - 16..block_index]
+                } else {
+                    &iv // Use IV for the first block
+                };
+                // Decrypt the block in-place without using the output
+                AES::decrypt_block(block, 0, &key_schedule.round_key);
+                // XOR the decrypted block with the previous ciphertext block
+                xor_blocks(block, xor_block);
+            });
+
         remove_pcks7_padding(&mut self.msg);
 
         let ver = kmac_xof(ka, &self.msg, 512, "AES", &SecParam::D256)?;
@@ -759,30 +751,39 @@ impl AesEncryptable for Message {
         let iv = get_random_bytes(12);
         let counter = 0u32;
         let counter_bytes = counter.to_be_bytes();
-    
+
         let mut ke_ka = iv.clone();
         ke_ka.extend_from_slice(&counter_bytes);
         ke_ka.extend_from_slice(key);
         let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", &SecParam::D256)?;
-    
+
         let (ke, ka) = ke_ka.split_at(key.len());
-    
+
         self.sym_nonce = Some(iv.clone());
-        self.digest = Ok(kmac_xof(&ka.to_vec(), &self.msg, 512, "AES", &SecParam::D256)?);
-    
+        self.digest = Ok(kmac_xof(
+            &ka.to_vec(),
+            &self.msg,
+            512,
+            "AES",
+            &SecParam::D256,
+        )?);
+
         let key_schedule = AES::new(&ke.to_vec());
-    
+
         // Parallelize encryption for each block
-        self.msg.par_chunks_mut(16).enumerate().for_each(|(i, block)| {
-            let mut temp = iv.clone();
-            let counter = i as u32;
-            temp.extend_from_slice(&counter.to_be_bytes());
-    
-            AES::encrypt_block(&mut temp, 0, &key_schedule.round_key);
-    
-            xor_blocks(block, &temp);
-        });
-    
+        self.msg
+            .par_chunks_mut(16)
+            .enumerate()
+            .for_each(|(i, block)| {
+                let mut temp = iv.clone();
+                let counter = i as u32;
+                temp.extend_from_slice(&counter.to_be_bytes());
+
+                AES::encrypt_block(&mut temp, 0, &key_schedule.round_key);
+
+                xor_blocks(block, &temp);
+            });
+
         Ok(())
     }
     /// # Symmetric Decryption using AES in CTR Mode
@@ -819,30 +820,36 @@ impl AesEncryptable for Message {
     /// assert!(input.op_result.unwrap());
     /// ```
     fn aes_decrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError> {
-        let iv = self.sym_nonce.clone().ok_or(OperationError::SymNonceNotSet)?;
+        let iv = self
+            .sym_nonce
+            .clone()
+            .ok_or(OperationError::SymNonceNotSet)?;
         let counter = 0u32;
         let counter_bytes = counter.to_be_bytes();
-    
+
         let mut ke_ka = iv.clone();
         ke_ka.extend_from_slice(&counter_bytes);
         ke_ka.extend_from_slice(key);
         let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", &SecParam::D256)?;
-    
+
         let (ke, ka) = ke_ka.split_at(key.len());
-    
+
         let key_schedule = AES::new(&ke.to_vec());
-    
+
         // Parallelize decryption for each block
-        self.msg.par_chunks_mut(16).enumerate().for_each(|(i, block)| {
-            let mut temp = iv.clone();
-            let counter = i as u32;
-            temp.extend_from_slice(&counter.to_be_bytes());
-    
-            AES::encrypt_block(&mut temp, 0, &key_schedule.round_key);
-    
-            xor_blocks(block, &temp);
-        });
-    
+        self.msg
+            .par_chunks_mut(16)
+            .enumerate()
+            .for_each(|(i, block)| {
+                let mut temp = iv.clone();
+                let counter = i as u32;
+                temp.extend_from_slice(&counter.to_be_bytes());
+
+                AES::encrypt_block(&mut temp, 0, &key_schedule.round_key);
+
+                xor_blocks(block, &temp);
+            });
+
         let ver = kmac_xof(&ka.to_vec(), &self.msg, 512, "AES", &SecParam::D256)?;
         self.op_result = if let Ok(digest) = self.digest.as_ref() {
             if digest == &ver {
@@ -942,226 +949,111 @@ mod kmac_tests {
 mod decryption_test {
     // Ensure to test if there are if & else cases: write two tests for each if and else case
     use crate::{
-        sha3::aux_functions::byte_utils::get_random_bytes, 
-        KeyEncryptable, 
-        KeyPair, 
-        Message, 
-        SecParam::{D224, D256, D384, D512}, 
-        SpongeEncryptable
+        sha3::aux_functions::byte_utils::get_random_bytes,
+        KeyEncryptable, KeyPair, Message,
+        SecParam::{D224, D256, D384, D512},
+        SpongeEncryptable,
     };
     #[test]
-    ///
-    /// Testing if the failed decryption preserves the same message
-    /// if password1 not_equal password2,
-    /// then the original encrypted message should be the same.
-    fn test_sha3_decrypt_handling_bad_input() {
-        let mut new_msg = Message::new(get_random_bytes(523)); // mutable
 
-        // create a copy of message, and pass the copy of message into the encryption & decryption
+    /// Testing all 4 security parameters (224, 256, 384, 512) for 
+    /// the failed decryption preserves the original encrypted text.
+    /// if an encrypted text is decrypted with a wrong password,
+    /// then the original encrypted message should remain the same.
+    ///
+    /// Note: Message were cloned for the test purposes, but in a production setting,
+    /// clone() will not be used, as the operation is done in memory.
+    fn test_sha3_decrypt_handling_bad_input() {
         let pw1 = get_random_bytes(64);
         let pw2 = get_random_bytes(64);
-        // encrypted_message with password1
-        new_msg.sha3_encrypt(&pw1, &D512);
 
-        // cloned after encryption for testing purpose only
-        let msg2 = new_msg.msg.clone(); 
-
-        // decrypt message with password2
-        new_msg.sha3_decrypt(&pw2);
-        // after decryption, message is still preserved without being affected
-
-        // let differ = Differ::new();
-        // let msg_text = stringify msg.split(" ").collect::<Vec&str>>();
-        // let msg2_text = stringify msg2.split(" ").collect::<Vec&str>>();
-        // let diff = differ.compare(&msg_text, &msg2_text);
-        // for line in &diff {
-            // println!("{:?}, line");
-        //}
-        println!("{:?}", new_msg.msg);
-
-        assert_eq!(msg2, new_msg.msg);
-
+        // D224
         let mut msg_224 = Message::new(get_random_bytes(225));
-        // encrypt text with password 1
         msg_224.sha3_encrypt(&pw1, &D224);
-
-        let msg2_224 = msg_224.msg.clone(); // clone for test purposes
-        // decrypt text with password 2
-        msg_224.sha3_decrypt(&pw2); // decrypted with a wrong password
+        let msg2_224 = msg_224.msg.clone();
+        msg_224.sha3_decrypt(&pw2);
 
         assert_eq!(msg_224.msg, msg2_224);
 
         // D256
         let mut msg_256 = Message::new(get_random_bytes(260));
-        // encrypt text with password 1
         msg_256.sha3_encrypt(&pw1, &D256);
-
-        let msg2_256 = msg_256.msg.clone(); // clone for test purposes
-        msg_256.sha3_decrypt(&pw2); // decrypt with password 2
+        let msg2_256 = msg_256.msg.clone();
+        msg_256.sha3_decrypt(&pw2);
 
         assert_eq!(msg_256.msg, msg2_256);
 
         // D384
         let mut msg_384 = Message::new(get_random_bytes(390));
-
-
-        msg_384.sha3_encrypt(&pw1, &D384); // encrypt text with password 1
+        msg_384.sha3_encrypt(&pw1, &D384);
         let msg2_384 = msg_384.msg.clone();
-
-        msg_384.sha3_decrypt(&pw2); // decrypt with password 2
+        msg_384.sha3_decrypt(&pw2);
 
         assert_eq!(msg_384.msg, msg2_384);
+
+        // D512
+        let mut new_msg = Message::new(get_random_bytes(523));
+        new_msg.sha3_encrypt(&pw1, &D512);
+        let msg2 = new_msg.msg.clone();
+        new_msg.sha3_decrypt(&pw2);
+
+        assert_eq!(msg2, new_msg.msg);
     }
 
     #[test]
+    /// Testing the 4 security parameters (224, 256, 384, 512) 
+    /// whether the failed decryption preserves the original encrypted text.
+    /// If an encrypted text is decrypted with a wrong password, 
+    /// then the original encrypted message should remain the same.
     ///
-    /// Testing if bad password reverts the original message back to its state
+    /// Note: Message were cloned for the test purposes, but in a production setting,
+    /// clone() will not be used, as the operation is done in memory. 
     fn test_key_decrypt_handling_bad_input() {
         let mut new_msg = Message::new(get_random_bytes(125));
-        // D512
-
-        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512);
-        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512);
-        // check if creating the key pair was successful
-        match key_pair1 {
-            Ok(key_pair1) => {
-
-                // Encrypt the message with public key
-                new_msg.key_encrypt(&key_pair1.pub_key, &D512);
-
-                let new_msg2 = new_msg.msg.clone(); // cloning for test purposes
-                
-                match key_pair2 {
-                    Ok(key_pair2) => {
-                        new_msg.key_decrypt(&key_pair2.priv_key);
-                    }
-                    Err(err) => {
-                        println!("Error creating key pair2: {:?}", err);
-                    }
-                }
-
-                assert_eq!(new_msg.msg, new_msg2);
-            }
-            Err(err) => {
-                println!("Error creating key pair: {:?}", err);
-            }
-        }
 
         // D224
         let mut new_msg_224 = Message::new(get_random_bytes(125));
-        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D224);
-        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test string 2".to_string(), &D224);
+        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D224).unwrap();
+        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test string 2".to_string(), &D224).unwrap();
 
-        match key_pair1 {
-            Ok(key_pair1) => {
+        new_msg_224.key_encrypt(&key_pair1.pub_key, &D224);
+        let msg2_224 = new_msg_224.msg.clone();
+        new_msg_224.key_decrypt(&key_pair2.priv_key);
 
-                // encrypt message with public key
-                new_msg_224.key_encrypt(&key_pair1.pub_key, &D224);
-
-                // cloned message appears to be the same only after the message has been encrypted
-                let msg2_224 = new_msg_224.msg.clone();
-                match key_pair2 {
-                    Ok(key_pair2) => {
-                        new_msg_224.key_decrypt(&key_pair2.priv_key);
-                    }
-                    Err(err) => {
-                        println!("Error creating key pair: {:?}", err);
-                    }
-                }
-                // Check if retrieved message is the same after using a wrong password
-                assert_eq!(msg2_224, new_msg_224.msg);
-            }
-            Err(err) => {
-                println!("Error creating key pair: {:?}", err);
-            }
-        }
+        assert_eq!(*new_msg_224.msg, *msg2_224, "Message after reverting a failed decryption does not match the original encrypted message");
 
         // D256
         let mut new_msg_256 = Message::new(get_random_bytes(125));
-        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D256);
-        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test string 2".to_string(), &D256);
+        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D256).unwrap();
+        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test string 2".to_string(), &D256).unwrap();
 
-        match key_pair1 {
-            Ok(key_pair1) => {
+        new_msg_256.key_encrypt(&key_pair1.pub_key, &D224);
+        let msg2_256 = new_msg_256.msg.clone();
+        new_msg_256.key_decrypt(&key_pair2.priv_key);
 
-                // encrypt message with public key
-                new_msg_256.key_encrypt(&key_pair1.pub_key, &D256);
+        assert_eq!(*new_msg_256.msg, *msg2_256, "Message after reverting a failed decryption does not match the original encrypted message");
 
-                // cloned message appears to be the same only after the message has been encrypted
-                let msg2_256 = new_msg_256.msg.clone();
-                match key_pair2 {
-                    Ok(key_pair2) => {
-                        new_msg_256.key_decrypt(&key_pair2.priv_key);
-                    }
-                    Err(err) => {
-                        println!("Error creating key pair: {:?}", err);
-                    }
-                }
-                // Check if retrieved message is the same after using a wrong password
-                assert_eq!(msg2_256, new_msg_256.msg);
-            }
-            Err(err) => {
-                println!("Error creating key pair: {:?}", err);
-            }
-        }
-            // D256
-        let mut new_msg_256 = Message::new(get_random_bytes(125));
-        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D256);
-        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test string 2".to_string(), &D256);
-
-        match key_pair1 {
-            Ok(key_pair1) => {
-
-                // encrypt message with public key
-                new_msg_256.key_encrypt(&key_pair1.pub_key, &D256);
-
-                // cloned message appears to be the same only after the message has been encrypted
-                let msg2_256 = new_msg_256.msg.clone();
-                match key_pair2 {
-                    Ok(key_pair2) => {
-                        new_msg_256.key_decrypt(&key_pair2.priv_key);
-                    }
-                    Err(err) => {
-                        println!("Error creating key pair: {:?}", err);
-                    }
-                }
-                // Check if retrieved message is the same after using a wrong password
-                assert_eq!(msg2_256, new_msg_256.msg);
-            }
-            Err(err) => {
-                println!("Error creating key pair: {:?}", err);
-            }
-        }
         // D384
         let mut new_msg_384 = Message::new(get_random_bytes(125));
-        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D384);
-        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test string 2".to_string(), &D384);
+        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D384).unwrap();
+        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test string 2".to_string(), &D384).unwrap();
 
-        match key_pair1 {
-            Ok(key_pair1) => {
+        new_msg_384.key_encrypt(&key_pair1.pub_key, &D384);
+        let msg2_384 = new_msg_384.msg.clone();
+        new_msg_384.key_decrypt(&key_pair2.priv_key);
 
-                // encrypt message with public key
-                new_msg_384.key_encrypt(&key_pair1.pub_key, &D384);
+        assert_eq!(*new_msg_384.msg, *msg2_384, "Message after reverting a failed decryption does not match the original encrypted message");
+    
+        // D512
+        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512).unwrap();
+        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512).unwrap();
+        
+        new_msg.key_encrypt(&key_pair1.pub_key, &D512);
+        let new_msg2 = new_msg.msg.clone();
+        new_msg.key_decrypt(&key_pair2.priv_key);
 
-                // cloned message appears to be the same only after the message has been encrypted
-                let msg2_384 = new_msg_384.msg.clone();
-                match key_pair2 {
-                    Ok(key_pair2) => {
-                        new_msg_384.key_decrypt(&key_pair2.priv_key);
-                    }
-                    Err(err) => {
-                        println!("Error creating key pair: {:?}", err);
-                    }
-                }
-                // Check if retrieved message is the same after using a wrong password
-                assert_eq!(msg2_384, new_msg_384.msg);
-            }
-            Err(err) => {
-                println!("Error creating key pair: {:?}", err);
-            }
-        }
+        assert_eq!(*new_msg.msg, *new_msg2, "Message after reverting a failed decryption does not match the original encrypted message");
     }
-
 }
 
 #[cfg(test)]
