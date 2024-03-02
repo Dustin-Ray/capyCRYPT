@@ -352,20 +352,20 @@ impl KeyEncryptable for Message {
     ///     KeyPair,
     ///     Message,
     ///     sha3::aux_functions::byte_utils::get_random_bytes,
-    ///     SecParam::D512,
+    ///     SecParam,
     /// };
     ///
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Create a new private/public keypair
-    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512);
+    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &SecParam::D512).expect("Failed to create key pair");
     ///
     /// // Encrypt the message
-    /// msg.key_encrypt(&key_pair.pub_key, &D512);
-    /// // Decrypt the message
+    /// msg.key_encrypt(&key_pair.pub_key, &SecParam::D512);
+    //  Decrypt the message
     /// msg.key_decrypt(&key_pair.priv_key);
     /// // Verify successful operation using map
-    /// msg.op_result.as_ref().map(|_| { assert!(msg.op_result.is_ok(), "Key pair decryption failed");}).expect("Key pair decryption encountered an error");
+    /// msg.op_result.expect("Asymmetric decryption failed");    
     /// ```
     #[allow(non_snake_case)]
     fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: &SecParam) -> Result<(), OperationError> {
@@ -417,8 +417,6 @@ impl KeyEncryptable for Message {
     ///
     /// ## Usage:
     /// ```
-    ///
-    /// ```
     /// use capycrypt::{
     ///     KeyEncryptable,
     ///     KeyPair,
@@ -430,14 +428,14 @@ impl KeyEncryptable for Message {
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Create a new private/public keypair
-    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &SecParam::D512).expect("Failed to create Key Pair");
+    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &SecParam::D512).expect("Failed to create key pair");
     ///
     /// // Encrypt the message
     /// msg.key_encrypt(&key_pair.pub_key, &SecParam::D512);
-    /// // Decrypt the message
+    //  Decrypt the message
     /// msg.key_decrypt(&key_pair.priv_key);
     /// // Verify successful operation using map
-    /// msg.op_result.as_ref().map(|_| { assert!(msg.op_result.is_ok(), "Key pair decryption failed");}).expect("Key pair decryption encountered an error");
+    /// msg.op_result.expect("Asymmetric decryption failed");    
     /// ```
     #[allow(non_snake_case)]
     fn key_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError> {
@@ -509,7 +507,7 @@ impl Signable for Message {
     /// // Verify signature
     /// msg.verify(&key_pair.pub_key);
     /// // Assert correctness using map
-    /// msg.op_result.as_ref().map(|_| { assert!(msg.op_result.is_ok(), "Verifying a signature failed");}).expect("Verifying a signature encountered an error");
+    /// msg.op_result.expect("Signature verification failed");    
     /// ```
     #[allow(non_snake_case)]
     fn sign(&mut self, key: &KeyPair, d: &SecParam) -> Result<(), OperationError> {
@@ -550,20 +548,20 @@ impl Signable for Message {
     ///     KeyPair,
     ///     Message,
     ///     sha3::aux_functions::byte_utils::get_random_bytes,
-    ///     SecParam::D512,
+    ///     SecParam,
     /// };
     /// // Get random 5mb
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Get a random password
     /// let pw = get_random_bytes(64);
     /// // Generate a signing keypair
-    /// let key_pair = KeyPair::new(&pw, "test key".to_string(), &D512);
+    /// let key_pair = KeyPair::new(&pw, "test key".to_string(), &SecParam::D512).expect("Failed to generate Key Pair");
     /// // Sign with 256 bits of security
-    /// msg.sign(&key_pair, &D512);
+    /// msg.sign(&key_pair, &SecParam::D512);
     /// // Verify signature
     /// msg.verify(&key_pair.pub_key);
-    /// // Assert correctness
-    /// assert_eq!(Ok(()), msg.verify(&key_pair.pub_key));
+    /// // Assert correctness using map
+    /// msg.op_result.expect("Signature verification failed");    
     /// ```
     #[allow(non_snake_case)]
     fn verify(&mut self, pub_key: &ExtendedPoint) -> Result<(), OperationError> {
@@ -619,7 +617,7 @@ impl AesEncryptable for Message {
     /// // Decrypt the Message (need the same key)
     /// input.aes_decrypt_cbc(&key);
     /// // Verify successful operation using map
-    /// input.op_result.as_ref().map(|_| { assert!(input.op_result.is_ok(), "AES decryption in Cipher Block Chaining Mode failed");}).expect("AES decryption in CBC Mode encountered an error");
+    /// input.op_result.expect("AES decryption in CBC Mode encountered an error");
     /// ```
     fn aes_encrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = get_random_bytes(16);
@@ -680,7 +678,7 @@ impl AesEncryptable for Message {
     /// // Decrypt the Message (using the same key)
     /// input.aes_decrypt_cbc(&key);
     /// // Verify successful operation using map
-    /// input.op_result.as_ref().map(|_| { assert!(input.op_result.is_ok(), "AES decryption in Cipher Block Chaining Mode failed");}).expect("AES decryption in CBC Mode encountered an error");
+    /// input.op_result.expect("AES decryption in CBC Mode encountered an error");
     /// ```
     fn aes_decrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = self.sym_nonce.clone().unwrap();
@@ -753,7 +751,7 @@ impl AesEncryptable for Message {
     /// // Decrypt the Message (using the same key)
     /// input.aes_decrypt_ctr(&key);
     /// // Verify successful operation using map
-    /// input.op_result.as_ref().map(|_| { assert!(input.op_result.is_ok(), "AES Decryption in Counter Mode failed");}).expect("AES Decryption in CTR Mode encountered an error");
+    /// input.op_result.expect("AES Decryption in CTR Mode encountered an error");
     /// ```
     fn aes_encrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = get_random_bytes(12);
@@ -819,7 +817,7 @@ impl AesEncryptable for Message {
     /// // Decrypt the Message using AES in CTR mode
     /// input.aes_decrypt_ctr(&key);
     /// // Verify successful operation using map
-    /// input.op_result.as_ref().map(|_| { assert!(input.op_result.is_ok(), "AES Decryption in Counter Mode failed");}).expect("AES decryption in CTR Mode encountered an error");
+    /// input.op_result.expect("AES decryption in CTR Mode encountered an error");
     /// ```
     fn aes_decrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = self
@@ -953,11 +951,10 @@ mod decryption_test {
     use crate::{
         sha3::aux_functions::byte_utils::get_random_bytes,
         KeyEncryptable, KeyPair, Message,
-        SecParam::{D224, D256, D384, D512},
+        SecParam::D512,
         SpongeEncryptable,
     };
     #[test]
-
     /// Testing a security parameters whether the failed decryption preserves
     /// the original encrypted text. If an encrypted text is decrypted with a wrong password,
     /// then the original encrypted message should remain the same.
@@ -972,9 +969,9 @@ mod decryption_test {
 
         // D512
         let mut new_msg = Message::new(get_random_bytes(523));
-        new_msg.sha3_encrypt(&pw1, &D512);
+        let _ = new_msg.sha3_encrypt(&pw1, &D512);
         let msg2 = new_msg.msg.clone();
-        new_msg.sha3_decrypt(&pw2);
+        let _ = new_msg.sha3_decrypt(&pw2);
 
         assert_eq!(msg2, new_msg.msg);
     }
@@ -995,9 +992,9 @@ mod decryption_test {
         let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512).unwrap();
         let key_pair2 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512).unwrap();
 
-        new_msg.key_encrypt(&key_pair1.pub_key, &D512);
+        let _ = new_msg.key_encrypt(&key_pair1.pub_key, &D512);
         let new_msg2 = new_msg.msg.clone();
-        new_msg.key_decrypt(&key_pair2.priv_key);
+        let _ = new_msg.key_decrypt(&key_pair2.priv_key);
 
         assert_eq!(*new_msg.msg, *new_msg2, "Message after reverting a failed decryption does not match the original encrypted message");
     }
