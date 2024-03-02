@@ -135,7 +135,7 @@ impl Hashable for Message {
     /// // Compute a SHA3 digest with 128 bits of security
     /// data.compute_hash_sha3(&SecParam::D256);
     /// // Verify successful operation using map
-    /// data.op_result.as_ref().map(|_| { assert!(data.op_result.is_ok(), "Hashing a message failed");}).expect("Hashing a message encountered an error");
+    /// data.op_result.expect("Hashing a message encountered an error");
     /// ```
     fn compute_hash_sha3(&mut self, d: &SecParam) -> Result<(), OperationError> {
         self.digest = shake(&mut self.msg, d);
@@ -160,7 +160,7 @@ impl Hashable for Message {
     /// let expected = "0f9b5dcd47dc08e08a173bbe9a57b1a65784e318cf93cccb7f1f79f186ee1caeff11b12f8ca3a39db82a63f4ca0b65836f5261ee64644ce5a88456d3d30efbed";
     /// data.compute_tagged_hash(&mut pw, &"", &D512);
     /// // Verify successful operation using map
-    /// data.op_result.as_ref().map(|_| { assert!(data.op_result.is_ok(), "Computing an Authentication Tag failed");}).expect("Computing an Authentication Tag encountered an error");
+    /// data.op_result.expect("Computing an Authentication Tag encountered an error");
     /// ```
     fn compute_tagged_hash(&mut self, pw: &[u8], s: &str, d: &SecParam) {
         self.digest = kmac_xof(pw, &self.msg, d.bit_length(), s, d);
@@ -311,7 +311,26 @@ impl KeyPair {
     /// verification key 𝑉 is hashed together with the message 𝑚
     /// and the nonce 𝑈: hash (𝑚, 𝑈, 𝑉) .
     /// ## Usage:
-    /// ```  
+    /// ```
+    /// use capycrypt::{
+    ///     KeyEncryptable,
+    ///     KeyPair,
+    ///     Message,
+    ///     sha3::aux_functions::byte_utils::get_random_bytes,
+    ///     SecParam,
+    /// };
+    ///
+    /// // Get 5mb random data
+    /// let mut msg = Message::new(get_random_bytes(5242880));
+    /// // Create a new private/public keypair
+    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &SecParam::D512).expect("Failed to create key pair");
+    ///
+    /// // Encrypt the message
+    /// msg.key_encrypt(&key_pair.pub_key, &SecParam::D512);
+    //  Decrypt the message
+    /// msg.key_decrypt(&key_pair.priv_key);
+    /// // Verify successful operation using map
+    /// msg.op_result.expect("Asymmetric decryption failed");    
     /// ```
     #[allow(non_snake_case)]
     pub fn new(pw: &[u8], owner: String, d: &SecParam) -> Result<KeyPair, OperationError> {
@@ -949,10 +968,8 @@ mod kmac_tests {
 mod decryption_test {
     // Ensure to test if there are if & else cases: write two tests for each if and else case
     use crate::{
-        sha3::aux_functions::byte_utils::get_random_bytes,
-        KeyEncryptable, KeyPair, Message,
-        SecParam::D512,
-        SpongeEncryptable,
+        sha3::aux_functions::byte_utils::get_random_bytes, KeyEncryptable, KeyPair, Message,
+        SecParam::D512, SpongeEncryptable,
     };
     #[test]
     /// Testing a security parameters whether the failed decryption preserves
