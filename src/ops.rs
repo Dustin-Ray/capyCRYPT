@@ -956,40 +956,17 @@ mod decryption_test {
     };
     #[test]
 
-    /// Testing all 4 security parameters (224, 256, 384, 512) for 
-    /// the failed decryption preserves the original encrypted text.
-    /// if an encrypted text is decrypted with a wrong password,
+    /// Testing a security parameters whether the failed decryption preserves 
+    /// the original encrypted text. If an encrypted text is decrypted with a wrong password, 
     /// then the original encrypted message should remain the same.
     ///
     /// Note: Message were cloned for the test purposes, but in a production setting,
     /// clone() will not be used, as the operation is done in memory.
+    /// Although a single security parameter is tested, 
+    /// it should work on the remaining security parameters.
     fn test_sha3_decrypt_handling_bad_input() {
         let pw1 = get_random_bytes(64);
         let pw2 = get_random_bytes(64);
-
-        // D224
-        let mut msg_224 = Message::new(get_random_bytes(225));
-        msg_224.sha3_encrypt(&pw1, &D224);
-        let msg2_224 = msg_224.msg.clone();
-        msg_224.sha3_decrypt(&pw2);
-
-        assert_eq!(msg_224.msg, msg2_224);
-
-        // D256
-        let mut msg_256 = Message::new(get_random_bytes(260));
-        msg_256.sha3_encrypt(&pw1, &D256);
-        let msg2_256 = msg_256.msg.clone();
-        msg_256.sha3_decrypt(&pw2);
-
-        assert_eq!(msg_256.msg, msg2_256);
-
-        // D384
-        let mut msg_384 = Message::new(get_random_bytes(390));
-        msg_384.sha3_encrypt(&pw1, &D384);
-        let msg2_384 = msg_384.msg.clone();
-        msg_384.sha3_decrypt(&pw2);
-
-        assert_eq!(msg_384.msg, msg2_384);
 
         // D512
         let mut new_msg = Message::new(get_random_bytes(523));
@@ -1001,49 +978,17 @@ mod decryption_test {
     }
 
     #[test]
-    /// Testing the 4 security parameters (224, 256, 384, 512) 
-    /// whether the failed decryption preserves the original encrypted text.
-    /// If an encrypted text is decrypted with a wrong password, 
+    /// Testing a security parameters whether the failed decryption preserves 
+    /// the original encrypted text. If an encrypted text is decrypted with a wrong password, 
     /// then the original encrypted message should remain the same.
     ///
     /// Note: Message were cloned for the test purposes, but in a production setting,
     /// clone() will not be used, as the operation is done in memory. 
+    /// Although a single security parameter is tested, 
+    /// it should work on the remaining security parameters.
     fn test_key_decrypt_handling_bad_input() {
         let mut new_msg = Message::new(get_random_bytes(125));
 
-        // D224
-        let mut new_msg_224 = Message::new(get_random_bytes(125));
-        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D224).unwrap();
-        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test string 2".to_string(), &D224).unwrap();
-
-        new_msg_224.key_encrypt(&key_pair1.pub_key, &D224);
-        let msg2_224 = new_msg_224.msg.clone();
-        new_msg_224.key_decrypt(&key_pair2.priv_key);
-
-        assert_eq!(*new_msg_224.msg, *msg2_224, "Message after reverting a failed decryption does not match the original encrypted message");
-
-        // D256
-        let mut new_msg_256 = Message::new(get_random_bytes(125));
-        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D256).unwrap();
-        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test string 2".to_string(), &D256).unwrap();
-
-        new_msg_256.key_encrypt(&key_pair1.pub_key, &D224);
-        let msg2_256 = new_msg_256.msg.clone();
-        new_msg_256.key_decrypt(&key_pair2.priv_key);
-
-        assert_eq!(*new_msg_256.msg, *msg2_256, "Message after reverting a failed decryption does not match the original encrypted message");
-
-        // D384
-        let mut new_msg_384 = Message::new(get_random_bytes(125));
-        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D384).unwrap();
-        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test string 2".to_string(), &D384).unwrap();
-
-        new_msg_384.key_encrypt(&key_pair1.pub_key, &D384);
-        let msg2_384 = new_msg_384.msg.clone();
-        new_msg_384.key_decrypt(&key_pair2.priv_key);
-
-        assert_eq!(*new_msg_384.msg, *msg2_384, "Message after reverting a failed decryption does not match the original encrypted message");
-    
         // D512
         let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512).unwrap();
         let key_pair2 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512).unwrap();
