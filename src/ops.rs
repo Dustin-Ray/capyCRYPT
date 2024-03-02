@@ -956,13 +956,13 @@ mod decryption_test {
     };
     #[test]
 
-    /// Testing a security parameters whether the failed decryption preserves 
-    /// the original encrypted text. If an encrypted text is decrypted with a wrong password, 
+    /// Testing a security parameters whether the failed decryption preserves
+    /// the original encrypted text. If an encrypted text is decrypted with a wrong password,
     /// then the original encrypted message should remain the same.
     ///
     /// Note: Message were cloned for the test purposes, but in a production setting,
     /// clone() will not be used, as the operation is done in memory.
-    /// Although a single security parameter is tested, 
+    /// Although a single security parameter is tested,
     /// it should work on the remaining security parameters.
     fn test_sha3_decrypt_handling_bad_input() {
         let pw1 = get_random_bytes(64);
@@ -978,13 +978,13 @@ mod decryption_test {
     }
 
     #[test]
-    /// Testing a security parameters whether the failed decryption preserves 
-    /// the original encrypted text. If an encrypted text is decrypted with a wrong password, 
+    /// Testing a security parameters whether the failed decryption preserves
+    /// the original encrypted text. If an encrypted text is decrypted with a wrong password,
     /// then the original encrypted message should remain the same.
     ///
     /// Note: Message were cloned for the test purposes, but in a production setting,
-    /// clone() will not be used, as the operation is done in memory. 
-    /// Although a single security parameter is tested, 
+    /// clone() will not be used, as the operation is done in memory.
+    /// Although a single security parameter is tested,
     /// it should work on the remaining security parameters.
     fn test_key_decrypt_handling_bad_input() {
         let mut new_msg = Message::new(get_random_bytes(125));
@@ -992,7 +992,7 @@ mod decryption_test {
         // D512
         let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512).unwrap();
         let key_pair2 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512).unwrap();
-        
+
         new_msg.key_encrypt(&key_pair1.pub_key, &D512);
         let new_msg2 = new_msg.msg.clone();
         new_msg.key_decrypt(&key_pair2.priv_key);
