@@ -19,7 +19,7 @@ use crate::{
     },
     AesEncryptable, BitLength, Capacity, Hashable, KeyEncryptable, KeyPair, Message,
     OperationError, OutputLength, Rate, SecParam, Signable, Signature, SpongeEncryptable,
-    RATE_IN_BYTES,
+    UpdateFinalize, RATE_IN_BYTES, 
 };
 use rayon::prelude::*;
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
@@ -866,9 +866,52 @@ impl AesEncryptable for Message {
     }
 }
 
+impl UpdateFinalize for Message {
+    /// Returns nothing and simply appends the write data into self.data
+    ///
+    fn update(&mut self, write_data: &[u8]) {
+        self.msg.append(&mut write_data.to_owned());
+        // ke_ka.append(&mut key.to_owned());
+    }
+    /// Internally, this calls compute_sha3_hash, then
+    /// passes self.data and returns the result
+    fn finalize(mut self) -> Result<Vec<u8>, OperationError> {
+        
+        let sec_param = match self.d {
+            Some(d) => d,
+            None => {
+                return Err(OperationError::UnsupportedSecurityParameter);
+            }
+        };
+        self.compute_hash_sha3(&sec_param)?;
+        self.digest
+    }
+}
 ///
 /// TESTS
 ///
+#[cfg(test)]
+mod message_tests {
+    use crate::{ Message, UpdateFinalize};
+
+    #[test]
+    #[allow(non_snake_case)]
+    fn test_UpdateFinalize() {
+        let mut m = Message::new("Initial data".as_bytes().to_vec());
+        m.update("More data".as_bytes());
+        m.update("Even more data".as_bytes());
+        // let test_result: [u8; 31] = [73, 110, 105, 116, 105, 97, 108, 32, 77, 111, 114, 101, 32, 100, 97, 116, 97, 69, 118, 101, 110, 32, 109, 111, 114, 101, 32, 100, 97, 116, 97];
+        // let expected: [u8; 35] = [73, 110, 105, 116, 105, 97, 108, 32, 100, 97, 116, 97, 77, 111, 114, 101, 32, 100, 97, 116, 97, 69, 118, 101, 110, 32, 109, 111, 114, 101, 32, 100, 97, 116, 97];
+
+        // m.finalize();
+        println!("{:?}", m.finalize());
+        // assert_eq!(not equal)
+        // assert_eq!(m.finalize(), test_result);
+
+        // assert_eq!(equal)
+        // assert_eq!(m.msg, expected);
+    }
+}
 #[cfg(test)]
 mod cshake_tests {
     use crate::{ops::cshake, SecParam, NIST_DATA_SPONGE_INIT};
