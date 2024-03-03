@@ -904,6 +904,23 @@ mod message_tests {
         // let expected: [u8; 35] = [73, 110, 105, 116, 105, 97, 108, 32, 100, 97, 116, 97, 77, 111, 114, 101, 32, 100, 97, 116, 97, 69, 118, 101, 110, 32, 109, 111, 114, 101, 32, 100, 97, 116, 97];
 
         // m.finalize();
+
+        // FIXME: need to pass the following test cases
+        // 1. When initial message is empty
+        // let mut m = Message::new();
+        // m.update("foo");
+        // m.update("bar");
+        // m.update("baz");
+        // FIXME: are we using a hash function available in ops.rs?
+        // assert_eq!(m.finalize(), some_hash_function("foobarbaz"));
+
+        // 2. When initial message contains value
+        // let mut m = Message::new("Initial message");
+        // m.update("foo");
+        // m.update("bar");
+        // m.update("baz");
+        // assert_eq!(m.finalize(), some_hash_function("Initial messagefoobarbaz"));
+
         println!("{:?}", m.finalize());
         // assert_eq!(not equal)
         // assert_eq!(m.finalize(), test_result);
