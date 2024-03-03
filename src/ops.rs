@@ -134,7 +134,7 @@ impl Hashable for Message {
     /// let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
     /// // Compute a SHA3 digest with 128 bits of security
     /// data.compute_hash_sha3(&SecParam::D256);
-    /// // Verify successful operation using map
+    /// // Verify successful operation
     /// data.op_result.expect("Hashing a message encountered an error");
     /// ```
     fn compute_hash_sha3(&mut self, d: &SecParam) -> Result<(), OperationError> {
@@ -159,7 +159,7 @@ impl Hashable for Message {
     /// let mut data = Message::new(vec![]);
     /// let expected = "0f9b5dcd47dc08e08a173bbe9a57b1a65784e318cf93cccb7f1f79f186ee1caeff11b12f8ca3a39db82a63f4ca0b65836f5261ee64644ce5a88456d3d30efbed";
     /// data.compute_tagged_hash(&mut pw, &"", &D512);
-    /// // Verify successful operation using map
+    /// // Verify successful operation
     /// data.op_result.expect("Computing an Authentication Tag encountered an error");
     /// ```
     fn compute_tagged_hash(&mut self, pw: &[u8], s: &str, d: &SecParam) {
@@ -329,7 +329,7 @@ impl KeyPair {
     /// msg.key_encrypt(&key_pair.pub_key, &SecParam::D512);
     //  Decrypt the message
     /// msg.key_decrypt(&key_pair.priv_key);
-    /// // Verify successful operation using map
+    /// // Verify successful operation
     /// msg.op_result.expect("Asymmetric decryption failed");    
     /// ```
     #[allow(non_snake_case)]
@@ -383,7 +383,7 @@ impl KeyEncryptable for Message {
     /// msg.key_encrypt(&key_pair.pub_key, &SecParam::D512);
     //  Decrypt the message
     /// msg.key_decrypt(&key_pair.priv_key);
-    /// // Verify successful operation using map
+    /// // Verify successful operation
     /// msg.op_result.expect("Asymmetric decryption failed");    
     /// ```
     #[allow(non_snake_case)]
@@ -453,7 +453,7 @@ impl KeyEncryptable for Message {
     /// msg.key_encrypt(&key_pair.pub_key, &SecParam::D512);
     //  Decrypt the message
     /// msg.key_decrypt(&key_pair.priv_key);
-    /// // Verify successful operation using map
+    /// // Verify successful operation
     /// msg.op_result.expect("Asymmetric decryption failed");    
     /// ```
     #[allow(non_snake_case)]
@@ -635,7 +635,7 @@ impl AesEncryptable for Message {
     /// input.aes_encrypt_cbc(&key);
     /// // Decrypt the Message (need the same key)
     /// input.aes_decrypt_cbc(&key);
-    /// // Verify successful operation using map
+    /// // Verify successful operation
     /// input.op_result.expect("AES decryption in CBC Mode encountered an error");
     /// ```
     fn aes_encrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError> {
@@ -696,7 +696,7 @@ impl AesEncryptable for Message {
     /// input.aes_encrypt_cbc(&key);
     /// // Decrypt the Message (using the same key)
     /// input.aes_decrypt_cbc(&key);
-    /// // Verify successful operation using map
+    /// // Verify successful operation
     /// input.op_result.expect("AES decryption in CBC Mode encountered an error");
     /// ```
     fn aes_decrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError> {
@@ -769,7 +769,7 @@ impl AesEncryptable for Message {
     /// input.aes_encrypt_ctr(&key);
     /// // Decrypt the Message (using the same key)
     /// input.aes_decrypt_ctr(&key);
-    /// // Verify successful operation using map
+    /// // Verify successful operation
     /// input.op_result.expect("AES Decryption in CTR Mode encountered an error");
     /// ```
     fn aes_encrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError> {
@@ -835,7 +835,7 @@ impl AesEncryptable for Message {
     /// input.aes_encrypt_ctr(&key);
     /// // Decrypt the Message using AES in CTR mode
     /// input.aes_decrypt_ctr(&key);
-    /// // Verify successful operation using map
+    /// // Verify successful operation
     /// input.op_result.expect("AES decryption in CTR Mode encountered an error");
     /// ```
     fn aes_decrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError> {
