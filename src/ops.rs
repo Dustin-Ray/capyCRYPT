@@ -871,9 +871,8 @@ impl UpdateFinalize for Message {
     ///
     fn update(&mut self, write_data: &[u8]) {
         self.msg.append(&mut write_data.to_owned());
-        // ke_ka.append(&mut key.to_owned());
     }
-    /// Internally, this calls compute_sha3_hash, then
+    /// Internally, this calls cshake, then
     /// passes self.data and returns the result
     fn finalize(self) -> Vec<u8> {
         println!("{:?}", self);
@@ -889,12 +888,6 @@ impl UpdateFinalize for Message {
             eprintln!("Error: Unsupported security parameter");
             Vec::new()
         }
-
-        // FIXME: return the entire output of cshake
-        // cshake(&self.msg, sec_param, "", "", &self.d);
-        // self.digest = kmac_xof(&pw.to_owned(), &self.msg, d.bit_length(), s, d); example of how kmac_xof
-        //     cshake(&bp, l, "KMAC", s, d)
-        // self.compute_hash_sha3(&sec_param)?;
     }
 }
 ///
@@ -902,41 +895,37 @@ impl UpdateFinalize for Message {
 ///
 #[cfg(test)]
 mod message_tests {
-    use crate::{ Message, UpdateFinalize, SecParam, ops::cshake};
+    use crate::{ Message, UpdateFinalize, SecParam::{D256}, ops::cshake};
 
     #[test]
     #[allow(non_snake_case)]
-    fn test_UpdateFinalize() {
+    fn test_UpdateFinalize_initial_message() {
         let mut m = Message::new("Initial data".as_bytes().to_vec());
+        m.d = Some(D256);
         m.update("More data".as_bytes());
         m.update("Even more data".as_bytes());
-        assert_eq!(m.finalize(), cshake("ased".as_bytes(), 256, "", "", &SecParam::D256).unwrap())
-        // let test_result: [u8; 31] = [73, 110, 105, 116, 105, 97, 108, 32, 77, 111, 114, 101, 32, 100, 97, 116, 97, 69, 118, 101, 110, 32, 109, 111, 114, 101, 32, 100, 97, 116, 97];
-        // let expected: [u8; 35] = [73, 110, 105, 116, 105, 97, 108, 32, 100, 97, 116, 97, 77, 111, 114, 101, 32, 100, 97, 116, 97, 69, 118, 101, 110, 32, 109, 111, 114, 101, 32, 100, 97, 116, 97];
 
+        let expected_hash_result = cshake(
+            "Initial dataMore dataEven more data".as_bytes(),256,"","", &D256,)
+            .expect("Error occurred during cshake operation");
+        
+        assert_eq!(m.finalize(), expected_hash_result, 
+        "The computed hash does not match the expected hash.");
+    }
+    #[test]
+    #[allow(non_snake_case)]
+    fn test_UpdateFinalize_empty_message() {
+        let mut m = Message::new("".as_bytes().to_vec());
+        m.d = Some(D256);
+        m.update("foo".as_bytes());
+        m.update("bar".as_bytes());
+        m.update("baz".as_bytes());
 
-
-
-        // FIXME: need to pass the following test cases
-        // 1. When initial message is empty
-        // let mut m = Message::new();
-        // m.update("foo");
-        // m.update("bar");
-        // m.update("baz");
-        // FIXME: are we using a hash function available in ops.rs?
-        // assert_eq!(m.finalize(), some_hash_function("foobarbaz"));
-
-        // 2. When initial message contains value
-        // let mut m = Message::new("Initial message");
-        // m.update("foo");
-        // m.update("bar");
-        // m.update("baz");
-        // assert_eq!(m.finalize(), some_hash_function("Initial messagefoobarbaz"));
-
-        // assert_eq!(m.finalize(), test_result);
-
-        // assert_eq!(equal)
-        // assert_eq!(m.msg, expected);
+        let expected_hash_result = cshake(
+            "foobarbaz".as_bytes(), 256, "", "", &D256)
+            .expect("Error occured during cshake operation");
+        
+        assert_eq!(m.finalize(), expected_hash_result);
     }
 }
 #[cfg(test)]
