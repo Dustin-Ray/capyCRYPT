@@ -19,7 +19,7 @@ use crate::{
     },
     AesEncryptable, BitLength, Capacity, Hashable, KeyEncryptable, KeyPair, Message,
     OperationError, OutputLength, Rate, SecParam, Signable, Signature, SpongeEncryptable,
-    RATE_IN_BYTES,
+    UpdateFinalize, RATE_IN_BYTES,
 };
 use rayon::prelude::*;
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
@@ -883,9 +883,59 @@ impl AesEncryptable for Message {
     }
 }
 
+impl UpdateFinalize for Message {
+    /// Returns nothing and simply appends the write data into self.data
+    ///
+    fn update(&mut self, write_data: &[u8]) {
+        self.msg.append(&mut write_data.to_owned());
+    }
+    /// Internally, this calls cshake, then
+    /// passes self.data and returns the result
+    fn finalize(self) -> Result<Vec<u8>, OperationError> {
+        if let Some(d) = self.d {
+            let value = d as u64;
+            cshake(&self.msg, value, "", "", &d)
+        } else {
+            Err(OperationError::SecurityParameterNotSet)
+        }
+    }
+}
 ///
 /// TESTS
 ///
+#[cfg(test)]
+mod message_tests {
+    use crate::{Message, UpdateFinalize, SecParam::{D256}, ops::cshake};
+
+    #[test]
+    #[allow(non_snake_case)]
+    fn test_UpdateFinalize_initial_message() {
+        let mut m = Message::new("Initial data".as_bytes().to_vec());
+        m.d = Some(D256);
+        m.update("More data".as_bytes());
+        m.update("Even more data".as_bytes());
+
+        let expected_hash_result = cshake(
+            "Initial dataMore dataEven more data".as_bytes(), 256, "", "", &D256);
+
+        assert_eq!(m.finalize(), expected_hash_result,
+        " The computed hash does not match the expected hash");
+    }
+    #[test]
+    #[allow(non_snake_case)]
+    fn test_UpdateFinalize_empty_message() {
+        let mut m = Message::new("".as_bytes().to_vec());
+        m.d = Some(D256);
+        m.update("foo".as_bytes());
+        m.update("bar".as_bytes());
+        m.update("baz".as_bytes());
+
+        let expected_hash_result = cshake(
+            "foobarbaz".as_bytes(), 256, "", "", &D256);
+        assert_eq!(m.finalize(), expected_hash_result,
+        " The computed hash does not match the expected hash");
+    }
+}
 #[cfg(test)]
 mod cshake_tests {
     use crate::{ops::cshake, SecParam, NIST_DATA_SPONGE_INIT};
