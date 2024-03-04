@@ -223,7 +223,7 @@ pub trait Signable {
 
 pub trait UpdateFinalize {
     fn update(&mut self, write_data: &[u8]);
-    fn finalize(self) -> Result<Vec<u8>, OperationError>; 
+    fn finalize(self) -> Vec<u8>; 
 }
 
 const RATE_IN_BYTES: usize = 136; // SHA3-256 r = 1088 / 8 = 136

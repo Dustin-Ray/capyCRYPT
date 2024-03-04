@@ -875,24 +875,26 @@ impl UpdateFinalize for Message {
     }
     /// Internally, this calls compute_sha3_hash, then
     /// passes self.data and returns the result
-    fn finalize(mut self) -> Result<Vec<u8>, OperationError> {
-        
-        let sec_param = match self.d {
-            Some(d) => {d;
+    fn finalize(self) -> Vec<u8> {
+        println!("{:?}", self);
+        println!("{:?}", self.d);
+        if let Some(d) = self.d {
             let value = d as u64;
             cshake(&self.msg, value, "", "", &d)
-        },
+                .unwrap_or_else(|e| {
+                    eprintln!("Error occurred during cshake operation: {:?}", e);
+                Vec::new()
+                })
+        } else {
+            eprintln!("Error: Unsupported security parameter");
+            Vec::new()
+        }
 
-            None => {
-                return Err(OperationError::UnsupportedSecurityParameter);
-            }
-        };
         // FIXME: return the entire output of cshake
         // cshake(&self.msg, sec_param, "", "", &self.d);
         // self.digest = kmac_xof(&pw.to_owned(), &self.msg, d.bit_length(), s, d); example of how kmac_xof
         //     cshake(&bp, l, "KMAC", s, d)
         // self.compute_hash_sha3(&sec_param)?;
-        self.digest
     }
 }
 ///
@@ -900,7 +902,7 @@ impl UpdateFinalize for Message {
 ///
 #[cfg(test)]
 mod message_tests {
-    use crate::{ Message, UpdateFinalize};
+    use crate::{ Message, UpdateFinalize, SecParam, ops::cshake};
 
     #[test]
     #[allow(non_snake_case)]
@@ -908,10 +910,12 @@ mod message_tests {
         let mut m = Message::new("Initial data".as_bytes().to_vec());
         m.update("More data".as_bytes());
         m.update("Even more data".as_bytes());
+        assert_eq!(m.finalize(), cshake("ased".as_bytes(), 256, "", "", &SecParam::D256).unwrap())
         // let test_result: [u8; 31] = [73, 110, 105, 116, 105, 97, 108, 32, 77, 111, 114, 101, 32, 100, 97, 116, 97, 69, 118, 101, 110, 32, 109, 111, 114, 101, 32, 100, 97, 116, 97];
         // let expected: [u8; 35] = [73, 110, 105, 116, 105, 97, 108, 32, 100, 97, 116, 97, 77, 111, 114, 101, 32, 100, 97, 116, 97, 69, 118, 101, 110, 32, 109, 111, 114, 101, 32, 100, 97, 116, 97];
 
-        // m.finalize();
+
+
 
         // FIXME: need to pass the following test cases
         // 1. When initial message is empty
@@ -929,7 +933,6 @@ mod message_tests {
         // m.update("baz");
         // assert_eq!(m.finalize(), some_hash_function("Initial messagefoobarbaz"));
 
-        assert_eq!(m.finalize(), )
         // assert_eq!(m.finalize(), test_result);
 
         // assert_eq!(equal)
