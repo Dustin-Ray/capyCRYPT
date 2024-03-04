@@ -878,12 +878,20 @@ impl UpdateFinalize for Message {
     fn finalize(mut self) -> Result<Vec<u8>, OperationError> {
         
         let sec_param = match self.d {
-            Some(d) => d,
+            Some(d) => {d;
+            let value = d as u64;
+            cshake(&self.msg, value, "", "", &d)
+        },
+
             None => {
                 return Err(OperationError::UnsupportedSecurityParameter);
             }
         };
-        self.compute_hash_sha3(&sec_param)?;
+        // FIXME: return the entire output of cshake
+        // cshake(&self.msg, sec_param, "", "", &self.d);
+        // self.digest = kmac_xof(&pw.to_owned(), &self.msg, d.bit_length(), s, d); example of how kmac_xof
+        //     cshake(&bp, l, "KMAC", s, d)
+        // self.compute_hash_sha3(&sec_param)?;
         self.digest
     }
 }
@@ -921,8 +929,7 @@ mod message_tests {
         // m.update("baz");
         // assert_eq!(m.finalize(), some_hash_function("Initial messagefoobarbaz"));
 
-        println!("{:?}", m.finalize());
-        // assert_eq!(not equal)
+        assert_eq!(m.finalize(), )
         // assert_eq!(m.finalize(), test_result);
 
         // assert_eq!(equal)
