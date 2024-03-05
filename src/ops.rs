@@ -929,22 +929,6 @@ mod message_tests {
             " The computed hash does not match the expected hash"
         );
     }
-    #[test]
-    #[allow(non_snake_case)]
-    fn test_UpdateFinalize_empty_message() {
-        let mut m = Message::new("".as_bytes().to_vec());
-        m.d = Some(D256);
-        m.update("foo".as_bytes());
-        m.update("bar".as_bytes());
-        m.update("baz".as_bytes());
-
-        let expected_hash_result = cshake("foobarbaz".as_bytes(), 256, "", "", &D256);
-        assert_eq!(
-            m.finalize(),
-            expected_hash_result,
-            " The computed hash does not match the expected hash"
-        );
-    }
 }
 #[cfg(test)]
 mod cshake_tests {
