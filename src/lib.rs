@@ -86,7 +86,6 @@ pub struct Message {
 }
 
 impl Message {
-    
     // Returns a new Message instance
     pub fn new(data: Vec<u8>) -> Message {
         Message {
@@ -137,7 +136,7 @@ impl SecParam {
 }
 
 #[derive(Debug, Clone, Copy)]
-/// An enum representing standard capacity valuess based on FIPS PUB 202. 
+/// An enum representing standard capacity valuess based on FIPS PUB 202.
 /// (The capacity of a sponge function) = 2 * (digest length)
 pub(crate) enum Capacity {
     // 2 * SecParam.D224
@@ -151,7 +150,7 @@ pub(crate) enum Capacity {
 }
 
 impl Capacity {
-    /// This function effectively maps a given bit length to the appropriate capacity value enum variant, 
+    /// This function effectively maps a given bit length to the appropriate capacity value enum variant,
     fn from_bit_length(bit_length: u64) -> Self {
         match bit_length * 2 {
             x if x <= 448 => Capacity::C448,
@@ -183,8 +182,8 @@ impl OutputLength {
     }
 }
 
-/// Rate struct for storing the rate value. 
-/// Rate is the number of input bits processed per invocation of the underlying function in sponge construction. 
+/// Rate struct for storing the rate value.
+/// Rate is the number of input bits processed per invocation of the underlying function in sponge construction.
 pub struct Rate {
     value: u64,
 }
@@ -239,7 +238,7 @@ pub trait BitLength {
 
 pub trait Hashable {
     /// # Message Digest
-    /// Computes SHA3-d hash of input. 
+    /// Computes SHA3-d hash of input.
     /// ## Arguments:
     /// * `d: u64`: requested security strength in bits. Supported
     /// bitstrengths are 224, 256, 384, or 512.
