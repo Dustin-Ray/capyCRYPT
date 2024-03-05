@@ -238,6 +238,11 @@ pub trait BitLength {
 }
 
 pub trait Hashable {
+    /// # Message Digest
+    /// Computes SHA3-d hash of input. 
+    /// ## Arguments:
+    /// * `d: u64`: requested security strength in bits. Supported
+    /// bitstrengths are 224, 256, 384, or 512.
     fn compute_hash_sha3(&mut self, d: &SecParam) -> Result<(), OperationError>;
     fn compute_tagged_hash(&mut self, pw: &[u8], s: &str, d: &SecParam);
 }
