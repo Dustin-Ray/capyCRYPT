@@ -137,10 +137,16 @@ impl SecParam {
 }
 
 #[derive(Debug, Clone, Copy)]
+/// An enum representing standard capacity valuess based on FIPS PUB 202. 
+/// (The capacity of a sponge function) = 2 * (digest length)
 pub(crate) enum Capacity {
+    // 2 * SecParam.D224
     C448 = 448,
+    // 2 * SecParam.D256
     C512 = 512,
+    // 2 * SecParam.D384
     C768 = 768,
+    // 2 * SecParam.D512
     C1024 = 1024,
 }
 
