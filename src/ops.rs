@@ -905,7 +905,7 @@ impl UpdateFinalize for Message {
 ///
 #[cfg(test)]
 mod message_tests {
-    use crate::{Message, UpdateFinalize, SecParam::{D256}, ops::cshake};
+    use crate::{ops::cshake, Message, SecParam::D256, UpdateFinalize};
 
     #[test]
     #[allow(non_snake_case)]
@@ -916,10 +916,18 @@ mod message_tests {
         m.update("Even more data".as_bytes());
 
         let expected_hash_result = cshake(
-            "Initial dataMore dataEven more data".as_bytes(), 256, "", "", &D256);
+            "Initial dataMore dataEven more data".as_bytes(),
+            256,
+            "",
+            "",
+            &D256,
+        );
 
-        assert_eq!(m.finalize(), expected_hash_result,
-        " The computed hash does not match the expected hash");
+        assert_eq!(
+            m.finalize(),
+            expected_hash_result,
+            " The computed hash does not match the expected hash"
+        );
     }
     #[test]
     #[allow(non_snake_case)]
@@ -930,10 +938,12 @@ mod message_tests {
         m.update("bar".as_bytes());
         m.update("baz".as_bytes());
 
-        let expected_hash_result = cshake(
-            "foobarbaz".as_bytes(), 256, "", "", &D256);
-        assert_eq!(m.finalize(), expected_hash_result,
-        " The computed hash does not match the expected hash");
+        let expected_hash_result = cshake("foobarbaz".as_bytes(), 256, "", "", &D256);
+        assert_eq!(
+            m.finalize(),
+            expected_hash_result,
+            " The computed hash does not match the expected hash"
+        );
     }
 }
 #[cfg(test)]
