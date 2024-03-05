@@ -65,8 +65,8 @@ pub(crate) fn cshake(
 ) -> Result<Vec<u8>, OperationError> {
     d.validate()?;
 
-    let mut encoded_n = encode_string(&n.as_bytes().to_vec());
-    encoded_n.extend_from_slice(&encode_string(&s.as_bytes().to_vec()));
+    let mut encoded_n = encode_string(n.as_bytes());
+    encoded_n.extend_from_slice(&encode_string(s.as_bytes()));
 
     let bytepad_w = d.bytepad_value();
 
@@ -101,7 +101,7 @@ pub(crate) fn cshake(
 /// ## Returns:
 /// * `return  -> Vec<u8>`: kmac_xof of `x` under `k`
 pub(crate) fn kmac_xof(
-    k: &Vec<u8>,
+    k: &[u8],
     x: &[u8],
     l: u64,
     s: &str,
@@ -127,14 +127,15 @@ impl Hashable for Message {
     /// bitstrengths are 224, 256, 384, or 512.
     /// ## Usage:
     /// ```
-    /// use capycrypt::{Hashable, Message};
+    /// use capycrypt::{Hashable, Message, SecParam};
     /// // Hash the empty string
     /// let mut data = Message::new(vec![]);
     /// // Obtained from echo -n "" | openssl dgst -sha3-256
     /// let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
     /// // Compute a SHA3 digest with 128 bits of security
-    /// data.compute_hash_sha3(256);
-    /// // FIXME: Assertion
+    /// data.compute_hash_sha3(&SecParam::D256);
+    /// // Verify successful operation
+    /// data.op_result.expect("Hashing a message encountered an error");
     /// ```
     fn compute_hash_sha3(&mut self, d: &SecParam) -> Result<(), OperationError> {
         self.digest = shake(&mut self.msg, d);
@@ -153,15 +154,16 @@ impl Hashable for Message {
     /// bitstrengths are 224, 256, 384, or 512.
     /// ## Usage:
     /// ```
-    /// use capycrypt::{Hashable, Message};
+    /// use capycrypt::{Hashable, Message, SecParam::{D512}};
     /// let mut pw = "test".as_bytes().to_vec();
     /// let mut data = Message::new(vec![]);
     /// let expected = "0f9b5dcd47dc08e08a173bbe9a57b1a65784e318cf93cccb7f1f79f186ee1caeff11b12f8ca3a39db82a63f4ca0b65836f5261ee64644ce5a88456d3d30efbed";
-    /// data.compute_tagged_hash(&mut pw, &"", 512);
-    /// // FIXME: Assertion
+    /// data.compute_tagged_hash(&mut pw, &"", &D512);
+    /// // Verify successful operation
+    /// data.op_result.expect("Computing an Authentication Tag encountered an error");
     /// ```
     fn compute_tagged_hash(&mut self, pw: &[u8], s: &str, d: &SecParam) {
-        self.digest = kmac_xof(&pw.to_owned(), &self.msg, d.bit_length(), s, d);
+        self.digest = kmac_xof(pw, &self.msg, d.bit_length(), s, d);
     }
 }
 
@@ -187,18 +189,20 @@ impl SpongeEncryptable for Message {
     /// use capycrypt::{
     ///     Message,
     ///     SpongeEncryptable,
-    ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}}
+    ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}},
+    ///     SecParam::D512,
     /// };
+    /// use capycrypt::SecParam;
     /// // Get a random password
     /// let pw = get_random_bytes(64);
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Encrypt the data with 512 bits of security
-    /// msg.sha3_encrypt(&pw, 512);
+    /// msg.sha3_encrypt(&pw, &D512);
     /// // Decrypt the data
     /// msg.sha3_decrypt(&pw);
-    /// // Verify operation success
-    /// // FIXME: Assertion
+    /// // Verify successful operation
+    /// assert!(msg.sha3_decrypt(&pw).is_ok(), "Decryption Failure");
     /// ```
     fn sha3_encrypt(&mut self, pw: &[u8], d: &SecParam) -> Result<(), OperationError> {
         self.d = Some(*d);
@@ -210,9 +214,9 @@ impl SpongeEncryptable for Message {
         let ke_ka = kmac_xof(&ke_ka, &[], 1024, "S", d)?;
         let (ke, ka) = ke_ka.split_at(64);
 
-        self.digest = kmac_xof(&ka.to_vec(), &self.msg, 512, "SKA", d);
+        self.digest = kmac_xof(ka, &self.msg, 512, "SKA", d);
 
-        let m = kmac_xof(&ke.to_vec(), &[], (self.msg.len() * 8) as u64, "SKE", d)?;
+        let m = kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "SKE", d)?;
         xor_bytes(&mut self.msg, &m);
 
         self.sym_nonce = Some(z);
@@ -238,7 +242,8 @@ impl SpongeEncryptable for Message {
     /// use capycrypt::{
     ///     Message,
     ///     SpongeEncryptable,
-    ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}}
+    ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}},
+    ///     SecParam::D512,
     /// };
     /// use capycrypt::SecParam;
     /// // Get a random password
@@ -246,14 +251,11 @@ impl SpongeEncryptable for Message {
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Encrypt the data with 512 bits of security
-    /// msg.sha3_encrypt(&pw, &SecParam::D512);
+    /// msg.sha3_encrypt(&pw, &D512);
     /// // Decrypt the data
     /// msg.sha3_decrypt(&pw);
-    ///
-    /// // Verify operation success using map
-    /// msg.op_result.as_ref().map(|_| {
-    ///     assert!(msg.op_result.is_ok(), "Decryption failed");
-    /// }).expect("SHA3 decryption encountered an error");
+    /// // Verify successful operation
+    /// assert!(msg.sha3_decrypt(&pw).is_ok(), "Decryption Failure");
     /// ```
     fn sha3_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError> {
         let d = self
@@ -271,10 +273,11 @@ impl SpongeEncryptable for Message {
         let ke_ka = kmac_xof(&z_pw, &[], 1024, "S", d)?;
         let (ke, ka) = ke_ka.split_at(64);
 
-        let m = kmac_xof(&ke.to_vec(), &[], (self.msg.len() * 8) as u64, "SKE", d)?;
+        let m = kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "SKE", d)?;
+
         xor_bytes(&mut self.msg, &m);
 
-        let new_t = kmac_xof(&ka.to_vec(), &self.msg, 512, "SKA", d)?;
+        let new_t = kmac_xof(ka, &self.msg, 512, "SKA", d)?;
 
         self.op_result = if self
             .digest
@@ -283,6 +286,7 @@ impl SpongeEncryptable for Message {
         {
             Ok(())
         } else {
+            xor_bytes(&mut self.msg, &m);
             Err(OperationError::SHA3DecryptionFailure)
         };
 
@@ -307,11 +311,30 @@ impl KeyPair {
     /// verification key 𝑉 is hashed together with the message 𝑚
     /// and the nonce 𝑈: hash (𝑚, 𝑈, 𝑉) .
     /// ## Usage:
-    /// ```  
+    /// ```
+    /// use capycrypt::{
+    ///     KeyEncryptable,
+    ///     KeyPair,
+    ///     Message,
+    ///     sha3::aux_functions::byte_utils::get_random_bytes,
+    ///     SecParam,
+    /// };
+    ///
+    /// // Get 5mb random data
+    /// let mut msg = Message::new(get_random_bytes(5242880));
+    /// // Create a new private/public keypair
+    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &SecParam::D512).expect("Failed to create key pair");
+    ///
+    /// // Encrypt the message
+    /// msg.key_encrypt(&key_pair.pub_key, &SecParam::D512);
+    //  Decrypt the message
+    /// msg.key_decrypt(&key_pair.priv_key);
+    /// // Verify successful operation
+    /// msg.op_result.expect("Asymmetric decryption failed");    
     /// ```
     #[allow(non_snake_case)]
     pub fn new(pw: &[u8], owner: String, d: &SecParam) -> Result<KeyPair, OperationError> {
-        let data = kmac_xof(&pw.to_vec(), &[], 448, "SK", d)?;
+        let data = kmac_xof(pw, &[], 448, "SK", d)?;
         let s: Scalar = bytes_to_scalar(data).mul_mod_r(&Scalar::from(4_u64));
         let V = ExtendedPoint::tw_generator() * s;
         Ok(KeyPair {
@@ -347,20 +370,21 @@ impl KeyEncryptable for Message {
     ///     KeyEncryptable,
     ///     KeyPair,
     ///     Message,
-    ///     sha3::aux_functions::byte_utils::get_random_bytes
+    ///     sha3::aux_functions::byte_utils::get_random_bytes,
+    ///     SecParam,
     /// };
     ///
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Create a new private/public keypair
-    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), 512);
+    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &SecParam::D512).expect("Failed to create key pair");
     ///
     /// // Encrypt the message
-    /// msg.key_encrypt(&key_pair.pub_key, 512);
-    /// // Decrypt the message
+    /// msg.key_encrypt(&key_pair.pub_key, &SecParam::D512);
+    //  Decrypt the message
     /// msg.key_decrypt(&key_pair.priv_key);
-    /// // Verify
-    /// // FIXME: Assertion
+    /// // Verify successful operation
+    /// msg.op_result.expect("Asymmetric decryption failed");    
     /// ```
     #[allow(non_snake_case)]
     fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: &SecParam) -> Result<(), OperationError> {
@@ -369,15 +393,15 @@ impl KeyEncryptable for Message {
         let w = (*pub_key * k).to_affine();
         let Z = (ExtendedPoint::tw_generator() * k).to_affine();
 
-        let ke_ka = kmac_xof(&w.x.to_bytes().to_vec(), &[], 448 * 2, "PK", d)?;
+        let ke_ka = kmac_xof(&w.x.to_bytes(), &[], 448 * 2, "PK", d)?;
         let (ke, ka) = ke_ka.split_at(ke_ka.len() / 2);
 
-        let t = kmac_xof(&ka.to_vec(), &self.msg, 448, "PKA", d);
+        let t = kmac_xof(ka, &self.msg, 448, "PKA", d);
 
         let msg_len = self.msg.len();
         xor_bytes(
             &mut self.msg,
-            &kmac_xof(&ke.to_vec(), &[], (msg_len * 8) as u64, "PKE", d)?,
+            &kmac_xof(ke, &[], (msg_len * 8) as u64, "PKE", d)?,
         );
 
         self.digest = t;
@@ -416,20 +440,21 @@ impl KeyEncryptable for Message {
     ///     KeyEncryptable,
     ///     KeyPair,
     ///     Message,
-    ///     sha3::aux_functions::byte_utils::get_random_bytes
+    ///     sha3::aux_functions::byte_utils::get_random_bytes,
+    ///     SecParam,
     /// };
     ///
     /// // Get 5mb random data
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Create a new private/public keypair
-    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), 512);
+    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &SecParam::D512).expect("Failed to create key pair");
     ///
     /// // Encrypt the message
-    /// msg.key_encrypt(&key_pair.pub_key, 512);
-    /// // Decrypt the message
+    /// msg.key_encrypt(&key_pair.pub_key, &SecParam::D512);
+    //  Decrypt the message
     /// msg.key_decrypt(&key_pair.priv_key);
-    /// // Verify
-    /// // FIXME: Assertion
+    /// // Verify successful operation
+    /// msg.op_result.expect("Asymmetric decryption failed");    
     /// ```
     #[allow(non_snake_case)]
     fn key_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError> {
@@ -439,21 +464,24 @@ impl KeyEncryptable for Message {
             .as_ref()
             .ok_or(OperationError::SecurityParameterNotSet)?;
 
-        let s_bytes = kmac_xof(&pw.to_vec(), &[], 448, "SK", d)?;
+        let s_bytes = kmac_xof(pw, &[], 448, "SK", d)?;
         let s = bytes_to_scalar(s_bytes).mul_mod_r(&Scalar::from(4_u64));
         let Z = (Z * s).to_affine();
 
-        let ke_ka = kmac_xof(&Z.x.to_bytes().to_vec(), &[], 448 * 2, "PK", d)?;
+        let ke_ka = kmac_xof(&Z.x.to_bytes(), &[], 448 * 2, "PK", d)?;
         let (ke, ka) = ke_ka.split_at(ke_ka.len() / 2);
 
-        let xor_result = kmac_xof(&ke.to_vec(), &[], (self.msg.len() * 8) as u64, "PKE", d)?;
+        let xor_result = kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "PKE", d)?;
         xor_bytes(&mut self.msg, &xor_result);
 
-        let t_p = kmac_xof(&ka.to_vec(), &self.msg, 448, "PKA", d)?;
+        let t_p = kmac_xof(ka, &self.msg, 448, "PKA", d)?;
 
         self.op_result = if self.digest.as_ref() == Ok(&t_p) {
             Ok(())
         } else {
+            // revert back to the encrypted message
+            xor_bytes(&mut self.msg, &xor_result);
+
             Err(OperationError::KeyDecryptionError)
         };
 
@@ -484,20 +512,21 @@ impl Signable for Message {
     ///     Signable,
     ///     KeyPair,
     ///     Message,
-    ///     sha3::aux_functions::byte_utils::get_random_bytes
+    ///     sha3::aux_functions::byte_utils::get_random_bytes,
+    ///     SecParam,
     /// };
     /// // Get random 5mb
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Get a random password
     /// let pw = get_random_bytes(64);
     /// // Generate a signing keypair
-    /// let key_pair = KeyPair::new(&pw, "test key".to_string(), 512);
+    /// let key_pair = KeyPair::new(&pw, "test key".to_string(), &SecParam::D512).expect("Failed to generate Key Pair");
     /// // Sign with 256 bits of security
-    /// msg.sign(&key_pair, 512);
+    /// msg.sign(&key_pair, &SecParam::D512);
     /// // Verify signature
     /// msg.verify(&key_pair.pub_key);
-    /// // Assert correctness
-    /// // FIXME: Assertion
+    /// // Assert correctness using map
+    /// msg.op_result.expect("Signature verification failed");    
     /// ```
     #[allow(non_snake_case)]
     fn sign(&mut self, key: &KeyPair, d: &SecParam) -> Result<(), OperationError> {
@@ -511,7 +540,7 @@ impl Signable for Message {
         let U = ExtendedPoint::tw_generator() * k;
         let ux_bytes = U.to_affine().x.to_bytes();
 
-        let h = kmac_xof(&ux_bytes.to_vec(), &self.msg, 448, "T", d)?;
+        let h = kmac_xof(&ux_bytes, &self.msg, 448, "T", d)?;
         let h_big = bytes_to_scalar(h.clone());
 
         let z = k - h_big.mul_mod_r(&s);
@@ -537,20 +566,21 @@ impl Signable for Message {
     ///     Signable,
     ///     KeyPair,
     ///     Message,
-    ///     sha3::aux_functions::byte_utils::get_random_bytes
+    ///     sha3::aux_functions::byte_utils::get_random_bytes,
+    ///     SecParam,
     /// };
     /// // Get random 5mb
     /// let mut msg = Message::new(get_random_bytes(5242880));
     /// // Get a random password
     /// let pw = get_random_bytes(64);
     /// // Generate a signing keypair
-    /// let key_pair = KeyPair::new(&pw, "test key".to_string(), 512);
+    /// let key_pair = KeyPair::new(&pw, "test key".to_string(), &SecParam::D512).expect("Failed to generate Key Pair");
     /// // Sign with 256 bits of security
-    /// msg.sign(&key_pair, 512);
+    /// msg.sign(&key_pair, &SecParam::D512);
     /// // Verify signature
     /// msg.verify(&key_pair.pub_key);
-    /// // Assert correctness
-    /// // FIXME: Assertion
+    /// // Assert correctness using map
+    /// msg.op_result.expect("Signature verification failed");    
     /// ```
     #[allow(non_snake_case)]
     fn verify(&mut self, pub_key: &ExtendedPoint) -> Result<(), OperationError> {
@@ -563,7 +593,7 @@ impl Signable for Message {
         let h_scalar = bytes_to_scalar(sig.h.clone());
         let U = ExtendedPoint::tw_generator() * sig.z + (*pub_key * h_scalar);
 
-        let h_p = kmac_xof(&U.to_affine().x.to_bytes().to_vec(), &self.msg, 448, "T", d)?;
+        let h_p = kmac_xof(&U.to_affine().x.to_bytes(), &self.msg, 448, "T", d)?;
 
         self.op_result = if h_p == sig.h {
             Ok(())
@@ -605,8 +635,8 @@ impl AesEncryptable for Message {
     /// input.aes_encrypt_cbc(&key);
     /// // Decrypt the Message (need the same key)
     /// input.aes_decrypt_cbc(&key);
-    /// // Verify operation success
-    /// // FIXME: Assertion
+    /// // Verify successful operation
+    /// input.op_result.expect("AES decryption in CBC Mode encountered an error");
     /// ```
     fn aes_encrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = get_random_bytes(16);
@@ -666,8 +696,8 @@ impl AesEncryptable for Message {
     /// input.aes_encrypt_cbc(&key);
     /// // Decrypt the Message (using the same key)
     /// input.aes_decrypt_cbc(&key);
-    /// // Verify operation success
-    /// // FIXME: Assertion
+    /// // Verify successful operation
+    /// input.op_result.expect("AES decryption in CBC Mode encountered an error");
     /// ```
     fn aes_decrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = self.sym_nonce.clone().unwrap();
@@ -737,10 +767,10 @@ impl AesEncryptable for Message {
     /// let mut input = Message::new(get_random_bytes(5242880));
     /// // Encrypt the Message using AES in CTR mode
     /// input.aes_encrypt_ctr(&key);
-    /// // Decrypt the Message (need the same key)
+    /// // Decrypt the Message (using the same key)
     /// input.aes_decrypt_ctr(&key);
-    /// // Verify operation success
-    /// assert!(input.op_result.unwrap());
+    /// // Verify successful operation
+    /// input.op_result.expect("AES Decryption in CTR Mode encountered an error");
     /// ```
     fn aes_encrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = get_random_bytes(12);
@@ -755,15 +785,9 @@ impl AesEncryptable for Message {
         let (ke, ka) = ke_ka.split_at(key.len());
 
         self.sym_nonce = Some(iv.clone());
-        self.digest = Ok(kmac_xof(
-            &ka.to_vec(),
-            &self.msg,
-            512,
-            "AES",
-            &SecParam::D256,
-        )?);
+        self.digest = Ok(kmac_xof(ka, &self.msg, 512, "AES", &SecParam::D256)?);
 
-        let key_schedule = AES::new(&ke.to_vec());
+        let key_schedule = AES::new(ke);
 
         // Parallelize encryption for each block
         self.msg
@@ -811,8 +835,8 @@ impl AesEncryptable for Message {
     /// input.aes_encrypt_ctr(&key);
     /// // Decrypt the Message using AES in CTR mode
     /// input.aes_decrypt_ctr(&key);
-    /// // Verify operation success
-    /// assert!(input.op_result.unwrap());
+    /// // Verify successful operation
+    /// input.op_result.expect("AES decryption in CTR Mode encountered an error");
     /// ```
     fn aes_decrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = self
@@ -829,7 +853,7 @@ impl AesEncryptable for Message {
 
         let (ke, ka) = ke_ka.split_at(key.len());
 
-        let key_schedule = AES::new(&ke.to_vec());
+        let key_schedule = AES::new(ke);
 
         // Parallelize decryption for each block
         self.msg
@@ -845,7 +869,7 @@ impl AesEncryptable for Message {
                 xor_blocks(block, &temp);
             });
 
-        let ver = kmac_xof(&ka.to_vec(), &self.msg, 512, "AES", &SecParam::D256)?;
+        let ver = kmac_xof(ka, &self.msg, 512, "AES", &SecParam::D256)?;
         self.op_result = if let Ok(digest) = self.digest.as_ref() {
             if digest == &ver {
                 Ok(())
@@ -937,6 +961,59 @@ mod kmac_tests {
             0x97, 0xde, 0x28, 0x1d, 0xcc, 0x30, 0x30, 0x5d,
         ];
         assert_eq!(res, expected)
+    }
+}
+
+#[cfg(test)]
+mod decryption_test {
+    // Ensure to test if there are if & else cases: write two tests for each if and else case
+    use crate::{
+        sha3::aux_functions::byte_utils::get_random_bytes, KeyEncryptable, KeyPair, Message,
+        SecParam::D512, SpongeEncryptable,
+    };
+    #[test]
+    /// Testing a security parameters whether the failed decryption preserves
+    /// the original encrypted text. If an encrypted text is decrypted with a wrong password,
+    /// then the original encrypted message should remain the same.
+    ///
+    /// Note: Message were cloned for the test purposes, but in a production setting,
+    /// clone() will not be used, as the operation is done in memory.
+    /// Although a single security parameter is tested,
+    /// it should work on the remaining security parameters.
+    fn test_sha3_decrypt_handling_bad_input() {
+        let pw1 = get_random_bytes(64);
+        let pw2 = get_random_bytes(64);
+
+        // D512
+        let mut new_msg = Message::new(get_random_bytes(523));
+        let _ = new_msg.sha3_encrypt(&pw1, &D512);
+        let msg2 = new_msg.msg.clone();
+        let _ = new_msg.sha3_decrypt(&pw2);
+
+        assert_eq!(msg2, new_msg.msg);
+    }
+
+    #[test]
+    /// Testing a security parameters whether the failed decryption preserves
+    /// the original encrypted text. If an encrypted text is decrypted with a wrong password,
+    /// then the original encrypted message should remain the same.
+    ///
+    /// Note: Message were cloned for the test purposes, but in a production setting,
+    /// clone() will not be used, as the operation is done in memory.
+    /// Although a single security parameter is tested,
+    /// it should work on the remaining security parameters.
+    fn test_key_decrypt_handling_bad_input() {
+        let mut new_msg = Message::new(get_random_bytes(125));
+
+        // D512
+        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512).unwrap();
+        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512).unwrap();
+
+        let _ = new_msg.key_encrypt(&key_pair1.pub_key, &D512);
+        let new_msg2 = new_msg.msg.clone();
+        let _ = new_msg.key_decrypt(&key_pair2.priv_key);
+
+        assert_eq!(*new_msg.msg, *new_msg2, "Message after reverting a failed decryption does not match the original encrypted message");
     }
 }
 
