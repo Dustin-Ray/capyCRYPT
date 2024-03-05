@@ -885,7 +885,6 @@ impl AesEncryptable for Message {
 
 impl UpdateFinalize for Message {
     /// Returns nothing and simply appends the write data into self.data
-    ///
     fn update(&mut self, write_data: &[u8]) {
         self.msg.append(&mut write_data.to_owned());
     }
