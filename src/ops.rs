@@ -889,12 +889,21 @@ impl UpdateFinalize for Message {
     fn update(&mut self, write_data: &[u8]) {
         self.msg.append(&mut write_data.to_owned());
     }
+    /// Used in a sliding window
     /// Internally, this calls cshake, then
     /// passes self.data and returns the result
-    fn finalize(self) -> Result<Vec<u8>, OperationError> {
+    ///
+    fn finalize(self, output_length: &u64) -> Result<Box<Vec<u8>>, OperationError> {
         if let Some(d) = self.d {
-            let value = d as u64;
-            cshake(&self.msg, value, "", "", &d)
+            match cshake(&self.msg, *output_length, "", "", &d) {
+                Ok(new_msg) => {
+                    self.msg = Box::new(new_msg);
+                    Ok(self.msg)
+                }
+            },
+            Err(_) => {
+                Err(OperationError::CShakeError)
+            }
         } else {
             Err(OperationError::SecurityParameterNotSet)
         }
