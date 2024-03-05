@@ -2,10 +2,16 @@
 /// Elliptic curve backend
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
 
-/// Module for sha3 primitives.
+/// Module for SHA-3 primitives
 pub mod sha3 {
+
+    // Submodule that implements NIST 800-185 compliant functions
     pub mod aux_functions;
+
+    // Submodule that implements the Keccak-f[1600] permutation
     pub mod keccakf;
+
+    // Submodule that implements the sponge construction
     pub mod sponge;
 }
 
@@ -61,18 +67,26 @@ pub struct KeyPair {
 }
 
 #[derive(Debug)]
-/// Message type for which cryptographic traits are defined.
+/// Message struct for which cryptographic traits are defined.
 pub struct Message {
+    // Input message
     pub msg: Box<Vec<u8>>,
+    // The digest lengths in FIPS-approved hash functions
     pub d: Option<SecParam>,
+    // Nonce used in symmetric encryption
     pub sym_nonce: Option<Vec<u8>>,
+    // Nonce used in asymmetric encryption
     pub asym_nonce: Option<ExtendedPoint>,
+    // Hash value (also known as message digest)
     pub digest: Result<Vec<u8>, OperationError>,
+    // Result of the cryptographic trait
     pub op_result: Result<(), OperationError>,
+    // Schnorr signatures on the input message
     pub sig: Option<Signature>,
 }
 
 impl Message {
+    
     pub fn new(data: Vec<u8>) -> Message {
         Message {
             msg: Box::new(data),
