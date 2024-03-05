@@ -87,6 +87,7 @@ pub struct Message {
 
 impl Message {
     
+    // Returns a new Message instance
     pub fn new(data: Vec<u8>) -> Message {
         Message {
             msg: Box::new(data),
@@ -106,10 +107,15 @@ impl Message {
 //     }
 // }
 #[derive(Debug, Clone, Copy)]
+/// An enum representing standard digest lengths based on FIPS PUB 202
 pub enum SecParam {
+    /// Digest length of 224 bits, also known as SHA3-224
     D224 = 224,
+    /// Digest length of 256 bits, also known as SHA3-256
     D256 = 256,
+    /// Digest length of 384 bits, also known as SHA3-384
     D384 = 384,
+    /// Digest length of 512 bits, also known as SHA3-512
     D512 = 512,
 }
 
