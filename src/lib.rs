@@ -151,6 +151,7 @@ pub(crate) enum Capacity {
 }
 
 impl Capacity {
+    /// This function effectively maps a given bit length to the appropriate capacity value enum variant, 
     fn from_bit_length(bit_length: u64) -> Self {
         match bit_length * 2 {
             x if x <= 448 => Capacity::C448,
@@ -161,6 +162,7 @@ impl Capacity {
     }
 }
 
+/// OutputLength struct for storing the output length.
 pub struct OutputLength {
     value: u64,
 }
@@ -181,11 +183,14 @@ impl OutputLength {
     }
 }
 
+/// Rate struct for storing the rate value. 
+/// Rate is the number of input bits processed per invocation of the underlying function in sponge construction. 
 pub struct Rate {
     value: u64,
 }
 
 impl Rate {
+    // Rate = (Permutation width) - (Capacity)
     pub fn from<R: BitLength + ?Sized>(sec_param: &R) -> Self {
         Rate {
             value: (1600 - sec_param.bit_length()),
