@@ -5,13 +5,13 @@ use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scala
 /// Module for SHA-3 primitives
 pub mod sha3 {
 
-    // Submodule that implements NIST 800-185 compliant functions
+    /// Submodule that implements NIST 800-185 compliant functions
     pub mod aux_functions;
 
-    // Submodule that implements the Keccak-f[1600] permutation
+    /// Submodule that implements the Keccak-f[1600] permutation
     pub mod keccakf;
 
-    // Submodule that implements the sponge construction
+    /// Submodule that implements the sponge construction
     pub mod sponge;
 }
 
@@ -100,11 +100,6 @@ impl Message {
     }
 }
 
-// impl PartialEq for Message {
-//     fn eq(&self, other: &self) -> bool {
-//         self.msg == other.msg;
-//     }
-// }
 #[derive(Debug, Clone, Copy)]
 /// An enum representing standard digest lengths based on FIPS PUB 202
 pub enum SecParam {
