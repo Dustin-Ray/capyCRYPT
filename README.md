@@ -1,6 +1,6 @@
 # capyCRYPT - A Complete Rust Cryptosystem
 <p align="center">
-  <img src="./img.webp" width="350" height="350">
+  <img src="./cc.jpg" width="520" height="320">
 </p>
 
 
