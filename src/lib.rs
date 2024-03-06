@@ -69,24 +69,24 @@ pub struct KeyPair {
 #[derive(Debug)]
 /// Message struct for which cryptographic traits are defined.
 pub struct Message {
-    // Input message
+    /// Input message
     pub msg: Box<Vec<u8>>,
-    // The digest lengths in FIPS-approved hash functions
+    /// The digest lengths in FIPS-approved hash functions
     pub d: Option<SecParam>,
-    // Nonce used in symmetric encryption
+    /// Nonce used in symmetric encryption
     pub sym_nonce: Option<Vec<u8>>,
-    // Nonce used in asymmetric encryption
+    /// Nonce used in asymmetric encryption
     pub asym_nonce: Option<ExtendedPoint>,
-    // Hash value (also known as message digest)
+    /// Hash value (also known as message digest)
     pub digest: Result<Vec<u8>, OperationError>,
-    // Result of the cryptographic trait
+    /// Result of the cryptographic trait
     pub op_result: Result<(), OperationError>,
-    // Schnorr signatures on the input message
+    /// Schnorr signatures on the input message
     pub sig: Option<Signature>,
 }
 
 impl Message {
-    // Returns a new Message instance
+    /// Returns a new Message instance
     pub fn new(data: Vec<u8>) -> Message {
         Message {
             msg: Box::new(data),
@@ -139,13 +139,13 @@ impl SecParam {
 /// An enum representing standard capacity valuess based on FIPS PUB 202.
 /// (The capacity of a sponge function) = 2 * (digest length)
 pub(crate) enum Capacity {
-    // 2 * SecParam.D224
+    /// 2 * SecParam.D224
     C448 = 448,
-    // 2 * SecParam.D256
+    /// 2 * SecParam.D256
     C512 = 512,
-    // 2 * SecParam.D384
+    /// 2 * SecParam.D384
     C768 = 768,
-    // 2 * SecParam.D512
+    /// 2 * SecParam.D512
     C1024 = 1024,
 }
 
@@ -189,7 +189,7 @@ pub struct Rate {
 }
 
 impl Rate {
-    // Rate = (Permutation width) - (Capacity)
+    /// Rate = (Permutation width) - (Capacity)
     pub fn from<R: BitLength + ?Sized>(sec_param: &R) -> Self {
         Rate {
             value: (1600 - sec_param.bit_length()),
@@ -237,11 +237,6 @@ pub trait BitLength {
 }
 
 pub trait Hashable {
-    /// # Message Digest
-    /// Computes SHA3-d hash of input.
-    /// ## Arguments:
-    /// * `d: u64`: requested security strength in bits. Supported
-    /// bitstrengths are 224, 256, 384, or 512.
     fn compute_hash_sha3(&mut self, d: &SecParam) -> Result<(), OperationError>;
     fn compute_tagged_hash(&mut self, pw: &[u8], s: &str, d: &SecParam);
 }
