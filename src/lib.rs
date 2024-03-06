@@ -2,10 +2,16 @@
 /// Elliptic curve backend
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
 
-/// Module for sha3 primitives.
+/// Module for SHA-3 primitives
 pub mod sha3 {
+
+    /// Submodule that implements NIST 800-185 compliant functions
     pub mod aux_functions;
+
+    /// Submodule that implements the Keccak-f[1600] permutation
     pub mod keccakf;
+
+    /// Submodule that implements the sponge construction
     pub mod sponge;
 }
 
@@ -61,18 +67,26 @@ pub struct KeyPair {
 }
 
 #[derive(Debug)]
-/// Message type for which cryptographic traits are defined.
+/// Message struct for which cryptographic traits are defined.
 pub struct Message {
+    /// Input message
     pub msg: Box<Vec<u8>>,
+    /// The digest lengths in FIPS-approved hash functions
     pub d: Option<SecParam>,
+    /// Nonce used in symmetric encryption
     pub sym_nonce: Option<Vec<u8>>,
+    /// Nonce used in asymmetric encryption
     pub asym_nonce: Option<ExtendedPoint>,
+    /// Hash value (also known as message digest)
     pub digest: Result<Vec<u8>, OperationError>,
+    /// Result of the cryptographic trait
     pub op_result: Result<(), OperationError>,
+    /// Schnorr signatures on the input message
     pub sig: Option<Signature>,
 }
 
 impl Message {
+    /// Returns a new Message instance
     pub fn new(data: Vec<u8>) -> Message {
         Message {
             msg: Box::new(data),
@@ -86,16 +100,16 @@ impl Message {
     }
 }
 
-// impl PartialEq for Message {
-//     fn eq(&self, other: &self) -> bool {
-//         self.msg == other.msg;
-//     }
-// }
 #[derive(Debug, Clone, Copy)]
+/// An enum representing standard digest lengths based on FIPS PUB 202
 pub enum SecParam {
+    /// Digest length of 224 bits, also known as SHA3-224
     D224 = 224,
+    /// Digest length of 256 bits, also known as SHA3-256
     D256 = 256,
+    /// Digest length of 384 bits, also known as SHA3-384
     D384 = 384,
+    /// Digest length of 512 bits, also known as SHA3-512
     D512 = 512,
 }
 
@@ -117,14 +131,21 @@ impl SecParam {
 }
 
 #[derive(Debug, Clone, Copy)]
+/// An enum representing standard capacity valuess based on FIPS PUB 202.
+/// (The capacity of a sponge function) = 2 * (digest length)
 pub(crate) enum Capacity {
+    /// 2 * SecParam.D224
     C448 = 448,
+    /// 2 * SecParam.D256
     C512 = 512,
+    /// 2 * SecParam.D384
     C768 = 768,
+    /// 2 * SecParam.D512
     C1024 = 1024,
 }
 
 impl Capacity {
+    /// This function effectively maps a given bit length to the appropriate capacity value enum variant,
     fn from_bit_length(bit_length: u64) -> Self {
         match bit_length * 2 {
             x if x <= 448 => Capacity::C448,
@@ -135,6 +156,7 @@ impl Capacity {
     }
 }
 
+/// OutputLength struct for storing the output length.
 pub struct OutputLength {
     value: u64,
 }
@@ -155,11 +177,14 @@ impl OutputLength {
     }
 }
 
+/// Rate struct for storing the rate value.
+/// Rate is the number of input bits processed per invocation of the underlying function in sponge construction.
 pub struct Rate {
     value: u64,
 }
 
 impl Rate {
+    /// Rate = (Permutation width) - (Capacity)
     pub fn from<R: BitLength + ?Sized>(sec_param: &R) -> Self {
         Rate {
             value: (1600 - sec_param.bit_length()),
