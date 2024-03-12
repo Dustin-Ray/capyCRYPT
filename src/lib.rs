@@ -100,7 +100,7 @@ impl Message {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 /// An enum representing standard digest lengths based on FIPS PUB 202
 pub enum SecParam {
     /// Digest length of 224 bits, also known as SHA3-224
@@ -114,6 +114,39 @@ pub enum SecParam {
 }
 
 impl SecParam {
+
+    /// Convert an integer input to the corresponding security parameter.
+    /// # Arguments
+    ///
+    /// * `value` - An integer representing the desired security parameter.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(SecParam)` - If the conversion is successful, returns the corresponding `SecParam`.
+    /// * `Err(OperationError)` - If the given `value` does not correspond to any supported security parameter.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use capycrypt::SecParam;
+    /// use capycrypt::OperationError;
+    ///
+    /// assert_eq!(SecParam::from_int(224).unwrap(), SecParam::D224);
+    /// assert_eq!(SecParam::from_int(256).unwrap(), SecParam::D256);
+    /// assert_eq!(SecParam::from_int(384).unwrap(), SecParam::D384);
+    /// assert_eq!(SecParam::from_int(512).unwrap(), SecParam::D512);
+    /// assert_eq!(SecParam::from_int(1024), Err(OperationError::UnsupportedSecurityParameter))
+    /// ``` 
+    pub fn from_int(value: usize) -> Result<SecParam, OperationError> {
+        match value {
+            224 => Ok(SecParam::D224),
+            256 => Ok(SecParam::D256),
+            384 => Ok(SecParam::D384),
+            512 => Ok(SecParam::D512),
+            _ => Err(OperationError::UnsupportedSecurityParameter),
+        }
+    }
+
     fn bytepad_value(&self) -> u32 {
         match self {
             SecParam::D224 => 172,

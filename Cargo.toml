@@ -25,6 +25,7 @@ num-bigint = { version = "0.4", features = ["rand"] }
 tiny_ed448_goldilocks = "0.1.3"
 aes = "0.8.3"
 rayon = "1.5"
+structopt = "0.3"
 
 
 [[bench]]
