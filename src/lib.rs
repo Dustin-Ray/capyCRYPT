@@ -114,7 +114,6 @@ pub enum SecParam {
 }
 
 impl SecParam {
-
     /// Convert an integer input to the corresponding security parameter.
     /// # Arguments
     ///
@@ -136,7 +135,7 @@ impl SecParam {
     /// assert_eq!(SecParam::from_int(384).unwrap(), SecParam::D384);
     /// assert_eq!(SecParam::from_int(512).unwrap(), SecParam::D512);
     /// assert_eq!(SecParam::from_int(1024), Err(OperationError::UnsupportedSecurityParameter))
-    /// ``` 
+    /// ```
     pub fn from_int(value: usize) -> Result<SecParam, OperationError> {
         match value {
             224 => Ok(SecParam::D224),
