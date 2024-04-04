@@ -814,16 +814,12 @@ dependencies = [
 
 [[package]]
 name = "tiny_ed448_goldilocks"
-version = "0.1.3"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "304288400eeeca61a1438ece1cba533502b4bc41a95b6dc952767a9f597e5ccd"
+checksum = "bb6847faba11f0b31982619a013ed61467a83f9e07f3dbc0f658a573bf195b44"
 dependencies = [
- "byteorder",
- "chrono",
- "criterion",
  "crypto-bigint",
  "fiat-crypto",
- "hex",
  "rand",
 ]
 
