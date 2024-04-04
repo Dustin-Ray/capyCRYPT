@@ -161,7 +161,7 @@ impl Hashable for Message {
     /// data.op_result.expect("Computing an Authentication Tag encountered an error");
     /// ```
     fn compute_tagged_hash(&mut self, pw: &[u8], s: &str, d: &SecParam) {
-        self.digest = vec![0_u8; d.bit_length() /8];
+        self.digest = vec![0_u8; d.bit_length() / 8];
         kmac_xof(pw, &self.msg, d.bit_length(), s, d, &mut self.digest);
     }
 }
@@ -269,7 +269,7 @@ impl SpongeEncryptable for Message {
             .clone();
         z_pw.extend_from_slice(pw);
 
-        let mut keka = vec![0_u8; 1024 /8];
+        let mut keka = vec![0_u8; 1024 / 8];
         kmac_xof(&z_pw, &[], 1024, "S", &d, &mut keka);
         let (ke, ka) = keka.split_at(64);
 

@@ -27,9 +27,9 @@ pub(crate) fn squeeze<S: BitLength + ?Sized>(
     rate: Rate,
     buffer: &mut [u8],
 ) {
-    let block_size: usize = (rate.value / 64) as usize;
+    let block_size: usize = rate.value / 64;
     let mut offset: usize = 0;
-    let total_bytes_needed = std::cmp::min(buffer.len(), (bit_length.bit_length() / 8) as usize);
+    let total_bytes_needed = std::cmp::min(buffer.len(), bit_length.bit_length());
 
     while offset < total_bytes_needed {
         let bytes = state_to_byte_array(&s[0..block_size]);
@@ -44,7 +44,6 @@ pub(crate) fn squeeze<S: BitLength + ?Sized>(
         keccakf_1600(s); // Permute for next block if needed
     }
 }
-
 
 // Converts state of 25 u64s to array of bytes.
 fn state_to_byte_array(uint64s: &[u64]) -> Vec<u8> {
