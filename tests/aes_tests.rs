@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod aes_modes_tests {
     use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
+    use capycrypt::SecParam::D512;
     use capycrypt::{AesEncryptable, Message};
 
     #[test]
@@ -8,7 +9,7 @@ mod aes_modes_tests {
         // Get a random key (16 bytes -> 128 bits)
         let key = get_random_bytes(16);
         // Get 5mb random data
-        let mut input = Message::new(get_random_bytes(5242880));
+        let mut input = Message::new(get_random_bytes(5242880), D512);
 
         let _ = input.aes_encrypt_cbc(&key); // Encrypt the input
         let _ = input.aes_decrypt_cbc(&key); // Decrypt the input
@@ -21,7 +22,7 @@ mod aes_modes_tests {
         // Get a random key (24 bytes -> 192 bits)
         let key = get_random_bytes(24);
         // Get 5mb random data
-        let mut input = Message::new(get_random_bytes(5242880));
+        let mut input = Message::new(get_random_bytes(5242880), D512);
 
         let _ = input.aes_encrypt_cbc(&key); // Encrypt the input
         let _ = input.aes_decrypt_cbc(&key); // Decrypt the input
@@ -33,7 +34,7 @@ mod aes_modes_tests {
         // Get a random key (32 bytes -> 256 bits)
         let key = get_random_bytes(32);
         // Get 5mb random data
-        let mut input = Message::new(get_random_bytes(5242880));
+        let mut input = Message::new(get_random_bytes(5242880), D512);
 
         let _ = input.aes_encrypt_cbc(&key); // Encrypt the input
         let _ = input.aes_decrypt_cbc(&key); // Decrypt the input
@@ -45,7 +46,7 @@ mod aes_modes_tests {
         // Get a random key (16 bytes -> 128 bits)
         let key = get_random_bytes(16);
         // Get 5mb random data
-        let mut input = Message::new(get_random_bytes(5242880));
+        let mut input = Message::new(get_random_bytes(5242880), D512);
 
         let _ = input.aes_encrypt_ctr(&key); // Encrypt the input
         let _ = input.aes_decrypt_ctr(&key); // Decrypt the input
@@ -58,7 +59,7 @@ mod aes_modes_tests {
         // Get a random key (24 bytes -> 192 bits)
         let key = get_random_bytes(24);
         // Get 5mb random data
-        let mut input = Message::new(get_random_bytes(5242880));
+        let mut input = Message::new(get_random_bytes(5242880), D512);
 
         let _ = input.aes_encrypt_ctr(&key); // Encrypt the input
         let _ = input.aes_decrypt_ctr(&key); // Decrypt the input
@@ -71,7 +72,7 @@ mod aes_modes_tests {
         // Get a random key (32 bytes -> 256 bits)
         let key = get_random_bytes(32);
         // Get 5mb random data
-        let mut input = Message::new(get_random_bytes(5242880));
+        let mut input = Message::new(get_random_bytes(5242880), D512);
 
         let _ = input.aes_encrypt_ctr(&key); // Encrypt the input
         let _ = input.aes_decrypt_ctr(&key); // Decrypt the input
@@ -84,10 +85,13 @@ mod aes_modes_tests {
 mod aes_functions_tests {
     use capycrypt::aes::aes_functions::{apply_pcks7_padding, remove_pcks7_padding, xor_blocks};
     use capycrypt::Message;
-
+    use capycrypt::SecParam::D512;
     #[test]
     fn test_applying_padding() {
-        let mut input = Message::new(hex::decode("00000000000000000000000000000000").unwrap());
+        let mut input = Message::new(
+            hex::decode("00000000000000000000000000000000").unwrap(),
+            D512,
+        );
         apply_pcks7_padding(&mut input.msg);
 
         let expected = "0000000000000000000000000000000010101010101010101010101010101010";
@@ -99,6 +103,7 @@ mod aes_functions_tests {
         let mut input = Message::new(
             hex::decode("0000000000000000000000000000000010101010101010101010101010101010")
                 .unwrap(),
+            D512,
         );
         remove_pcks7_padding(&mut input.msg);
 

@@ -6,13 +6,13 @@ use crate::{sha3::keccakf::keccakf_1600, BitLength, Rate};
 // * m: message to be absorbed
 // * capacity: security parameter which determines rate = bit_width - capacity
 // * return: a state consisting of 25 words of 64 bits each.
-pub(crate) fn sponge_absorb<S: BitLength + ?Sized>(m: &mut Vec<u8>, capacity: &S) -> [u64; 25] {
+pub(crate) fn absorb<S: BitLength + ?Sized>(msg: &mut [u8], capacity: &S) -> [u64; 25] {
     let c = capacity.bit_length();
-    let r: u64 = (1600 - c) / 8;
-    if (m.len() % r as usize) != 0 {
-        pad_ten_one(m, r as usize);
+    let r = (1600 - c) / 8;
+    if (msg.len() % r) != 0 {
+        pad_ten_one(&mut msg.to_vec(), r);
     }
-    bytes_to_state(m, r as usize)
+    bytes_to_state(msg, r)
 }
 
 // Finalizes a state.
@@ -21,20 +21,30 @@ pub(crate) fn sponge_absorb<S: BitLength + ?Sized>(m: &mut Vec<u8>, capacity: &S
 // * bit_length: requested output length in bits
 // * rate: security parameter
 // * return: digest of permuted states of length `bit_length`.
-pub(crate) fn sponge_squeeze<S: BitLength + ?Sized>(
+pub(crate) fn squeeze<S: BitLength + ?Sized>(
     s: &mut [u64; 25],
     bit_length: &S,
     rate: Rate,
-) -> Vec<u8> {
-    let mut out: Vec<u8> = Vec::new(); //FIPS 202 Algorithm 8 Step 8
+    buffer: &mut [u8],
+) {
     let block_size: usize = (rate.value / 64) as usize;
-    while out.len() * 8 < bit_length.bit_length() as usize {
-        out.append(&mut state_to_byte_array(&s[0..block_size]));
-        keccakf_1600(s); //FIPS 202 Algorithm 8 Step 10
+    let mut offset: usize = 0;
+    let total_bytes_needed = std::cmp::min(buffer.len(), (bit_length.bit_length() / 8) as usize);
+
+    while offset < total_bytes_needed {
+        let bytes = state_to_byte_array(&s[0..block_size]);
+        for byte in bytes.iter().take(total_bytes_needed - offset) {
+            if offset < buffer.len() {
+                buffer[offset] = *byte;
+                offset += 1;
+            } else {
+                break;
+            }
+        }
+        keccakf_1600(s); // Permute for next block if needed
     }
-    out.truncate((bit_length.bit_length() / 8) as usize);
-    out
 }
+
 
 // Converts state of 25 u64s to array of bytes.
 fn state_to_byte_array(uint64s: &[u64]) -> Vec<u8> {
@@ -86,6 +96,21 @@ fn xor_states(a: &mut [u64; 25], b: &[u64; 25]) {
         a[i] ^= b[i];
     }
 }
+
+// fn pad_ten_one(m: &mut [u8], original_len: usize, rate_in_bytes: usize) {
+//     // Calculate the padding length needed
+//     let q = rate_in_bytes - original_len % rate_in_bytes;
+
+//     // Check if there's enough space for padding
+//     if original_len + q > m.len() {
+//         panic!("Not enough space in the buffer for padding");
+//     }
+
+//     // Initialize all padding bytes to 0, except the last one to 0x80
+//     for i in original_len..original_len + q {
+//         m[i] = if i == original_len + q - 1 { 0x80 } else { 0 };
+//     }
+// }
 
 // # NIST FIPS 202 5.1
 // Multi-rate padding scheme

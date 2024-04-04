@@ -2,13 +2,12 @@ use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
 use capycrypt::SecParam::D224;
 use capycrypt::{KeyEncryptable, KeyPair, Message, SecParam, Signable, SpongeEncryptable};
 use criterion::{criterion_group, criterion_main, Criterion};
-
 const BIT_SECURITY: SecParam = D224;
 
 /// Symmetric encrypt and decrypt roundtrip
 fn sym_enc(pw: &mut Vec<u8>, mut msg: Message) {
-    let _ = msg.sha3_encrypt(&pw, &BIT_SECURITY);
-    let _ = msg.sha3_decrypt(&pw);
+    let _ = msg.sha3_encrypt(pw, &BIT_SECURITY);
+    let _ = msg.sha3_decrypt(pw);
 }
 
 /// Asymmetric encrypt and decrypt roundtrip + keygen
@@ -29,7 +28,7 @@ fn bench_sign_verify(c: &mut Criterion) {
         b.iter(|| {
             sign_verify(
                 KeyPair::new(&get_random_bytes(16), "test key".to_string(), &BIT_SECURITY).unwrap(),
-                Message::new(get_random_bytes(5242880)),
+                Message::new(get_random_bytes(5242880), D224),
             )
         });
     });
@@ -40,7 +39,7 @@ fn bench_sym_enc(c: &mut Criterion) {
         b.iter(|| {
             sym_enc(
                 &mut get_random_bytes(64),
-                Message::new(get_random_bytes(5242880)),
+                Message::new(get_random_bytes(5242880), D224),
             )
         });
     });
@@ -53,7 +52,7 @@ fn bench_key_gen_enc_dec(c: &mut Criterion) {
                 &mut KeyPair::new(&get_random_bytes(32), "test key".to_string(), &BIT_SECURITY)
                     .unwrap()
                     .priv_key,
-                Message::new(get_random_bytes(5242880)),
+                Message::new(get_random_bytes(5242880), D224),
             )
         });
     });

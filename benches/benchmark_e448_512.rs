@@ -7,8 +7,8 @@ const BIT_SECURITY: SecParam = D512;
 
 /// Symmetric encrypt and decrypt roundtrip
 fn sym_enc(pw: &mut Vec<u8>, mut msg: Message) {
-    let _ = msg.sha3_encrypt(&pw, &BIT_SECURITY);
-    let _ = msg.sha3_decrypt(&pw);
+    let _ = msg.sha3_encrypt(pw, &BIT_SECURITY);
+    let _ = msg.sha3_decrypt(pw);
 }
 
 /// Asymmetric encrypt and decrypt roundtrip + keygen
@@ -29,7 +29,7 @@ fn bench_sign_verify(c: &mut Criterion) {
         b.iter(|| {
             sign_verify(
                 KeyPair::new(&get_random_bytes(16), "test key".to_string(), &BIT_SECURITY).unwrap(),
-                Message::new(get_random_bytes(5242880)),
+                Message::new(get_random_bytes(5242880), D512),
             )
         });
     });
@@ -40,7 +40,7 @@ fn bench_sym_enc(c: &mut Criterion) {
         b.iter(|| {
             sym_enc(
                 &mut get_random_bytes(64),
-                Message::new(get_random_bytes(5242880)),
+                Message::new(get_random_bytes(5242880), D512),
             )
         });
     });
@@ -53,7 +53,7 @@ fn bench_key_gen_enc_dec(c: &mut Criterion) {
                 &mut KeyPair::new(&get_random_bytes(32), "test key".to_string(), &BIT_SECURITY)
                     .unwrap()
                     .priv_key,
-                Message::new(get_random_bytes(5242880)),
+                Message::new(get_random_bytes(5242880), D512),
             )
         });
     });

@@ -4,13 +4,10 @@ use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scala
 
 /// Module for SHA-3 primitives
 pub mod sha3 {
-
     /// Submodule that implements NIST 800-185 compliant functions
     pub mod aux_functions;
-
     /// Submodule that implements the Keccak-f[1600] permutation
     pub mod keccakf;
-
     /// Submodule that implements the sponge construction
     pub mod sponge;
 }
@@ -72,13 +69,13 @@ pub struct Message {
     /// Input message
     pub msg: Box<Vec<u8>>,
     /// The digest lengths in FIPS-approved hash functions
-    pub d: Option<SecParam>,
+    pub d: SecParam,
     /// Nonce used in symmetric encryption
     pub sym_nonce: Option<Vec<u8>>,
     /// Nonce used in asymmetric encryption
     pub asym_nonce: Option<ExtendedPoint>,
     /// Hash value (also known as message digest)
-    pub digest: Result<Vec<u8>, OperationError>,
+    pub digest: Vec<u8>,
     /// Result of the cryptographic trait
     pub op_result: Result<(), OperationError>,
     /// Schnorr signatures on the input message
@@ -87,17 +84,25 @@ pub struct Message {
 
 impl Message {
     /// Returns a new Message instance
-    pub fn new(data: Vec<u8>) -> Message {
+    pub fn new(data: Vec<u8>, security: SecParam) -> Message {
         Message {
             msg: Box::new(data),
-            d: None,
+            d: security,
             sym_nonce: None,
             asym_nonce: None,
-            digest: Ok(vec![]),
+            digest: vec![],
             op_result: Ok(()),
             sig: None,
         }
     }
+
+    pub fn update(&mut self, data: &mut Vec<u8>) {
+        self.msg.append(data);
+    }
+
+    // pub fn finalize() -> Vec<u8> {
+    //    state  absorb(self.msg, self.d)
+    // }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -146,7 +151,7 @@ pub(crate) enum Capacity {
 
 impl Capacity {
     /// This function effectively maps a given bit length to the appropriate capacity value enum variant,
-    fn from_bit_length(bit_length: u64) -> Self {
+    fn from_bit_length(bit_length: usize) -> Self {
         match bit_length * 2 {
             x if x <= 448 => Capacity::C448,
             x if x <= 512 => Capacity::C512,
@@ -158,13 +163,13 @@ impl Capacity {
 
 /// OutputLength struct for storing the output length.
 pub struct OutputLength {
-    value: u64,
+    value: usize,
 }
 
 impl OutputLength {
-    const MAX_VALUE: u64 = u64::MAX;
+    const MAX_VALUE: usize = usize::MAX;
 
-    pub fn try_from(value: u64) -> Result<Self, OperationError> {
+    pub fn try_from(value: usize) -> Result<Self, OperationError> {
         if value < Self::MAX_VALUE {
             Ok(OutputLength { value })
         } else {
@@ -172,7 +177,7 @@ impl OutputLength {
         }
     }
 
-    pub fn value(&self) -> u64 {
+    pub fn value(&self) -> usize {
         self.value
     }
 }
@@ -180,7 +185,7 @@ impl OutputLength {
 /// Rate struct for storing the rate value.
 /// Rate is the number of input bits processed per invocation of the underlying function in sponge construction.
 pub struct Rate {
-    value: u64,
+    value: usize,
 }
 
 impl Rate {
@@ -191,31 +196,31 @@ impl Rate {
         }
     }
 
-    pub fn value(&self) -> u64 {
+    pub fn value(&self) -> usize {
         self.value
     }
 }
 
 impl BitLength for Capacity {
-    fn bit_length(&self) -> u64 {
-        *self as u64
+    fn bit_length(&self) -> usize {
+        *self as usize
     }
 }
 
 impl BitLength for SecParam {
-    fn bit_length(&self) -> u64 {
-        *self as u64
+    fn bit_length(&self) -> usize {
+        *self as usize
     }
 }
 
 impl BitLength for Rate {
-    fn bit_length(&self) -> u64 {
+    fn bit_length(&self) -> usize {
         self.value
     }
 }
 
 impl BitLength for OutputLength {
-    fn bit_length(&self) -> u64 {
+    fn bit_length(&self) -> usize {
         self.value()
     }
 }
@@ -228,16 +233,16 @@ pub trait AesEncryptable {
 }
 
 pub trait BitLength {
-    fn bit_length(&self) -> u64;
+    fn bit_length(&self) -> usize;
 }
 
 pub trait Hashable {
-    fn compute_hash_sha3(&mut self, d: &SecParam) -> Result<(), OperationError>;
+    fn compute_hash_sha3(&mut self, d: &SecParam, buf: &mut [u8]);
     fn compute_tagged_hash(&mut self, pw: &[u8], s: &str, d: &SecParam);
 }
 
 pub trait SpongeEncryptable {
-    fn sha3_encrypt(&mut self, pw: &[u8], d: &SecParam) -> Result<(), OperationError>;
+    fn sha3_encrypt(&mut self, pw: &[u8], d: &SecParam);
     fn sha3_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError>;
 }
 

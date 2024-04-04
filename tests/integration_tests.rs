@@ -2,6 +2,7 @@
 pub mod ops_tests {
     use std::time::Instant;
 
+    use crate::ops_tests::SecParam::{D256, D512};
     use capycrypt::{
         sha3::aux_functions::byte_utils::get_random_bytes, KeyEncryptable, KeyPair, Message,
         SecParam, Signable, SpongeEncryptable,
@@ -10,9 +11,8 @@ pub mod ops_tests {
     #[test]
     pub fn test_sym_enc_512() {
         let pw = get_random_bytes(64);
-        let mut msg = Message::new(get_random_bytes(5242880));
-
-        assert!(msg.sha3_encrypt(&pw, &SecParam::D512).is_ok());
+        let mut msg = Message::new(get_random_bytes(5242880), D512);
+        msg.sha3_encrypt(&pw, &D512);
         assert!(msg.sha3_decrypt(&pw).is_ok());
 
         assert!(msg.op_result.is_ok());
@@ -20,16 +20,15 @@ pub mod ops_tests {
     #[test]
     pub fn test_sym_enc_256() {
         let pw = get_random_bytes(64);
-        let mut msg = Message::new(get_random_bytes(5242880));
-
-        assert!(msg.sha3_encrypt(&pw, &SecParam::D256).is_ok());
+        let mut msg = Message::new(get_random_bytes(5242880), D256);
+        msg.sha3_encrypt(&pw, &D256);
         assert!(msg.sha3_decrypt(&pw).is_ok());
 
         assert!(msg.op_result.is_ok());
     }
     #[test]
     fn test_key_gen_enc_dec_256() {
-        let mut msg = Message::new(get_random_bytes(5242880));
+        let mut msg = Message::new(get_random_bytes(5242880), D512);
         let key_pair = KeyPair::new(
             &get_random_bytes(64),
             "test key".to_string(),
@@ -45,7 +44,7 @@ pub mod ops_tests {
 
     #[test]
     fn test_key_gen_enc_dec_512() {
-        let mut msg = Message::new(get_random_bytes(5242880));
+        let mut msg = Message::new(get_random_bytes(5242880), D512);
         let key_pair = KeyPair::new(
             &get_random_bytes(32),
             "test key".to_string(),
@@ -60,7 +59,7 @@ pub mod ops_tests {
     }
     #[test]
     pub fn test_signature_256() {
-        let mut msg = Message::new(get_random_bytes(5242880));
+        let mut msg = Message::new(get_random_bytes(5242880), D512);
         let pw = get_random_bytes(64);
         let key_pair = KeyPair::new(&pw, "test key".to_string(), &SecParam::D256).unwrap();
 
@@ -72,7 +71,7 @@ pub mod ops_tests {
 
     #[test]
     pub fn test_signature_512() {
-        let mut msg = Message::new(get_random_bytes(5242880));
+        let mut msg = Message::new(get_random_bytes(5242880), D512);
         let pw = get_random_bytes(64);
         let key_pair = KeyPair::new(&pw, "test key".to_string(), &SecParam::D512).unwrap();
 
@@ -90,7 +89,7 @@ pub mod ops_tests {
     #[test]
     fn test_sig_timing_side_channel() {
         for i in 0..10 {
-            let mut msg = Message::new(get_random_bytes(5242880));
+            let mut msg = Message::new(get_random_bytes(5242880), D512);
             let pw = get_random_bytes(1 << i);
             let key_pair = KeyPair::new(&pw, "test key".to_string(), &SecParam::D512).unwrap();
 
