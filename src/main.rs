@@ -2,10 +2,12 @@ use capycrypt::{Hashable, Message, SecParam};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "capycrypt-cli", about = "A simple hashing CLI")]
+#[structopt(
+    name = "capycrypt-cli",
+    about = "Support command-line interface for capyCrypt library"
+)]
 enum Command {
-    //enums and structs in rust can be used almost interchangeably.
-    #[structopt(name = "compute_sha3_hash")] // the name of the program to run
+    #[structopt(name = "sha3")]
     Sha3 {
         #[structopt(help = "The input string to hash")]
         input: String,
