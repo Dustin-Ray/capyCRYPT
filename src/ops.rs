@@ -335,8 +335,8 @@ impl KeyPair {
     #[allow(non_snake_case)]
     pub fn new(pw: &[u8], owner: String, d: &SecParam) -> Result<KeyPair, OperationError> {
         let data = kmac_xof(pw, &[], 448, "SK", d)?;
-        let s: Scalar = bytes_to_scalar(data).mul_mod_r(&Scalar::from(4_u64));
-        let V = ExtendedPoint::tw_generator() * s;
+        let s: Scalar = bytes_to_scalar(data).mul_mod(&Scalar::from(4_u64));
+        let V = ExtendedPoint::generator() * s;
         Ok(KeyPair {
             owner,
             pub_key: V,
@@ -389,9 +389,9 @@ impl KeyEncryptable for Message {
     #[allow(non_snake_case)]
     fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: &SecParam) -> Result<(), OperationError> {
         self.d = Some(*d);
-        let k = bytes_to_scalar(get_random_bytes(56)).mul_mod_r(&Scalar::from(4_u64));
+        let k = bytes_to_scalar(get_random_bytes(56)).mul_mod(&Scalar::from(4_u64));
         let w = (*pub_key * k).to_affine();
-        let Z = (ExtendedPoint::tw_generator() * k).to_affine();
+        let Z = (ExtendedPoint::generator() * k).to_affine();
 
         let ke_ka = kmac_xof(&w.x.to_bytes(), &[], 448 * 2, "PK", d)?;
         let (ke, ka) = ke_ka.split_at(ke_ka.len() / 2);
@@ -465,7 +465,7 @@ impl KeyEncryptable for Message {
             .ok_or(OperationError::SecurityParameterNotSet)?;
 
         let s_bytes = kmac_xof(pw, &[], 448, "SK", d)?;
-        let s = bytes_to_scalar(s_bytes).mul_mod_r(&Scalar::from(4_u64));
+        let s = bytes_to_scalar(s_bytes).mul_mod(&Scalar::from(4_u64));
         let Z = (Z * s).to_affine();
 
         let ke_ka = kmac_xof(&Z.x.to_bytes(), &[], 448 * 2, "PK", d)?;
@@ -531,19 +531,19 @@ impl Signable for Message {
     #[allow(non_snake_case)]
     fn sign(&mut self, key: &KeyPair, d: &SecParam) -> Result<(), OperationError> {
         let s_bytes = kmac_xof(&key.priv_key, &[], 448, "SK", d)?;
-        let s = bytes_to_scalar(s_bytes).mul_mod_r(&Scalar::from(4_u64));
+        let s = bytes_to_scalar(s_bytes).mul_mod(&Scalar::from(4_u64));
         let s_bytes = scalar_to_bytes(&s);
 
         let k_bytes = kmac_xof(&s_bytes, &self.msg, 448, "N", d)?;
         let k = bytes_to_scalar(k_bytes) * Scalar::from(4_u64);
 
-        let U = ExtendedPoint::tw_generator() * k;
+        let U = ExtendedPoint::generator() * k;
         let ux_bytes = U.to_affine().x.to_bytes();
 
         let h = kmac_xof(&ux_bytes, &self.msg, 448, "T", d)?;
         let h_big = bytes_to_scalar(h.clone());
 
-        let z = k - h_big.mul_mod_r(&s);
+        let z = k - h_big.mul_mod(&s);
         self.sig = Some(Signature { h, z });
         self.d = Some(*d);
         Ok(())
@@ -591,7 +591,7 @@ impl Signable for Message {
             .ok_or(OperationError::SecurityParameterNotSet)?;
 
         let h_scalar = bytes_to_scalar(sig.h.clone());
-        let U = ExtendedPoint::tw_generator() * sig.z + (*pub_key * h_scalar);
+        let U = ExtendedPoint::generator() * sig.z + (*pub_key * h_scalar);
 
         let h_p = kmac_xof(&U.to_affine().x.to_bytes(), &self.msg, 448, "T", d)?;
 
