@@ -251,6 +251,11 @@ pub trait Signable {
     fn verify(&mut self, pub_key: &ExtendedPoint) -> Result<(), OperationError>;
 }
 
+pub trait UpdateFinalize {
+    fn update(&mut self, write_data: &[u8]);
+    fn finalize(self, output_length: &u64) -> Result<Box<Vec<u8>>, OperationError>;
+}
+
 const RATE_IN_BYTES: usize = 136; // SHA3-256 r = 1088 / 8 = 136
 
 #[cfg(test)]
