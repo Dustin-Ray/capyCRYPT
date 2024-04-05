@@ -22,7 +22,7 @@ crypto-bigint = "0.5.3"
 fiat-crypto = "0.2.2"
 rand = "0.8"
 num-bigint = { version = "0.4", features = ["rand"] }
-tiny_ed448_goldilocks = "0.1.5"
+tiny_ed448_goldilocks = "0.1.7"
 aes = "0.8.3"
 rayon = "1.5"
 
