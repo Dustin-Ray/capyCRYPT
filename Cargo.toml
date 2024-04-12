@@ -26,6 +26,7 @@ tiny_ed448_goldilocks = "0.1.7"
 aes = "0.8.3"
 rayon = "1.5"
 structopt = "0.3"
+serde = { version = "1.0", features = ["derive"] }
 
 
 [[bench]]
