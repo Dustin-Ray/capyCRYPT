@@ -2,6 +2,9 @@
 /// Elliptic curve backend
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
 
+/// Serializing data structures
+use serde::Serialize;
+
 /// Module for SHA-3 primitives
 pub mod sha3 {
 
@@ -53,7 +56,7 @@ pub struct Signature {
     pub z: Scalar,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 /// An object containing the fields necessary to represent an asymmetric keypair.
 pub struct KeyPair {
     /// String indicating the owner of the key, can be arbitrary

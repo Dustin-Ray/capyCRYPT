@@ -1,4 +1,4 @@
-use capycrypt::{Hashable, Message, SecParam};
+use capycrypt::{Hashable, KeyPair, Message, SecParam};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -20,6 +20,24 @@ enum Command {
         )]
         bits: usize,
     },
+
+    #[structopt(name = "new_keypair")]
+    NewKeypair {
+        #[structopt(help = "Password")]
+        pw: String,
+
+        #[structopt(help = "Owner of the key pair")]
+        owner: String,
+
+        #[structopt(help = "Selected curve")]
+        _curve: String,
+
+        #[structopt(help = "Security length", short, long, default_value = "256")]
+        bits: usize,
+
+        #[structopt(help = "Output file name", short, long)]
+        output: String,
+    },
 }
 
 fn main() {
@@ -36,6 +54,20 @@ fn main() {
                 Ok(digest) => println!("Hash: {}", hex::encode(digest)),
                 Err(_) => eprintln!("Error: Hash computation failed"),
             }
+        }
+
+        Command::NewKeypair {
+            pw,
+            owner,
+            _curve,
+            bits,
+            output,
+        } => {
+            let sec_param = SecParam::from_int(bits).expect("Unsupported security parameter.");
+            let kp = KeyPair::new(pw.as_bytes(), owner, &sec_param)
+                .expect("Unable to generate the requested key pair");
+
+            let _ = kp.save_to_file(&output);
         }
     }
 }

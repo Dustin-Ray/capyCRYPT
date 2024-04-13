@@ -344,6 +344,12 @@ impl KeyPair {
             date_created: get_date_and_time_as_string(),
         })
     }
+
+    /// Documentation should be written
+    pub fn save_to_file(&self, filename: &str) -> std::io::Result<()> {
+        let json_key_pair = serde_json::to_string_pretty(self).unwrap();
+        std::fs::write(filename, json_key_pair)
+    }
 }
 
 impl KeyEncryptable for Message {

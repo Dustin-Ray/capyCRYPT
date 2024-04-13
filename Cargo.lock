@@ -103,6 +103,7 @@ dependencies = [
  "rand",
  "rayon",
  "serde",
+ "serde_json",
  "structopt",
  "tiny_ed448_goldilocks",
 ]
