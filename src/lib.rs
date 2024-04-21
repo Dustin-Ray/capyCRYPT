@@ -3,7 +3,7 @@
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
 
 /// Serializing data structures
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Module for SHA-3 primitives
 pub mod sha3 {
@@ -56,7 +56,7 @@ pub struct Signature {
     pub z: Scalar,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 /// An object containing the fields necessary to represent an asymmetric keypair.
 pub struct KeyPair {
     /// String indicating the owner of the key, can be arbitrary
@@ -117,28 +117,8 @@ pub enum SecParam {
 }
 
 impl SecParam {
-    /// Convert an integer input to the corresponding security parameter.
-    /// # Arguments
-    ///
-    /// * `value` - An integer representing the desired security parameter.
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(SecParam)` - If the conversion is successful, returns the corresponding `SecParam`.
-    /// * `Err(OperationError)` - If the given `value` does not correspond to any supported security parameter.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use capycrypt::SecParam;
-    /// use capycrypt::OperationError;
-    ///
-    /// assert_eq!(SecParam::from_int(224).unwrap(), SecParam::D224);
-    /// assert_eq!(SecParam::from_int(256).unwrap(), SecParam::D256);
-    /// assert_eq!(SecParam::from_int(384).unwrap(), SecParam::D384);
-    /// assert_eq!(SecParam::from_int(512).unwrap(), SecParam::D512);
-    /// assert_eq!(SecParam::from_int(1024), Err(OperationError::UnsupportedSecurityParameter))
-    /// ```
+    /// Converts an integer input to the corresponding security parameter.
+    /// Supports security levels of 224, 256, 384, and 512 bits.
     pub fn from_int(value: usize) -> Result<SecParam, OperationError> {
         match value {
             224 => Ok(SecParam::D224),

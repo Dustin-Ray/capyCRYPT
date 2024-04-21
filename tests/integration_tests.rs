@@ -1,6 +1,7 @@
 #[cfg(test)]
 pub mod ops_tests {
     use std::time::Instant;
+    use tempfile::tempdir;
 
     use capycrypt::{
         sha3::aux_functions::byte_utils::get_random_bytes, KeyEncryptable, KeyPair, Message,
@@ -100,5 +101,44 @@ pub mod ops_tests {
             let _ = msg.verify(&key_pair.pub_key);
             assert!(msg.op_result.is_ok());
         }
+    }
+
+    #[test]
+    fn test_reading_writing_keypair() {
+        let key_pair = KeyPair::new(
+            &get_random_bytes(32),
+            "test key".to_string(),
+            &SecParam::D512,
+        )
+        .expect("Failed to create key pair");
+
+        let temp_dir = tempdir().expect("Failed to create temporary directory");
+        let temp_file_path = temp_dir.path().join("read_write_keypair.json");
+
+        let _ = key_pair.write_to_file(temp_file_path.to_str().unwrap());
+        let read_key_pair = KeyPair::read_from_file(temp_file_path.to_str().unwrap())
+            .expect("Failed to read key pair from file");
+
+        assert_eq!(key_pair, read_key_pair);
+    }
+
+    #[test]
+    pub fn test_signature_512_read_keypair_from_file() {
+        let mut msg = Message::new(get_random_bytes(5242880));
+        let pw = get_random_bytes(64);
+
+        let key_pair = KeyPair::new(&pw, "test key".to_string(), &SecParam::D512)
+            .expect("Failed to create key pair");
+
+        let temp_dir = tempdir().expect("Failed to create temporary directory");
+        let temp_file_path: std::path::PathBuf = temp_dir.path().join("read_write_keypair.json");
+
+        let _ = key_pair.write_to_file(temp_file_path.to_str().unwrap());
+        let read_key_pair = KeyPair::read_from_file(temp_file_path.to_str().unwrap())
+            .expect("Failed to read key pair from file");
+
+        assert!(msg.sign(&read_key_pair, &SecParam::D512).is_ok());
+        assert!(msg.verify(&read_key_pair.pub_key).is_ok());
+        assert!(msg.op_result.is_ok());
     }
 }

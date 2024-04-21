@@ -4,7 +4,7 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(
     name = "capycrypt-cli",
-    about = "Support command-line interface for capyCrypt library"
+    about = "Command-line interface for capycrypt library"
 )]
 enum Command {
     #[structopt(name = "sha3")]
@@ -67,7 +67,7 @@ fn main() {
             let kp = KeyPair::new(pw.as_bytes(), owner, &sec_param)
                 .expect("Unable to generate the requested key pair");
 
-            let _ = kp.save_to_file(&output);
+            let _ = kp.write_to_file(&output);
         }
     }
 }
