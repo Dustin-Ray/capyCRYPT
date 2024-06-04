@@ -141,4 +141,30 @@ pub mod ops_tests {
         assert!(msg.verify(&read_key_pair.pub_key).is_ok());
         assert!(msg.op_result.is_ok());
     }
+
+    #[test]
+    pub fn test_signature_512_read_message_from_file() {
+        let temp_dir = tempdir().expect("Failed to create temporary directory");
+        let temp_file_path: std::path::PathBuf = temp_dir.path().join("temp_message.json");
+        let _ = Message::new(get_random_bytes(5242880))
+            .write_to_file(temp_file_path.to_str().unwrap())
+            .unwrap();
+
+        let mut initial_msg = Message::read_from_file(temp_file_path.to_str().unwrap()).unwrap();
+
+        let pw = get_random_bytes(64);
+        let key_pair = KeyPair::new(&pw, "test key".to_string(), &SecParam::D512).unwrap();
+
+        assert!(initial_msg.sign(&key_pair, &SecParam::D512).is_ok());
+
+        let _ = initial_msg
+            .write_to_file(temp_file_path.to_str().unwrap())
+            .unwrap();
+
+        let mut signed_msg = Message::read_from_file(temp_file_path.to_str().unwrap()).unwrap();
+
+        assert!(signed_msg.verify(&key_pair.pub_key).is_ok());
+
+        assert!(signed_msg.op_result.is_ok());
+    }
 }

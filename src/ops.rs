@@ -385,7 +385,6 @@ impl KeyPair {
     /// match KeyPair::read_from_file("keypair.json") {
     ///     Ok(key_pair) => {
     ///         println!("Loaded KeyPair: {:?}", key_pair);
-    ///         // Additional processing with the loaded KeyPair
     ///     },
     ///     Err(err) => eprintln!("Error loading KeyPair: {}", err),
     /// }
@@ -395,9 +394,37 @@ impl KeyPair {
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
 
-        // Parse the JSON string into a MyData struct
         let keypair: KeyPair = serde_json::from_str(&contents)?;
         Ok(keypair)
+    }
+}
+
+impl Message {
+    /// Returns a new Message instance
+    pub fn new(data: Vec<u8>) -> Message {
+        Message {
+            msg: Box::new(data),
+            d: None,
+            sym_nonce: None,
+            asym_nonce: None,
+            digest: Ok(vec![]),
+            op_result: Ok(()),
+            sig: None,
+        }
+    }
+
+    pub fn write_to_file(&self, filename: &str) -> std::io::Result<()> {
+        let json_key_pair = serde_json::to_string(self).unwrap();
+        std::fs::write(filename, json_key_pair)
+    }
+
+    pub fn read_from_file(filename: &str) -> Result<Message, Box<dyn std::error::Error>> {
+        let mut file = File::open(filename)?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)?;
+
+        let message: Message = serde_json::from_str(&contents)?;
+        Ok(message)
     }
 }
 

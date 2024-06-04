@@ -26,7 +26,7 @@ pub mod aes {
 /// Module for encrypt, decrypt, and sign functions.
 pub mod ops;
 
-#[derive(Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 /// A simple error type
 pub enum OperationError {
     UnsupportedSecurityParameter,
@@ -47,7 +47,7 @@ pub enum OperationError {
     AESCTRDecryptionFailure,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 /// An object containing the necessary fields for Schnorr signatures.
 pub struct Signature {
     /// keyed hash of signed message
@@ -69,7 +69,7 @@ pub struct KeyPair {
     pub date_created: String,
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 /// Message struct for which cryptographic traits are defined.
 pub struct Message {
     /// Input message
@@ -88,22 +88,7 @@ pub struct Message {
     pub sig: Option<Signature>,
 }
 
-impl Message {
-    /// Returns a new Message instance
-    pub fn new(data: Vec<u8>) -> Message {
-        Message {
-            msg: Box::new(data),
-            d: None,
-            sym_nonce: None,
-            asym_nonce: None,
-            digest: Ok(vec![]),
-            op_result: Ok(()),
-            sig: None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 /// An enum representing standard digest lengths based on FIPS PUB 202
 pub enum SecParam {
     /// Digest length of 224 bits, also known as SHA3-224

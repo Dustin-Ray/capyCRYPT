@@ -18,15 +18,15 @@ hex = {version = "0.4.3"}
 byteorder = {version = "1.4.3"}
 chrono = {version = "0.4.23"}
 criterion = "0.3"
-crypto-bigint = "0.5.3"
+crypto-bigint = {version = "0.5.3", features = ["serde", "alloc"]}
 fiat-crypto = "0.2.2"
 rand = "0.8"
 num-bigint = { version = "0.4", features = ["rand"] }
-tiny_ed448_goldilocks = "0.1.7"
+tiny_ed448_goldilocks = { version = "0.1.8"}
 aes = "0.8.3"
 rayon = "1.5"
 structopt = "0.3"
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0", features = ["alloc", "derive"] }
 serde_json = "1.0"
 tempfile = "3.2"
 
