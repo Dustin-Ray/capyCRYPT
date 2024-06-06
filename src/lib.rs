@@ -1,4 +1,6 @@
 #![warn(clippy::just_underscores_and_digits)]
+use ops::kmac_xof;
+use sha3::aux_functions::byte_utils::{bytes_to_scalar, get_date_and_time_as_string};
 /// Elliptic curve backend
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
 
@@ -25,6 +27,9 @@ pub mod aes {
 
 /// Module for encrypt, decrypt, and sign functions.
 pub mod ops;
+
+use std::fs::File;
+use std::io::Read;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 /// A simple error type
@@ -69,6 +74,109 @@ pub struct KeyPair {
     pub date_created: String,
 }
 
+impl KeyPair {
+    /// # Asymmetric [`KeyPair`] Generation
+    /// Generates a (Schnorr/ECDHIES) key pair from passphrase pw.
+    ///
+    /// ## Algorithm:
+    /// * s ← kmac_xof(pw, “”, 448, “K”); s ← 4s
+    /// * 𝑉 ← s*𝑮
+    /// * key pair: (s, 𝑉)
+    /// ## Arguments:
+    /// * pw: &Vec<u8> : password as bytes, can be blank but shouldnt be
+    /// * owner: String : A label to indicate the owner of the key
+    /// * curve: [`EdCurves`] : The selected Edwards curve
+    /// ## Returns:
+    /// * return  -> [`KeyPair`]: Key object containing owner, private key, public key x and y coordinates, and timestamp.
+    /// verification key 𝑉 is hashed together with the message 𝑚
+    /// and the nonce 𝑈: hash (𝑚, 𝑈, 𝑉) .
+    /// ## Usage:
+    /// ```
+    /// use capycrypt::{
+    ///     KeyEncryptable,
+    ///     KeyPair,
+    ///     Message,
+    ///     sha3::aux_functions::byte_utils::get_random_bytes,
+    ///     SecParam,
+    /// };
+    ///
+    /// // Get 5mb random data
+    /// let mut msg = Message::new(get_random_bytes(5242880));
+    /// // Create a new private/public keypair
+    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &SecParam::D512).expect("Failed to create key pair");
+    ///
+    /// // Encrypt the message
+    /// msg.key_encrypt(&key_pair.pub_key, &SecParam::D512);
+    //  Decrypt the message
+    /// msg.key_decrypt(&key_pair.priv_key);
+    /// // Verify successful operation
+    /// msg.op_result.expect("Asymmetric decryption failed");    
+    /// ```
+    #[allow(non_snake_case)]
+    pub fn new(pw: &[u8], owner: String, d: &SecParam) -> Result<KeyPair, OperationError> {
+        let data = kmac_xof(pw, &[], 448, "SK", d)?;
+        let s: Scalar = bytes_to_scalar(data).mul_mod(&Scalar::from(4_u64));
+        let V = ExtendedPoint::generator() * s;
+        Ok(KeyPair {
+            owner,
+            pub_key: V,
+            priv_key: pw.to_vec(),
+            date_created: get_date_and_time_as_string(),
+        })
+    }
+
+    /// # KeyPair Saving
+    ///
+    /// Saves the key pair to a JSON file.
+    ///
+    /// ## Usage:
+    ///
+    /// ```rust
+    /// use capycrypt::KeyPair;
+    /// use capycrypt::SecParam;
+    ///
+    /// let key_pair = KeyPair::new("password".as_bytes(), "owner".to_string(), &SecParam::D512)
+    ///     .expect("Failed to create key pair");
+    ///
+    /// // key_pair.write_to_file("keypai1r.json").expect("Failed to save key pair");
+    pub fn write_to_file(&self, filename: &str) -> std::io::Result<()> {
+        let json_key_pair = serde_json::to_string_pretty(self).unwrap();
+        std::fs::write(filename, json_key_pair)
+    }
+
+    /// # KeyPair Loading
+    ///
+    /// Reads a JSON file and creates a `KeyPair` from its contents.
+    ///
+    /// ## Errors:
+    ///
+    /// Returns an error if:
+    /// - The file cannot be opened or read.
+    /// - The JSON content cannot be parsed into a `KeyPair`.
+    ///
+    /// ## Usage:
+    ///
+    /// ```rust
+    /// use capycrypt::KeyPair;
+    ///
+    /// // Assuming "keypair.json" contains a serialized KeyPair
+    /// match KeyPair::read_from_file("keypair.json") {
+    ///     Ok(key_pair) => {
+    ///         println!("Loaded KeyPair: {:?}", key_pair);
+    ///     },
+    ///     Err(err) => eprintln!("Error loading KeyPair: {}", err),
+    /// }
+    /// ```
+    pub fn read_from_file(filename: &str) -> Result<KeyPair, Box<dyn std::error::Error>> {
+        let mut file = File::open(filename)?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)?;
+
+        let keypair: KeyPair = serde_json::from_str(&contents)?;
+        Ok(keypair)
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 /// Message struct for which cryptographic traits are defined.
 pub struct Message {
@@ -86,6 +194,35 @@ pub struct Message {
     pub op_result: Result<(), OperationError>,
     /// Schnorr signatures on the input message
     pub sig: Option<Signature>,
+}
+
+impl Message {
+    /// Returns a new Message instance
+    pub fn new(data: Vec<u8>) -> Message {
+        Message {
+            msg: Box::new(data),
+            d: None,
+            sym_nonce: None,
+            asym_nonce: None,
+            digest: Ok(vec![]),
+            op_result: Ok(()),
+            sig: None,
+        }
+    }
+
+    pub fn write_to_file(&self, filename: &str) -> std::io::Result<()> {
+        let json_key_pair = serde_json::to_string(self).unwrap();
+        std::fs::write(filename, json_key_pair)
+    }
+
+    pub fn read_from_file(filename: &str) -> Result<Message, Box<dyn std::error::Error>> {
+        let mut file = File::open(filename)?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)?;
+
+        let message: Message = serde_json::from_str(&contents)?;
+        Ok(message)
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
