@@ -1,4 +1,4 @@
-use capycrypt::{Hashable, KeyPair, Message, SecParam};
+use capycrypt::{ecc::keypair::KeyPair, sha3::hashable::Hashable, Message, SecParam};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -44,10 +44,10 @@ fn main() {
     match Command::from_args() {
         Command::Sha3 { input, bits } => {
             let mut data = Message::new(input.into_bytes());
-            let sec_param = SecParam::from_int(bits)
+            let sec_param = SecParam::try_from(bits)
                 .expect("Unsupported security parameter. Use 224, 256, 384, or 512");
 
-            data.compute_hash_sha3(&sec_param)
+            data.compute_sha3_hash(&sec_param)
                 .expect("An error occurred during hash computation.");
 
             match data.digest {
@@ -63,7 +63,7 @@ fn main() {
             bits,
             output,
         } => {
-            let sec_param = SecParam::from_int(bits).expect("Unsupported security parameter.");
+            let sec_param = SecParam::try_from(bits).expect("Unsupported security parameter.");
             let kp = KeyPair::new(pw.as_bytes(), owner, &sec_param)
                 .expect("Unable to generate the requested key pair");
 

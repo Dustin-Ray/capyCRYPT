@@ -4,8 +4,10 @@ pub mod ops_tests {
     use tempfile::tempdir;
 
     use capycrypt::{
-        sha3::aux_functions::byte_utils::get_random_bytes, KeyEncryptable, KeyPair, Message,
-        SecParam, Signable, SpongeEncryptable,
+        ecc::{encryptable::KeyEncryptable, keypair::KeyPair, signable::Signable},
+        kem::{encryptable::KEMEncryptable, keypair::kem_keygen},
+        sha3::{aux_functions::byte_utils::get_random_bytes, encryptable::SpongeEncryptable},
+        Message, SecParam,
     };
 
     #[test]
@@ -28,6 +30,29 @@ pub mod ops_tests {
 
         assert!(msg.op_result.is_ok());
     }
+
+    #[test]
+    pub fn test_kem_enc_256() {
+        let mut msg = Message::new(get_random_bytes(5242880));
+
+        let (kem_pub_key, kem_priv_key) = kem_keygen();
+
+        assert!(msg.kem_encrypt(&kem_pub_key, &SecParam::D256).is_ok());
+        assert!(msg.kem_decrypt(&kem_priv_key).is_ok());
+        assert!(msg.op_result.is_ok());
+    }
+
+    #[test]
+    pub fn test_kem_enc_512() {
+        let mut msg = Message::new(get_random_bytes(5242880));
+
+        let (kem_pub_key, kem_priv_key) = kem_keygen();
+
+        assert!(msg.kem_encrypt(&kem_pub_key, &SecParam::D512).is_ok());
+        assert!(msg.kem_decrypt(&kem_priv_key).is_ok());
+        assert!(msg.op_result.is_ok());
+    }
+
     #[test]
     fn test_key_gen_enc_dec_256() {
         let mut msg = Message::new(get_random_bytes(5242880));
@@ -146,7 +171,7 @@ pub mod ops_tests {
     pub fn test_signature_512_read_message_from_file() {
         let temp_dir = tempdir().expect("Failed to create temporary directory");
         let temp_file_path: std::path::PathBuf = temp_dir.path().join("temp_message.json");
-        let _ = Message::new(get_random_bytes(5242880))
+        Message::new(get_random_bytes(5242880))
             .write_to_file(temp_file_path.to_str().unwrap())
             .unwrap();
 
@@ -157,7 +182,7 @@ pub mod ops_tests {
 
         assert!(initial_msg.sign(&key_pair, &SecParam::D512).is_ok());
 
-        let _ = initial_msg
+        initial_msg
             .write_to_file(temp_file_path.to_str().unwrap())
             .unwrap();
 
@@ -166,5 +191,60 @@ pub mod ops_tests {
         assert!(signed_msg.verify(&key_pair.pub_key).is_ok());
 
         assert!(signed_msg.op_result.is_ok());
+    }
+}
+
+#[cfg(test)]
+mod decryption_test {
+    use capycrypt::ecc::encryptable::KeyEncryptable;
+    use capycrypt::ecc::keypair::KeyPair;
+    use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
+    use capycrypt::sha3::encryptable::SpongeEncryptable;
+    use capycrypt::Message;
+    use capycrypt::SecParam::D512;
+
+    /// Testing a security parameters whether the failed decryption preserves
+    /// the original encrypted text. If an encrypted text is decrypted with a wrong password,
+    /// then the original encrypted message should remain the same.
+    ///
+    /// Note: Message were cloned for the test purposes, but in a production setting,
+    /// clone() will not be used, as the operation is done in memory.
+    /// Although a single security parameter is tested,
+    /// it should work on the remaining security parameters.
+    #[test]
+    fn test_sha3_decrypt_handling_bad_input() {
+        let pw1 = get_random_bytes(64);
+        let pw2 = get_random_bytes(64);
+
+        // D512
+        let mut new_msg = Message::new(get_random_bytes(523));
+        let _ = new_msg.sha3_encrypt(&pw1, &D512);
+        let msg2 = new_msg.msg.clone();
+        let _ = new_msg.sha3_decrypt(&pw2);
+
+        assert_eq!(msg2, new_msg.msg);
+    }
+
+    /// Testing a security parameters whether the failed decryption preserves
+    /// the original encrypted text. If an encrypted text is decrypted with a wrong password,
+    /// then the original encrypted message should remain the same.
+    ///
+    /// Note: Message were cloned for the test purposes, but in a production setting,
+    /// clone() will not be used, as the operation is done in memory.
+    /// Although a single security parameter is tested,
+    /// it should work on the remaining security parameters.
+    #[test]
+    fn test_key_decrypt_handling_bad_input() {
+        let mut new_msg = Message::new(get_random_bytes(125));
+
+        // D512
+        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512).unwrap();
+        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512).unwrap();
+
+        let _ = new_msg.key_encrypt(&key_pair1.pub_key, &D512);
+        let new_msg2 = new_msg.msg.clone();
+        let _ = new_msg.key_decrypt(&key_pair2.priv_key);
+
+        assert_eq!(*new_msg.msg, *new_msg2, "Message after reverting a failed decryption does not match the original encrypted message");
     }
 }

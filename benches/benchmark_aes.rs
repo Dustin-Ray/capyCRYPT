@@ -1,6 +1,7 @@
 use capycrypt::aes::aes_functions::{apply_pcks7_padding, remove_pcks7_padding};
+use capycrypt::aes::encryptable::AesEncryptable;
 use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-use capycrypt::{AesEncryptable, Message};
+use capycrypt::Message;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use rand::{distributions::Alphanumeric, Rng};
 
@@ -77,23 +78,23 @@ fn sym_enc_rust_aes(key: &[u8], data: &[u8]) -> Vec<u8> {
 }
 
 /// Symmetric encrypt and decrypt roundtrip
-fn sym_cbc_enc(key: &mut Vec<u8>, data: &[u8]) {
+fn sym_cbc_enc(key: &[u8], data: &[u8]) {
     let mut msg = Message::new(data.to_owned());
-    let _ = msg.aes_encrypt_cbc(&key);
-    let _ = msg.aes_decrypt_cbc(&key);
+    let _ = msg.aes_encrypt_cbc(key);
+    let _ = msg.aes_decrypt_cbc(key);
 }
 
 /// Symmetric encrypt and decrypt roundtrip for AES in CTR mode
-fn sym_ctr_enc(key: &mut Vec<u8>, data: &[u8]) {
+fn sym_ctr_enc(key: &[u8], data: &[u8]) {
     let mut msg = Message::new(data.to_owned());
-    let _ = msg.aes_encrypt_ctr(&key);
-    let _ = msg.aes_decrypt_ctr(&key);
+    let _ = msg.aes_encrypt_ctr(key);
+    let _ = msg.aes_decrypt_ctr(key);
 }
 
 // Benchmark AES encryption and decryption roundtrip
 fn bench_aes_cbc_enc(c: &mut Criterion) {
     let data = generate_random_data(5 * 1024 * 1024);
-    let mut key = get_random_bytes(32); // Generate key if needed
+    let key = get_random_bytes(32); // Generate key if needed
 
     c.bench_function("Rust AES-256-CBC Encrypt + Decrypt Roundtrip", |b| {
         b.iter(|| {
@@ -103,7 +104,7 @@ fn bench_aes_cbc_enc(c: &mut Criterion) {
 
     c.bench_function("capyCRYPT AES-256-CBC Encrypt + Decrypt Roundtrip", |b| {
         b.iter(|| {
-            sym_cbc_enc(&mut key, black_box(&data));
+            sym_cbc_enc(&key, black_box(&data));
         });
     });
 }
@@ -111,11 +112,11 @@ fn bench_aes_cbc_enc(c: &mut Criterion) {
 // Benchmark AES encryption and decryption roundtrip
 fn bench_aes_ctr_enc(c: &mut Criterion) {
     let data = generate_random_data(5 * 1024 * 1024);
-    let mut key = get_random_bytes(32); // Generate key if needed
+    let key = get_random_bytes(32); // Generate key if needed
 
     c.bench_function("capyCRYPT AES-256-CTR Encrypt + Decrypt Roundtrip", |b| {
         b.iter(|| {
-            sym_ctr_enc(&mut key, black_box(&data));
+            sym_ctr_enc(&key, black_box(&data));
         });
     });
 }

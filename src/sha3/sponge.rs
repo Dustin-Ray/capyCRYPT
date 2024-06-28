@@ -1,4 +1,6 @@
-use crate::{sha3::keccakf::keccakf_1600, BitLength, Rate};
+use crate::sha3::keccakf::keccakf_1600;
+
+use super::constants::{BitLength, Rate};
 
 // Absorbs rate amount of data into state and permutes. Continue absorbing and permuting until
 // no more data left in m. Pads to multiple of rate using multi-rate padding.
@@ -27,7 +29,7 @@ pub(crate) fn sponge_squeeze<S: BitLength + ?Sized>(
     rate: Rate,
 ) -> Vec<u8> {
     let mut out: Vec<u8> = Vec::new(); //FIPS 202 Algorithm 8 Step 8
-    let block_size: usize = (rate.value / 64) as usize;
+    let block_size: usize = (rate.value() / 64) as usize;
     while out.len() * 8 < bit_length.bit_length() as usize {
         out.append(&mut state_to_byte_array(&s[0..block_size]));
         keccakf_1600(s); //FIPS 202 Algorithm 8 Step 10
@@ -101,8 +103,10 @@ fn pad_ten_one(m: &mut Vec<u8>, rate_in_bytes: usize) {
 /// "exptected" in cshake and kmac tests are official test vectors supplied by NIST.
 #[cfg(test)]
 mod sponge_tests {
-    use crate::sha3::aux_functions::nist_800_185::{byte_pad, left_encode, right_encode};
-    use crate::NIST_DATA_SPONGE_INIT;
+    use crate::sha3::{
+        aux_functions::nist_800_185::{byte_pad, left_encode, right_encode},
+        constants::NIST_DATA_SPONGE_INIT,
+    };
 
     #[test]
     fn test_bytepad() {
