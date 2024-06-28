@@ -49,7 +49,7 @@ pub enum OperationError {
 }
 
 pub mod ecc;
-pub mod mlkem;
+pub mod kem;
 
 /// Module for SHA-3 primitives
 pub mod sha3 {
