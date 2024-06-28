@@ -10,8 +10,10 @@ use crate::{
         aux_functions::nist_800_185::{byte_pad, encode_string, right_encode},
         sponge::{sponge_absorb, sponge_squeeze},
     },
-    BitLength, Capacity, OperationError, OutputLength, Rate, SecParam, RATE_IN_BYTES,
+    OperationError, SecParam,
 };
+
+use super::constants::{BitLength, Capacity, OutputLength, Rate, RATE_IN_BYTES};
 
 /// # SHA3-Keccak
 /// ref NIST FIPS 202.
@@ -119,7 +121,7 @@ mod shake_tests {
             0x6b, 0x4e, 0x03, 0x42, 0x36, 0x67, 0xdb, 0xb7, 0x3b, 0x6e, 0x15, 0x45, 0x4f, 0x0e,
             0xb1, 0xab, 0xd4, 0x59, 0x7f, 0x9a, 0x1b, 0x07, 0x8e, 0x3f, 0x5b, 0x5a, 0x6b, 0xc7,
         ];
-        assert!(data.compute_hash_sha3(&SecParam::D224).is_ok());
+        assert!(data.compute_sha3_hash(&SecParam::D224).is_ok());
         assert!(data
             .digest
             .as_ref()
@@ -131,7 +133,7 @@ mod shake_tests {
             0x37, 0x97, 0xbf, 0x0a, 0xfb, 0xbf, 0xca, 0x4a, 0x7b, 0xbb, 0xa7, 0x60, 0x2a, 0x2b,
             0x55, 0x27, 0x46, 0x87, 0x65, 0x17, 0xa7, 0xf9, 0xb7, 0xce, 0x2d, 0xb0, 0xae, 0x7b,
         ];
-        assert!(data.compute_hash_sha3(&SecParam::D224).is_ok());
+        assert!(data.compute_sha3_hash(&SecParam::D224).is_ok());
         assert!(data
             .digest
             .as_ref()
@@ -147,7 +149,7 @@ mod shake_tests {
             0xd6, 0x62, 0xf5, 0x80, 0xff, 0x4d, 0xe4, 0x3b, 0x49, 0xfa, 0x82, 0xd8, 0x0a, 0x4b,
             0x80, 0xf8, 0x43, 0x4a,
         ];
-        assert!(data.compute_hash_sha3(&SecParam::D256).is_ok());
+        assert!(data.compute_sha3_hash(&SecParam::D256).is_ok());
         assert!(data
             .digest
             .as_ref()
@@ -160,7 +162,7 @@ mod shake_tests {
             0x00, 0xe3, 0x46, 0xe2, 0x76, 0xae, 0x66, 0x4e, 0x45, 0xee, 0x80, 0x74, 0x55, 0x74,
             0xe2, 0xf5, 0xab, 0x80,
         ];
-        assert!(data.compute_hash_sha3(&SecParam::D256).is_ok());
+        assert!(data.compute_sha3_hash(&SecParam::D256).is_ok());
         assert!(data
             .digest
             .as_ref()
@@ -177,7 +179,7 @@ mod shake_tests {
             0xee, 0x98, 0x3a, 0x2a, 0xc3, 0x71, 0x38, 0x31, 0x26, 0x4a, 0xdb, 0x47, 0xfb, 0x6b,
             0xd1, 0xe0, 0x58, 0xd5, 0xf0, 0x04,
         ];
-        assert!(data.compute_hash_sha3(&SecParam::D384).is_ok());
+        assert!(data.compute_sha3_hash(&SecParam::D384).is_ok());
         assert!(data
             .digest
             .as_ref()
@@ -191,7 +193,7 @@ mod shake_tests {
             0xf0, 0xf1, 0xb4, 0x1e, 0xec, 0xb9, 0xdb, 0x3f, 0xf2, 0x19, 0x00, 0x7c, 0x4e, 0x09,
             0x72, 0x60, 0xd5, 0x86, 0x21, 0xbd,
         ];
-        assert!(data.compute_hash_sha3(&SecParam::D384).is_ok());
+        assert!(data.compute_sha3_hash(&SecParam::D384).is_ok());
         assert!(data
             .digest
             .as_ref()
@@ -209,7 +211,7 @@ mod shake_tests {
             0xf2, 0xe9, 0xb3, 0xca, 0x9f, 0x48, 0x4f, 0x52, 0x1d, 0x0c, 0xe4, 0x64, 0x34, 0x5c,
             0xc1, 0xae, 0xc9, 0x67, 0x79, 0x14, 0x9c, 0x14,
         ];
-        assert!(data.compute_hash_sha3(&SecParam::D512).is_ok());
+        assert!(data.compute_sha3_hash(&SecParam::D512).is_ok());
         assert!(data
             .digest
             .as_ref()
@@ -259,7 +261,10 @@ mod shake_tests {
 
 #[cfg(test)]
 mod cshake_tests {
-    use crate::{sha3::shake_functions::cshake, SecParam, NIST_DATA_SPONGE_INIT};
+    use crate::{
+        sha3::{constants::NIST_DATA_SPONGE_INIT, shake_functions::cshake},
+        SecParam,
+    };
 
     #[test]
     fn test_cshake_256() {
@@ -295,8 +300,9 @@ mod cshake_tests {
 
 #[cfg(test)]
 mod kmac_tests {
+    use crate::sha3::constants::NIST_DATA_SPONGE_INIT;
     use crate::sha3::shake_functions::kmac_xof;
-    use crate::{SecParam, NIST_DATA_SPONGE_INIT};
+    use crate::SecParam;
     #[test]
     fn test_kmac_256() {
         let key_str: [u8; 32] = [

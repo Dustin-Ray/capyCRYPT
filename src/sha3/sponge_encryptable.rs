@@ -26,26 +26,6 @@ impl SpongeEncryptable for Message {
     /// * `pw: &[u8]`: symmetric encryption key, can be blank but shouldnt be
     /// * `d: u64`: requested security strength in bits. Supported
     /// bitstrengths are 224, 256, 384, or 512.
-    /// ## Usage:
-    /// ```
-    /// use capycrypt::{
-    ///     Message,
-    ///     SpongeEncryptable,
-    ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}},
-    ///     SecParam::D512,
-    /// };
-    /// use capycrypt::SecParam;
-    /// // Get a random password
-    /// let pw = get_random_bytes(64);
-    /// // Get 5mb random data
-    /// let mut msg = Message::new(get_random_bytes(5242880));
-    /// // Encrypt the data with 512 bits of security
-    /// msg.sha3_encrypt(&pw, &D512);
-    /// // Decrypt the data
-    /// msg.sha3_decrypt(&pw);
-    /// // Verify successful operation
-    /// assert!(msg.sha3_decrypt(&pw).is_ok(), "Decryption Failure");
-    /// ```
     fn sha3_encrypt(&mut self, pw: &[u8], d: &SecParam) -> Result<(), OperationError> {
         self.d = Some(*d);
         let z = get_random_bytes(512);
@@ -64,6 +44,7 @@ impl SpongeEncryptable for Message {
         self.sym_nonce = Some(z);
         Ok(())
     }
+
     /// # Symmetric Decryption
     /// Decrypts a [`Message`] (z, c, t) under passphrase pw.
     /// ## Assumes:
@@ -79,26 +60,6 @@ impl SpongeEncryptable for Message {
     /// * t’ ← kmac_xof(ka, m, 512, “SKA”)
     /// ## Arguments:
     /// * `pw: &[u8]`: decryption password, can be blank
-    /// ## Usage:
-    /// ```
-    /// use capycrypt::{
-    ///     Message,
-    ///     SpongeEncryptable,
-    ///     sha3::{aux_functions::{byte_utils::{get_random_bytes}}},
-    ///     SecParam::D512,
-    /// };
-    /// use capycrypt::SecParam;
-    /// // Get a random password
-    /// let pw = get_random_bytes(64);
-    /// // Get 5mb random data
-    /// let mut msg = Message::new(get_random_bytes(5242880));
-    /// // Encrypt the data with 512 bits of security
-    /// msg.sha3_encrypt(&pw, &D512);
-    /// // Decrypt the data
-    /// msg.sha3_decrypt(&pw);
-    /// // Verify successful operation
-    /// assert!(msg.sha3_decrypt(&pw).is_ok(), "Decryption Failure");
-    /// ```
     fn sha3_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError> {
         let d = self
             .d

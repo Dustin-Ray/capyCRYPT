@@ -1,5 +1,4 @@
 #![warn(clippy::just_underscores_and_digits)]
-
 use serde::{Deserialize, Serialize};
 use sha3::{
     aux_functions::byte_utils::{bytes_to_scalar, get_date_and_time_as_string},
@@ -40,28 +39,6 @@ impl KeyPair {
     /// * return  -> [`KeyPair`]: Key object containing owner, private key, public key x and y coordinates, and timestamp.
     /// verification key 𝑉 is hashed together with the message 𝑚
     /// and the nonce 𝑈: hash (𝑚, 𝑈, 𝑉) .
-    /// ## Usage:
-    /// ```
-    /// use capycrypt::{
-    ///     KeyEncryptable,
-    ///     KeyPair,
-    ///     Message,
-    ///     sha3::aux_functions::byte_utils::get_random_bytes,
-    ///     SecParam,
-    /// };
-    ///
-    /// // Get 5mb random data
-    /// let mut msg = Message::new(get_random_bytes(5242880));
-    /// // Create a new private/public keypair
-    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &SecParam::D512).expect("Failed to create key pair");
-    ///
-    /// // Encrypt the message
-    /// msg.key_encrypt(&key_pair.pub_key, &SecParam::D512);
-    //  Decrypt the message
-    /// msg.key_decrypt(&key_pair.priv_key);
-    /// // Verify successful operation
-    /// msg.op_result.expect("Asymmetric decryption failed");    
-    /// ```
     #[allow(non_snake_case)]
     pub fn new(pw: &[u8], owner: String, d: &SecParam) -> Result<KeyPair, OperationError> {
         let data = kmac_xof(pw, &[], 448, "SK", d)?;
@@ -82,7 +59,7 @@ impl KeyPair {
     /// ## Usage:
     ///
     /// ```rust
-    /// use capycrypt::KeyPair;
+    /// use capycrypt::ecc::ecc_keypair::KeyPair;
     /// use capycrypt::SecParam;
     ///
     /// let key_pair = KeyPair::new("password".as_bytes(), "owner".to_string(), &SecParam::D512)
@@ -107,7 +84,7 @@ impl KeyPair {
     /// ## Usage:
     ///
     /// ```rust
-    /// use capycrypt::KeyPair;
+    /// use capycrypt::ecc::ecc_keypair::KeyPair;
     ///
     /// // Assuming "keypair.json" contains a serialized KeyPair
     /// match KeyPair::read_from_file("keypair.json") {

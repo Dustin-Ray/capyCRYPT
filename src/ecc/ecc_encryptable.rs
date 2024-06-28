@@ -13,6 +13,7 @@ pub trait KeyEncryptable {
 }
 
 impl KeyEncryptable for Message {
+    
     /// # Asymmetric Encryption
     /// Encrypts a [`Message`] in place under the (Schnorr/ECDHIES) public key 𝑉.
     /// Operates under Schnorr/ECDHIES principle in that shared symmetric key is
@@ -30,28 +31,6 @@ impl KeyEncryptable for Message {
     /// ## Arguments:
     /// * pub_key: [`EdCurvePoint`] : X coordinate of public key 𝑉
     /// * d: u64: Requested security strength in bits. Can only be 224, 256, 384, or 512.
-    /// ## Usage:
-    /// ```
-    /// use capycrypt::{
-    ///     KeyEncryptable,
-    ///     KeyPair,
-    ///     Message,
-    ///     sha3::aux_functions::byte_utils::get_random_bytes,
-    ///     SecParam,
-    /// };
-    ///
-    /// // Get 5mb random data
-    /// let mut msg = Message::new(get_random_bytes(5242880));
-    /// // Create a new private/public keypair
-    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &SecParam::D512).expect("Failed to create key pair");
-    ///
-    /// // Encrypt the message
-    /// msg.key_encrypt(&key_pair.pub_key, &SecParam::D512);
-    //  Decrypt the message
-    /// msg.key_decrypt(&key_pair.priv_key);
-    /// // Verify successful operation
-    /// msg.op_result.expect("Asymmetric decryption failed");    
-    /// ```
     #[allow(non_snake_case)]
     fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: &SecParam) -> Result<(), OperationError> {
         self.d = Some(*d);
@@ -99,29 +78,6 @@ impl KeyEncryptable for Message {
     /// ## Arguments:
     /// * pw: &[u8]: password used to generate ```CurvePoint``` encryption key.
     /// * d: u64: encryption security strength in bits. Can only be 224, 256, 384, or 512.
-    ///
-    /// ## Usage:
-    /// ```
-    /// use capycrypt::{
-    ///     KeyEncryptable,
-    ///     KeyPair,
-    ///     Message,
-    ///     sha3::aux_functions::byte_utils::get_random_bytes,
-    ///     SecParam,
-    /// };
-    ///
-    /// // Get 5mb random data
-    /// let mut msg = Message::new(get_random_bytes(5242880));
-    /// // Create a new private/public keypair
-    /// let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &SecParam::D512).expect("Failed to create key pair");
-    ///
-    /// // Encrypt the message
-    /// msg.key_encrypt(&key_pair.pub_key, &SecParam::D512);
-    //  Decrypt the message
-    /// msg.key_decrypt(&key_pair.priv_key);
-    /// // Verify successful operation
-    /// msg.op_result.expect("Asymmetric decryption failed");    
-    /// ```
     #[allow(non_snake_case)]
     fn key_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError> {
         let Z = self.asym_nonce.ok_or(OperationError::SymNonceNotSet)?;

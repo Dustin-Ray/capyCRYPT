@@ -31,21 +31,6 @@ impl AesEncryptable for Message {
     /// - C: Represents ciphertext blocks.
     /// ## Arguments:
     /// * `key: &Vec<u8>`: symmetric encryption key.
-    /// ## Usage:
-    /// ```
-    /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-    /// use capycrypt::{Message, AesEncryptable};
-    /// // Get a random 16-byte key
-    /// let key = get_random_bytes(16);
-    /// // Initialize the Message with some plaintext data
-    /// let mut input = Message::new(get_random_bytes(5242880));
-    /// // Encrypt the Message using AES in CBC mode
-    /// input.aes_encrypt_cbc(&key);
-    /// // Decrypt the Message (need the same key)
-    /// input.aes_decrypt_cbc(&key);
-    /// // Verify successful operation
-    /// input.op_result.expect("AES decryption in CBC Mode encountered an error");
-    /// ```
     fn aes_encrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = get_random_bytes(16);
         let mut ke_ka = iv.clone();
@@ -92,21 +77,6 @@ impl AesEncryptable for Message {
     /// - C: Represents ciphertext blocks.
     /// ## Arguments:
     /// * `key: &Vec<u8>`: symmetric encryption key.
-    /// ## Usage:
-    /// ```
-    /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-    /// use capycrypt::{Message, AesEncryptable};
-    /// // Get a random 16-byte key
-    /// let key = get_random_bytes(16);
-    /// // Initialize the Message with some ciphertext data
-    /// let mut input = Message::new(get_random_bytes(5242880));
-    /// // Encrypt the Message using AES in CBC mode
-    /// input.aes_encrypt_cbc(&key);
-    /// // Decrypt the Message (using the same key)
-    /// input.aes_decrypt_cbc(&key);
-    /// // Verify successful operation
-    /// input.op_result.expect("AES decryption in CBC Mode encountered an error");
-    /// ```
     fn aes_decrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = self.sym_nonce.clone().unwrap();
         let mut ke_ka = iv.clone();
@@ -165,21 +135,6 @@ impl AesEncryptable for Message {
     /// - C: Represents ciphertext blocks.
     /// ## Arguments:
     /// * `key: &[u8]`: symmetric encryption key.
-    /// ## Usage:
-    /// ```
-    /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-    /// use capycrypt::{Message, AesEncryptable};
-    /// // Get a random 16-byte key
-    /// let key = get_random_bytes(16);
-    /// // Initialize the Message with some plaintext data
-    /// let mut input = Message::new(get_random_bytes(5242880));
-    /// // Encrypt the Message using AES in CTR mode
-    /// input.aes_encrypt_ctr(&key);
-    /// // Decrypt the Message (using the same key)
-    /// input.aes_decrypt_ctr(&key);
-    /// // Verify successful operation
-    /// input.op_result.expect("AES Decryption in CTR Mode encountered an error");
-    /// ```
     fn aes_encrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = get_random_bytes(12);
         let counter = 0u32;
@@ -231,21 +186,6 @@ impl AesEncryptable for Message {
     /// - C: Represents ciphertext blocks.
     /// ## Arguments:
     /// * `key: &[u8]`: symmetric encryption key.
-    /// ## Usage:
-    /// ```
-    /// use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-    /// use capycrypt::{Message, AesEncryptable};
-    /// // Get a random 16-byte key
-    /// let key = get_random_bytes(16);
-    /// // Initialize the Message with some ciphertext data
-    /// let mut input = Message::new(get_random_bytes(5242880));
-    /// // Encrypt the Message using AES in CTR mode
-    /// input.aes_encrypt_ctr(&key);
-    /// // Decrypt the Message using AES in CTR mode
-    /// input.aes_decrypt_ctr(&key);
-    /// // Verify successful operation
-    /// input.op_result.expect("AES decryption in CTR Mode encountered an error");
-    /// ```
     fn aes_decrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError> {
         let iv = self
             .sym_nonce

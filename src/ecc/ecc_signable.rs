@@ -8,7 +8,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
 
-use super::keypair::KeyPair;
+use super::ecc_keypair::KeyPair;
 
 pub trait Signable {
     fn sign(&mut self, key: &KeyPair, d: &SecParam) -> Result<(), OperationError>;
@@ -40,29 +40,6 @@ impl Signable for Message {
     ///
     /// ## Assumes:
     /// * Some(key.priv_key)
-    ///
-    /// ## Usage
-    /// ```
-    /// use capycrypt::{
-    ///     Signable,
-    ///     KeyPair,
-    ///     Message,
-    ///     sha3::aux_functions::byte_utils::get_random_bytes,
-    ///     SecParam,
-    /// };
-    /// // Get random 5mb
-    /// let mut msg = Message::new(get_random_bytes(5242880));
-    /// // Get a random password
-    /// let pw = get_random_bytes(64);
-    /// // Generate a signing keypair
-    /// let key_pair = KeyPair::new(&pw, "test key".to_string(), &SecParam::D512).expect("Failed to generate Key Pair");
-    /// // Sign with 256 bits of security
-    /// msg.sign(&key_pair, &SecParam::D512);
-    /// // Verify signature
-    /// msg.verify(&key_pair.pub_key);
-    /// // Assert correctness using map
-    /// msg.op_result.expect("Signature verification failed");    
-    /// ```
     #[allow(non_snake_case)]
     fn sign(&mut self, key: &KeyPair, d: &SecParam) -> Result<(), OperationError> {
         let s_bytes = kmac_xof(&key.priv_key, &[], 448, "SK", d)?;
@@ -83,6 +60,7 @@ impl Signable for Message {
         self.d = Some(*d);
         Ok(())
     }
+
     /// # Signature Verification
     /// Verifies a [`Signature`] (h, 𝑍) for a byte array m under the (Schnorr/
     /// ECDHIES) public key 𝑉.
@@ -95,28 +73,6 @@ impl Signable for Message {
     /// ## Assumes:
     /// * Some(key.pub_key)
     /// * Some([`Message`].sig)
-    /// ## Usage
-    /// ```
-    /// use capycrypt::{
-    ///     Signable,
-    ///     KeyPair,
-    ///     Message,
-    ///     sha3::aux_functions::byte_utils::get_random_bytes,
-    ///     SecParam,
-    /// };
-    /// // Get random 5mb
-    /// let mut msg = Message::new(get_random_bytes(5242880));
-    /// // Get a random password
-    /// let pw = get_random_bytes(64);
-    /// // Generate a signing keypair
-    /// let key_pair = KeyPair::new(&pw, "test key".to_string(), &SecParam::D512).expect("Failed to generate Key Pair");
-    /// // Sign with 256 bits of security
-    /// msg.sign(&key_pair, &SecParam::D512);
-    /// // Verify signature
-    /// msg.verify(&key_pair.pub_key);
-    /// // Assert correctness using map
-    /// msg.op_result.expect("Signature verification failed");    
-    /// ```
     #[allow(non_snake_case)]
     fn verify(&mut self, pub_key: &ExtendedPoint) -> Result<(), OperationError> {
         let sig = self.sig.as_ref().ok_or(OperationError::SignatureNotSet)?;

@@ -4,8 +4,8 @@ pub mod ops_tests {
     use tempfile::tempdir;
 
     use capycrypt::{
-        ecc::{ecc_encryptable::KeyEncryptable, ecc_signable::Signable, keypair::KeyPair},
-        kem::kem_encryptable::{KEMEncryptable, KEMKey},
+        ecc::{ecc_encryptable::KeyEncryptable, ecc_keypair::KeyPair, ecc_signable::Signable},
+        kem::{kem_encryptable::KEMEncryptable, kem_keypair::kem_keygen},
         sha3::{
             aux_functions::byte_utils::get_random_bytes, sponge_encryptable::SpongeEncryptable,
         },
@@ -37,9 +37,10 @@ pub mod ops_tests {
     pub fn test_kem_enc_256() {
         let mut msg = Message::new(get_random_bytes(5242880));
 
-        let key = KEMKey::kem_keygen();
-        assert!(msg.kem_encrypt(&key, &SecParam::D256).is_ok());
-        assert!(msg.kem_decrypt(&key).is_ok());
+        let (kem_pub_key, kem_priv_key) = kem_keygen();
+
+        assert!(msg.kem_encrypt(&kem_pub_key, &SecParam::D256).is_ok());
+        assert!(msg.kem_decrypt(&kem_priv_key).is_ok());
         assert!(msg.op_result.is_ok());
     }
 
@@ -47,9 +48,10 @@ pub mod ops_tests {
     pub fn test_kem_enc_512() {
         let mut msg = Message::new(get_random_bytes(5242880));
 
-        let key = KEMKey::kem_keygen();
-        assert!(msg.kem_encrypt(&key, &SecParam::D512).is_ok());
-        assert!(msg.kem_decrypt(&key).is_ok());
+        let (kem_pub_key, kem_priv_key) = kem_keygen();
+
+        assert!(msg.kem_encrypt(&kem_pub_key, &SecParam::D512).is_ok());
+        assert!(msg.kem_decrypt(&kem_priv_key).is_ok());
         assert!(msg.op_result.is_ok());
     }
 
@@ -197,7 +199,7 @@ pub mod ops_tests {
 #[cfg(test)]
 mod decryption_test {
     use capycrypt::ecc::ecc_encryptable::KeyEncryptable;
-    use capycrypt::ecc::keypair::KeyPair;
+    use capycrypt::ecc::ecc_keypair::KeyPair;
     use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
     use capycrypt::sha3::sponge_encryptable::SpongeEncryptable;
     use capycrypt::Message;
