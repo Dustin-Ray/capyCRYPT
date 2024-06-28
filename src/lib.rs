@@ -1,38 +1,16 @@
 #![warn(clippy::just_underscores_and_digits)]
+use capy_kem::constants::parameter_sets::KEM_768;
+use capy_kem::fips203::keygen::k_pke_keygen;
 use ops::kmac_xof;
+use rand::{thread_rng, RngCore};
 use sha3::aux_functions::byte_utils::{bytes_to_scalar, get_date_and_time_as_string};
-/// Elliptic curve backend
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
-
-/// Serializing data structures
 use serde::{Deserialize, Serialize};
-
-/// Module for SHA-3 primitives
-pub mod sha3 {
-
-    /// Submodule that implements NIST 800-185 compliant functions
-    pub mod aux_functions;
-
-    /// Submodule that implements the Keccak-f[1600] permutation
-    pub mod keccakf;
-
-    /// Submodule that implements the sponge construction
-    pub mod sponge;
-}
-
-pub mod aes {
-    pub mod aes_constants;
-    pub mod aes_functions;
-}
-
-/// Module for encrypt, decrypt, and sign functions.
-pub mod ops;
-
 use std::fs::File;
 use std::io::Read;
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 /// A simple error type
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub enum OperationError {
     UnsupportedSecurityParameter,
     CShakeError,
@@ -55,11 +33,45 @@ pub enum OperationError {
     DecapsulationFailure,
 }
 
+/// Module for encrypt, decrypt, and sign functions.
+pub mod ops;
+
+/// Module for SHA-3 primitives
+pub mod sha3 {
+
+    /// Submodule that implements NIST 800-185 compliant functions
+    pub mod aux_functions;
+
+    /// Submodule that implements the Keccak-f[1600] permutation
+    pub mod keccakf;
+
+    /// Submodule that implements the sponge construction
+    pub mod sponge;
+}
+
+pub mod aes {
+    pub mod aes_constants;
+    pub mod aes_functions;
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct KEMKey {
     pub ek: Vec<u8>,
     pub dk: Vec<u8>,
     pub rand_bytes: [u8; 32],
+}
+
+impl KEMKey {
+    pub fn kem_keygen() -> KEMKey {
+        let mut rng = thread_rng();
+        let mut rand_bytes = [0u8; 32];
+
+        // generate randomness for the KEM
+        rng.fill_bytes(&mut rand_bytes);
+        let (ek, dk) = k_pke_keygen::<KEM_768>(&rand_bytes);
+
+        KEMKey { ek, dk, rand_bytes }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -209,7 +221,7 @@ pub struct Message {
 }
 
 impl Message {
-    /// Returns a new Message instance
+    /// Returns a new empty Message instance
     pub fn new(data: Vec<u8>) -> Message {
         Message {
             msg: Box::new(data),
@@ -346,6 +358,10 @@ impl Rate {
     }
 }
 
+pub trait BitLength {
+    fn bit_length(&self) -> u64;
+}
+
 impl BitLength for Capacity {
     fn bit_length(&self) -> u64 {
         *self as u64
@@ -377,10 +393,6 @@ pub trait AesEncryptable {
     fn aes_decrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError>;
 }
 
-pub trait BitLength {
-    fn bit_length(&self) -> u64;
-}
-
 pub trait Hashable {
     fn compute_hash_sha3(&mut self, d: &SecParam) -> Result<(), OperationError>;
     fn compute_tagged_hash(&mut self, pw: &[u8], s: &str, d: &SecParam);
@@ -397,8 +409,6 @@ pub trait KeyEncryptable {
 }
 
 pub trait KEMEncryptable {
-    fn kem_keygen(&mut self) -> KEMKey;
-    // TODO: combine randomness and ek together, they can easily be parsed apart
     fn kem_encrypt(&mut self, key: &KEMKey, d: &SecParam) -> Result<(), OperationError>;
     fn kem_decrypt(&mut self, key: &KEMKey) -> Result<(), OperationError>;
 }

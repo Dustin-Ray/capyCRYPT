@@ -4,8 +4,8 @@ pub mod ops_tests {
     use tempfile::tempdir;
 
     use capycrypt::{
-        sha3::aux_functions::byte_utils::get_random_bytes, KEMEncryptable, KeyEncryptable, KeyPair,
-        Message, SecParam, Signable, SpongeEncryptable,
+        sha3::aux_functions::byte_utils::get_random_bytes, KEMEncryptable, KEMKey, KeyEncryptable,
+        KeyPair, Message, SecParam, Signable, SpongeEncryptable,
     };
 
     #[test]
@@ -33,8 +33,18 @@ pub mod ops_tests {
     pub fn test_kem_enc_256() {
         let mut msg = Message::new(get_random_bytes(5242880));
 
-        let key = msg.kem_keygen();
+        let key = KEMKey::kem_keygen();
         assert!(msg.kem_encrypt(&key, &SecParam::D256).is_ok());
+        assert!(msg.kem_decrypt(&key).is_ok());
+        assert!(msg.op_result.is_ok());
+    }
+
+    #[test]
+    pub fn test_kem_enc_512() {
+        let mut msg = Message::new(get_random_bytes(5242880));
+
+        let key = KEMKey::kem_keygen();
+        assert!(msg.kem_encrypt(&key, &SecParam::D512).is_ok());
         assert!(msg.kem_decrypt(&key).is_ok());
         assert!(msg.op_result.is_ok());
     }

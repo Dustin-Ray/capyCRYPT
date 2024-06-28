@@ -71,7 +71,6 @@ pub(crate) mod nist_800_185 {
 pub mod byte_utils {
     use crypto_bigint::Encoding;
     use crypto_bigint::U448;
-    use num_bigint::{BigInt as big, RandBigInt};
 
     /// Aux methods for byte operations.
     use rand::prelude::*;
@@ -85,17 +84,6 @@ pub mod byte_utils {
         let mut rand_bytes = vec![0u8; size as usize];
         thread_rng().fill(&mut rand_bytes[..]);
         rand_bytes
-    }
-
-    /// Get a random big with size number of bits
-    pub fn get_random_big(bits: usize) -> big {
-        let mut rng = thread_rng();
-
-        // The `gen_bigint` method takes the number of bits as argument to generate
-        // a random `BigInt`. If you want a non-negative number, make sure the most
-        // significant bit is not set, which will effectively give you a number with
-        // one bit less than the specified size.
-        rng.gen_bigint(bits as u64)
     }
 
     /// XORs byte streams in place using iterators
