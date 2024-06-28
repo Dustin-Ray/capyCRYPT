@@ -18,7 +18,10 @@ use crate::{
     Message, OperationError, OutputLength, Rate, SecParam, Signable, Signature, SpongeEncryptable,
     RATE_IN_BYTES,
 };
-use capy_kem::{constants::parameter_sets::KEM_768, Decrypt, Encrypt, Secret};
+use capy_kem::{
+    constants::parameter_sets::KEM_768,
+    fips203::{decrypt::k_pke_decrypt, encrypt::k_pke_encrypt, keygen::k_pke_keygen},
+};
 use rand::{thread_rng, RngCore};
 use rayon::prelude::*;
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
@@ -438,16 +441,12 @@ impl KeyEncryptable for Message {
 
 impl KEMEncryptable for Message {
     fn kem_keygen(&mut self) -> KEMKey {
-        let mut secret = [0_u8; 32];
+        let mut rng = thread_rng();
         let mut rand_bytes = [0u8; 32];
 
-        let mut rng = thread_rng();
+        // generate randomness for the KEM
         rng.fill_bytes(&mut rand_bytes);
-        rng.fill_bytes(&mut secret);
-        self.kem_secret = secret;
-
-        let s = Secret::<KEM_768>::new(secret);
-        let (ek, dk) = s.k_pke_keygen(&rand_bytes);
+        let (ek, dk) = k_pke_keygen::<KEM_768>(&rand_bytes);
 
         KEMKey { ek, dk, rand_bytes }
     }
@@ -455,14 +454,19 @@ impl KEMEncryptable for Message {
     fn kem_encrypt(&mut self, key: &KEMKey, d: &SecParam) -> Result<(), OperationError> {
         self.d = Some(*d);
 
-        let s = Secret::<KEM_768>::new([0_u8; 32]);
-        let c = s.encrypt(&key.ek, &key.rand_bytes);
-        self.kem_ciphertext = c;
+        let mut rng = thread_rng();
+        let mut secret = [0_u8; 32];
+
+        // generate a random secret to be used as the shared seed
+        rng.fill_bytes(&mut secret);
+
+        let c = k_pke_encrypt::<KEM_768>(&secret, &key.ek, &key.rand_bytes);
+        self.kem_ciphertext = Some(c);
 
         let z = get_random_bytes(512);
         let mut ke_ka = z.clone();
-        ke_ka.extend_from_slice(&s.s);
-        println!("{:?}", &s.s);
+        ke_ka.extend_from_slice(&secret);
+
         let ke_ka = kmac_xof(&ke_ka, &[], 1024, "S", d)?;
         let (ke, ka) = ke_ka.split_at(64);
 
@@ -476,13 +480,12 @@ impl KEMEncryptable for Message {
     }
 
     fn kem_decrypt(&mut self, key: &KEMKey) -> Result<(), OperationError> {
-        let s = Secret::<KEM_768>::new([0_u8; 32]);
-        let dec = s.decrypt(&key.dk, &self.kem_ciphertext);
+        let ciphertext = self
+            .kem_ciphertext
+            .as_ref()
+            .ok_or(OperationError::EmptyDecryptionError)?;
 
-        // Check that the decrypted message matches the original message
-        if dec != s.s {
-            return Err(OperationError::DecapsulationFailure);
-        }
+        let dec = k_pke_decrypt::<KEM_768>(&key.dk, ciphertext);
 
         let d = self
             .d
@@ -500,7 +503,6 @@ impl KEMEncryptable for Message {
         let (ke, ka) = ke_ka.split_at(64);
 
         let m = kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "KEMKE", d)?;
-
         xor_bytes(&mut self.msg, &m);
 
         let new_t = kmac_xof(ka, &self.msg, 512, "KEMKA", d)?;
@@ -914,9 +916,7 @@ impl AesEncryptable for Message {
     }
 }
 
-///
 /// TESTS
-///
 #[cfg(test)]
 mod cshake_tests {
     use crate::{ops::cshake, SecParam, NIST_DATA_SPONGE_INIT};

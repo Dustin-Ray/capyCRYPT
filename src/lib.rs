@@ -204,10 +204,8 @@ pub struct Message {
     pub op_result: Result<(), OperationError>,
     /// Schnorr signatures on the input message
     pub sig: Option<Signature>,
-    /// KEM secret as a byte array
-    pub kem_secret: [u8; 32],
-    /// KEM secret as a byte array
-    pub kem_ciphertext: Vec<u8>,
+    /// ML-KEM encrypted secret as a byte array
+    pub kem_ciphertext: Option<Vec<u8>>,
 }
 
 impl Message {
@@ -221,8 +219,7 @@ impl Message {
             digest: Ok(vec![]),
             op_result: Ok(()),
             sig: None,
-            kem_secret: [0_u8; 32],
-            kem_ciphertext: vec![],
+            kem_ciphertext: Some(vec![]),
         }
     }
 
