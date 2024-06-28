@@ -1,13 +1,16 @@
 #![warn(clippy::just_underscores_and_digits)]
 use capy_kem::constants::parameter_sets::KEM_768;
 use capy_kem::fips203::keygen::k_pke_keygen;
-use ops::kmac_xof;
+
 use rand::{thread_rng, RngCore};
-use sha3::aux_functions::byte_utils::{bytes_to_scalar, get_date_and_time_as_string};
-use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
 use serde::{Deserialize, Serialize};
+use sha3::{
+    aux_functions::byte_utils::{bytes_to_scalar, get_date_and_time_as_string},
+    shake_functions::kmac_xof,
+};
 use std::fs::File;
 use std::io::Read;
+use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
 
 /// A simple error type
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
@@ -33,8 +36,8 @@ pub enum OperationError {
     DecapsulationFailure,
 }
 
-/// Module for encrypt, decrypt, and sign functions.
-pub mod ops;
+pub mod ecc;
+pub mod mlkem;
 
 /// Module for SHA-3 primitives
 pub mod sha3 {
@@ -45,12 +48,16 @@ pub mod sha3 {
     /// Submodule that implements the Keccak-f[1600] permutation
     pub mod keccakf;
 
+    pub mod sha3_encryptable;
+    pub mod sha3_hashable;
+    pub mod shake_functions;
     /// Submodule that implements the sponge construction
     pub mod sponge;
 }
 
 pub mod aes {
     pub mod aes_constants;
+    pub mod aes_encryptable;
     pub mod aes_functions;
 }
 
