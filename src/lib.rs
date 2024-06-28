@@ -31,7 +31,7 @@ pub mod ops;
 use std::fs::File;
 use std::io::Read;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 /// A simple error type
 pub enum OperationError {
     UnsupportedSecurityParameter,
@@ -50,6 +50,16 @@ pub enum OperationError {
     SignatureNotSet,
     UnsupportedCapacity,
     AESCTRDecryptionFailure,
+    SecretNotSet,
+    InvalidSecretLength,
+    DecapsulationFailure,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct KEMKey {
+    pub ek: Vec<u8>,
+    pub dk: Vec<u8>,
+    pub rand_bytes: [u8; 32],
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -177,7 +187,7 @@ impl KeyPair {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 /// Message struct for which cryptographic traits are defined.
 pub struct Message {
     /// Input message
@@ -194,6 +204,11 @@ pub struct Message {
     pub op_result: Result<(), OperationError>,
     /// Schnorr signatures on the input message
     pub sig: Option<Signature>,
+    /// KEM secret as a byte array
+    pub kem_secret: [u8; 32],
+    /// KEM secret as a byte array
+    pub kem_ciphertext: Vec<u8>,
+
 }
 
 impl Message {
@@ -207,6 +222,8 @@ impl Message {
             digest: Ok(vec![]),
             op_result: Ok(()),
             sig: None,
+            kem_secret: [0_u8; 32],
+            kem_ciphertext: vec![],
         }
     }
 
@@ -381,6 +398,13 @@ pub trait SpongeEncryptable {
 pub trait KeyEncryptable {
     fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: &SecParam) -> Result<(), OperationError>;
     fn key_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError>;
+}
+
+pub trait KEMEncryptable {
+    fn kem_keygen(&mut self) -> KEMKey;
+    // TODO: combine randomness and ek together, they can easily be parsed apart
+    fn kem_encrypt(&mut self, key: &KEMKey, d: &SecParam) -> Result<(), OperationError>;
+    fn kem_decrypt(&mut self, key: &KEMKey) -> Result<(), OperationError>;
 }
 
 pub trait Signable {

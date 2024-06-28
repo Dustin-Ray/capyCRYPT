@@ -4,8 +4,8 @@ pub mod ops_tests {
     use tempfile::tempdir;
 
     use capycrypt::{
-        sha3::aux_functions::byte_utils::get_random_bytes, KeyEncryptable, KeyPair, Message,
-        SecParam, Signable, SpongeEncryptable,
+        sha3::aux_functions::byte_utils::get_random_bytes, KEMEncryptable, KeyEncryptable, KeyPair,
+        Message, SecParam, Signable, SpongeEncryptable,
     };
 
     #[test]
@@ -28,6 +28,17 @@ pub mod ops_tests {
 
         assert!(msg.op_result.is_ok());
     }
+
+    #[test]
+    pub fn test_kem_enc_256() {
+        let mut msg = Message::new(get_random_bytes(5242880));
+
+        let key = msg.kem_keygen();
+        assert!(msg.kem_encrypt(&key, &SecParam::D256).is_ok());
+        assert!(msg.kem_decrypt(&key).is_ok());
+        assert!(msg.op_result.is_ok());
+    }
+
     #[test]
     fn test_key_gen_enc_dec_256() {
         let mut msg = Message::new(get_random_bytes(5242880));
@@ -146,7 +157,7 @@ pub mod ops_tests {
     pub fn test_signature_512_read_message_from_file() {
         let temp_dir = tempdir().expect("Failed to create temporary directory");
         let temp_file_path: std::path::PathBuf = temp_dir.path().join("temp_message.json");
-        let _ = Message::new(get_random_bytes(5242880))
+        Message::new(get_random_bytes(5242880))
             .write_to_file(temp_file_path.to_str().unwrap())
             .unwrap();
 
@@ -157,7 +168,7 @@ pub mod ops_tests {
 
         assert!(initial_msg.sign(&key_pair, &SecParam::D512).is_ok());
 
-        let _ = initial_msg
+        initial_msg
             .write_to_file(temp_file_path.to_str().unwrap())
             .unwrap();
 

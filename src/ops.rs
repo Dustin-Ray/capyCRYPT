@@ -14,10 +14,12 @@ use crate::{
         },
         sponge::{sponge_absorb, sponge_squeeze},
     },
-    AesEncryptable, BitLength, Capacity, Hashable, KeyEncryptable, KeyPair, Message,
-    OperationError, OutputLength, Rate, SecParam, Signable, Signature, SpongeEncryptable,
+    AesEncryptable, BitLength, Capacity, Hashable, KEMEncryptable, KEMKey, KeyEncryptable, KeyPair,
+    Message, OperationError, OutputLength, Rate, SecParam, Signable, Signature, SpongeEncryptable,
     RATE_IN_BYTES,
 };
+use capy_kem::{constants::parameter_sets::KEM_768, Decrypt, Encrypt, Secret};
+use rand::{thread_rng, RngCore};
 use rayon::prelude::*;
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
 
@@ -428,6 +430,91 @@ impl KeyEncryptable for Message {
             xor_bytes(&mut self.msg, &xor_result);
 
             Err(OperationError::KeyDecryptionError)
+        };
+
+        Ok(())
+    }
+}
+
+impl KEMEncryptable for Message {
+    fn kem_keygen(&mut self) -> KEMKey {
+        let mut secret = [0_u8; 32];
+        let mut rand_bytes = [0u8; 32];
+
+        let mut rng = thread_rng();
+        rng.fill_bytes(&mut rand_bytes);
+        rng.fill_bytes(&mut secret);
+        self.kem_secret = secret;
+
+        let s = Secret::<KEM_768>::new(secret);
+        let (ek, dk) = s.k_pke_keygen(&rand_bytes);
+
+        KEMKey { ek, dk, rand_bytes }
+    }
+
+    fn kem_encrypt(&mut self, key: &KEMKey, d: &SecParam) -> Result<(), OperationError> {
+        
+        self.d = Some(*d);
+        
+        let s = Secret::<KEM_768>::new([0_u8; 32]);
+        let c = s.encrypt(&key.ek, &key.rand_bytes);
+        self.kem_ciphertext = c.clone();
+
+        let z = get_random_bytes(512);
+        let mut ke_ka = z.clone();
+        ke_ka.extend_from_slice(&s.s);
+        println!("{:?}", &s.s);
+        let ke_ka = kmac_xof(&ke_ka, &[], 1024, "S", d)?;
+        let (ke, ka) = ke_ka.split_at(64);
+
+        self.digest = kmac_xof(ka, &self.msg, 512, "KEMKA", d);
+
+        let m = kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "KEMKE", d)?;
+        xor_bytes(&mut self.msg, &m);
+
+        self.sym_nonce = Some(z);
+        Ok(())
+    }
+
+    fn kem_decrypt(&mut self, key: &KEMKey) -> Result<(), OperationError> {
+        let s = Secret::<KEM_768>::new([0_u8; 32]);
+        let dec = s.decrypt(&key.dk, &self.kem_ciphertext);
+
+        // Check that the decrypted message matches the original message
+        if dec != s.s {
+            return Err(OperationError::DecapsulationFailure);
+        }
+
+        let d = self
+            .d
+            .as_ref()
+            .ok_or(OperationError::SecurityParameterNotSet)?;
+
+        let mut z_pw = self
+            .sym_nonce
+            .as_ref()
+            .ok_or(OperationError::SymNonceNotSet)?
+            .clone();
+        z_pw.extend_from_slice(&dec);
+
+        let ke_ka = kmac_xof(&z_pw, &[], 1024, "S", d)?;
+        let (ke, ka) = ke_ka.split_at(64);
+
+        let m = kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "KEMKE", d)?;
+
+        xor_bytes(&mut self.msg, &m);
+
+        let new_t = kmac_xof(ka, &self.msg, 512, "KEMKA", d)?;
+
+        self.op_result = if self
+            .digest
+            .as_ref()
+            .map_or(false, |digest| digest == &new_t)
+        {
+            Ok(())
+        } else {
+            xor_bytes(&mut self.msg, &m);
+            Err(OperationError::SHA3DecryptionFailure)
         };
 
         Ok(())
@@ -881,7 +968,7 @@ mod kmac_tests {
         let s_str = "My Tagged Application";
         let key_bytes = key_str;
         let mut data = hex::decode("00010203").unwrap();
-        let res = kmac_xof(&key_bytes.to_vec(), &mut data, 64, &s_str, &SecParam::D512).unwrap();
+        let res = kmac_xof(key_bytes.as_ref(), &mut data, 64, s_str, &SecParam::D512).unwrap();
         let expected = "1755133f1534752a";
         assert_eq!(hex::encode(res), expected)
     }
@@ -897,7 +984,7 @@ mod kmac_tests {
 
         let key_bytes = key_str;
         let mut data = NIST_DATA_SPONGE_INIT;
-        let res = kmac_xof(&key_bytes.to_vec(), &mut data, 512, &s_str, &SecParam::D512).unwrap();
+        let res = kmac_xof(key_bytes.as_ref(), &mut data, 512, s_str, &SecParam::D512).unwrap();
         let expected: [u8; 64] = [
             0xd5, 0xbe, 0x73, 0x1c, 0x95, 0x4e, 0xd7, 0x73, 0x28, 0x46, 0xbb, 0x59, 0xdb, 0xe3,
             0xa8, 0xe3, 0x0f, 0x83, 0xe7, 0x7a, 0x4b, 0xff, 0x44, 0x59, 0xf2, 0xf1, 0xc2, 0xb4,
@@ -1101,7 +1188,7 @@ mod shake_tests {
             0x63, 0xf4, 0xca, 0x0b, 0x65, 0x83, 0x6f, 0x52, 0x61, 0xee, 0x64, 0x64, 0x4c, 0xe5,
             0xa8, 0x84, 0x56, 0xd3, 0xd3, 0x0e, 0xfb, 0xed,
         ];
-        data.compute_tagged_hash(&mut pw, &"", &SecParam::D512);
+        data.compute_tagged_hash(&mut pw, "", &SecParam::D512);
 
         assert!(data
             .digest
