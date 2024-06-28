@@ -13,7 +13,6 @@ pub trait KeyEncryptable {
 }
 
 impl KeyEncryptable for Message {
-    
     /// # Asymmetric Encryption
     /// Encrypts a [`Message`] in place under the (Schnorr/ECDHIES) public key 𝑉.
     /// Operates under Schnorr/ECDHIES principle in that shared symmetric key is

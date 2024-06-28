@@ -6,9 +6,7 @@ pub mod ops_tests {
     use capycrypt::{
         ecc::{encryptable::KeyEncryptable, keypair::KeyPair, signable::Signable},
         kem::{encryptable::KEMEncryptable, keypair::kem_keygen},
-        sha3::{
-            aux_functions::byte_utils::get_random_bytes, encryptable::SpongeEncryptable,
-        },
+        sha3::{aux_functions::byte_utils::get_random_bytes, encryptable::SpongeEncryptable},
         Message, SecParam,
     };
 

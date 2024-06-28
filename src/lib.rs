@@ -34,13 +34,13 @@ pub mod sha3 {
     /// Submodule that implements NIST 800-185 compliant functions
     pub mod aux_functions;
     pub mod constants;
+    pub mod encryptable;
+    pub mod hashable;
     /// Submodule that implements the Keccak-f[1600] permutation
     pub mod keccakf;
-    pub mod hashable;
     pub mod shake_functions;
     /// Submodule that implements the sponge construction
     pub mod sponge;
-    pub mod encryptable;
 }
 
 pub mod aes {

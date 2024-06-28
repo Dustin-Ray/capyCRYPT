@@ -55,17 +55,6 @@ impl KeyPair {
     /// # KeyPair Saving
     ///
     /// Saves the key pair to a JSON file.
-    ///
-    /// ## Usage:
-    ///
-    /// ```rust
-    /// use capycrypt::ecc::ecc_keypair::KeyPair;
-    /// use capycrypt::SecParam;
-    ///
-    /// let key_pair = KeyPair::new("password".as_bytes(), "owner".to_string(), &SecParam::D512)
-    ///     .expect("Failed to create key pair");
-    ///
-    /// // key_pair.write_to_file("keypai1r.json").expect("Failed to save key pair");
     pub fn write_to_file(&self, filename: &str) -> std::io::Result<()> {
         let json_key_pair = serde_json::to_string_pretty(self).unwrap();
         std::fs::write(filename, json_key_pair)
@@ -80,20 +69,6 @@ impl KeyPair {
     /// Returns an error if:
     /// - The file cannot be opened or read.
     /// - The JSON content cannot be parsed into a `KeyPair`.
-    ///
-    /// ## Usage:
-    ///
-    /// ```rust
-    /// use capycrypt::ecc::ecc_keypair::KeyPair;
-    ///
-    /// // Assuming "keypair.json" contains a serialized KeyPair
-    /// match KeyPair::read_from_file("keypair.json") {
-    ///     Ok(key_pair) => {
-    ///         println!("Loaded KeyPair: {:?}", key_pair);
-    ///     },
-    ///     Err(err) => eprintln!("Error loading KeyPair: {}", err),
-    /// }
-    /// ```
     pub fn read_from_file(filename: &str) -> Result<KeyPair, Box<dyn std::error::Error>> {
         let mut file = File::open(filename)?;
         let mut contents = String::new();
