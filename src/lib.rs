@@ -208,7 +208,6 @@ pub struct Message {
     pub kem_secret: [u8; 32],
     /// KEM secret as a byte array
     pub kem_ciphertext: Vec<u8>,
-
 }
 
 impl Message {

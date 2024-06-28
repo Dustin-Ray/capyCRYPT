@@ -453,12 +453,11 @@ impl KEMEncryptable for Message {
     }
 
     fn kem_encrypt(&mut self, key: &KEMKey, d: &SecParam) -> Result<(), OperationError> {
-        
         self.d = Some(*d);
-        
+
         let s = Secret::<KEM_768>::new([0_u8; 32]);
         let c = s.encrypt(&key.ek, &key.rand_bytes);
-        self.kem_ciphertext = c.clone();
+        self.kem_ciphertext = c;
 
         let z = get_random_bytes(512);
         let mut ke_ka = z.clone();
@@ -924,11 +923,11 @@ mod cshake_tests {
 
     #[test]
     fn test_cshake_256() {
-        let mut data = NIST_DATA_SPONGE_INIT;
+        let data = NIST_DATA_SPONGE_INIT;
 
         let n = "";
         let s = "Email Signature";
-        let res = cshake(&mut data, 256, n, s, &SecParam::D256).unwrap();
+        let res = cshake(&data, 256, n, s, &SecParam::D256).unwrap();
         let expected: [u8; 32] = [
             0xc5, 0x22, 0x1d, 0x50, 0xe4, 0xf8, 0x22, 0xd9, 0x6a, 0x2e, 0x88, 0x81, 0xa9, 0x61,
             0x42, 0x0f, 0x29, 0x4b, 0x7b, 0x24, 0xfe, 0x3d, 0x20, 0x94, 0xba, 0xed, 0x2c, 0x65,
@@ -939,10 +938,10 @@ mod cshake_tests {
 
     #[test]
     fn test_cshake_512() {
-        let mut data = NIST_DATA_SPONGE_INIT;
+        let data = NIST_DATA_SPONGE_INIT;
         let n = "";
         let s = "Email Signature";
-        let res = cshake(&mut data, 512, n, s, &SecParam::D512).unwrap();
+        let res = cshake(&data, 512, n, s, &SecParam::D512).unwrap();
         let expected: [u8; 64] = [
             0x07, 0xdc, 0x27, 0xb1, 0x1e, 0x51, 0xfb, 0xac, 0x75, 0xbc, 0x7b, 0x3c, 0x1d, 0x98,
             0x3e, 0x8b, 0x4b, 0x85, 0xfb, 0x1d, 0xef, 0xaf, 0x21, 0x89, 0x12, 0xac, 0x86, 0x43,
@@ -967,8 +966,8 @@ mod kmac_tests {
 
         let s_str = "My Tagged Application";
         let key_bytes = key_str;
-        let mut data = hex::decode("00010203").unwrap();
-        let res = kmac_xof(key_bytes.as_ref(), &mut data, 64, s_str, &SecParam::D512).unwrap();
+        let data = hex::decode("00010203").unwrap();
+        let res = kmac_xof(key_bytes.as_ref(), &data, 64, s_str, &SecParam::D512).unwrap();
         let expected = "1755133f1534752a";
         assert_eq!(hex::encode(res), expected)
     }
@@ -983,8 +982,8 @@ mod kmac_tests {
         let s_str = "My Tagged Application";
 
         let key_bytes = key_str;
-        let mut data = NIST_DATA_SPONGE_INIT;
-        let res = kmac_xof(key_bytes.as_ref(), &mut data, 512, s_str, &SecParam::D512).unwrap();
+        let data = NIST_DATA_SPONGE_INIT;
+        let res = kmac_xof(key_bytes.as_ref(), &data, 512, s_str, &SecParam::D512).unwrap();
         let expected: [u8; 64] = [
             0xd5, 0xbe, 0x73, 0x1c, 0x95, 0x4e, 0xd7, 0x73, 0x28, 0x46, 0xbb, 0x59, 0xdb, 0xe3,
             0xa8, 0xe3, 0x0f, 0x83, 0xe7, 0x7a, 0x4b, 0xff, 0x44, 0x59, 0xf2, 0xf1, 0xc2, 0xb4,
@@ -1161,14 +1160,14 @@ mod shake_tests {
     #[test]
     fn test_compute_tagged_hash_256() {
         let s = "".to_string();
-        let mut pw = "".as_bytes().to_vec();
+        let pw = "".as_bytes().to_vec();
         let mut data = Message::new(vec![]);
         let expected: [u8; 32] = [
             0x3f, 0x92, 0x59, 0xe8, 0x0b, 0x35, 0xe0, 0x71, 0x9c, 0x26, 0x02, 0x5f, 0x7e, 0x38,
             0xa4, 0xa3, 0x81, 0x72, 0xbf, 0x11, 0x42, 0xa6, 0xa9, 0xc1, 0x93, 0x0e, 0x50, 0xdf,
             0x03, 0x90, 0x43, 0x12,
         ];
-        data.compute_tagged_hash(&mut pw, &s, &SecParam::D256);
+        data.compute_tagged_hash(&pw, &s, &SecParam::D256);
 
         assert!(data
             .digest
@@ -1179,7 +1178,7 @@ mod shake_tests {
 
     #[test]
     fn test_compute_tagged_hash_512() {
-        let mut pw = "test".as_bytes().to_vec();
+        let pw = "test".as_bytes().to_vec();
         let mut data = Message::new(vec![]);
         let expected: [u8; 64] = [
             0x0f, 0x9b, 0x5d, 0xcd, 0x47, 0xdc, 0x08, 0xe0, 0x8a, 0x17, 0x3b, 0xbe, 0x9a, 0x57,
@@ -1188,7 +1187,7 @@ mod shake_tests {
             0x63, 0xf4, 0xca, 0x0b, 0x65, 0x83, 0x6f, 0x52, 0x61, 0xee, 0x64, 0x64, 0x4c, 0xe5,
             0xa8, 0x84, 0x56, 0xd3, 0xd3, 0x0e, 0xfb, 0xed,
         ];
-        data.compute_tagged_hash(&mut pw, "", &SecParam::D512);
+        data.compute_tagged_hash(&pw, "", &SecParam::D512);
 
         assert!(data
             .digest
