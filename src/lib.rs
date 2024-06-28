@@ -1,5 +1,5 @@
 #![warn(clippy::just_underscores_and_digits)]
-use ecc::ecc_signable::Signature;
+use ecc::signable::Signature;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Read;
@@ -36,28 +36,28 @@ pub mod sha3 {
     pub mod constants;
     /// Submodule that implements the Keccak-f[1600] permutation
     pub mod keccakf;
-    pub mod sha3_hashable;
+    pub mod hashable;
     pub mod shake_functions;
     /// Submodule that implements the sponge construction
     pub mod sponge;
-    pub mod sponge_encryptable;
+    pub mod encryptable;
 }
 
 pub mod aes {
     pub mod aes_constants;
-    pub mod aes_encryptable;
     pub mod aes_functions;
+    pub mod encryptable;
 }
 
 pub mod ecc {
-    pub mod ecc_encryptable;
-    pub mod ecc_keypair;
-    pub mod ecc_signable;
+    pub mod encryptable;
+    pub mod keypair;
+    pub mod signable;
 }
 
 pub mod kem {
-    pub mod kem_encryptable;
-    pub mod kem_keypair;
+    pub mod encryptable;
+    pub mod keypair;
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

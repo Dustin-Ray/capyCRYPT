@@ -112,7 +112,7 @@ pub fn kmac_xof(
 /// TESTS
 #[cfg(test)]
 mod shake_tests {
-    use crate::{sha3::sha3_hashable::Hashable, Message, SecParam};
+    use crate::{sha3::hashable::Hashable, Message, SecParam};
 
     #[test]
     fn test_shake_224() {

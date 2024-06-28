@@ -1,4 +1,4 @@
-use capycrypt::aes::aes_encryptable::AesEncryptable;
+use capycrypt::aes::encryptable::AesEncryptable;
 use capycrypt::aes::aes_functions::{apply_pcks7_padding, remove_pcks7_padding};
 use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
 use capycrypt::Message;

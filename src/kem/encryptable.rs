@@ -11,7 +11,7 @@ use capy_kem::{
 };
 use rand::{thread_rng, RngCore};
 
-use super::kem_keypair::{KEMPrivateKey, KEMPublicKey};
+use super::keypair::{KEMPrivateKey, KEMPublicKey};
 
 pub trait KEMEncryptable {
     fn kem_encrypt(&mut self, key: &KEMPublicKey, d: &SecParam) -> Result<(), OperationError>;

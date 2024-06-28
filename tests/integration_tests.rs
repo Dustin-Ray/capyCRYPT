@@ -4,10 +4,10 @@ pub mod ops_tests {
     use tempfile::tempdir;
 
     use capycrypt::{
-        ecc::{ecc_encryptable::KeyEncryptable, ecc_keypair::KeyPair, ecc_signable::Signable},
-        kem::{kem_encryptable::KEMEncryptable, kem_keypair::kem_keygen},
+        ecc::{encryptable::KeyEncryptable, keypair::KeyPair, signable::Signable},
+        kem::{encryptable::KEMEncryptable, keypair::kem_keygen},
         sha3::{
-            aux_functions::byte_utils::get_random_bytes, sponge_encryptable::SpongeEncryptable,
+            aux_functions::byte_utils::get_random_bytes, encryptable::SpongeEncryptable,
         },
         Message, SecParam,
     };
@@ -198,10 +198,10 @@ pub mod ops_tests {
 
 #[cfg(test)]
 mod decryption_test {
-    use capycrypt::ecc::ecc_encryptable::KeyEncryptable;
-    use capycrypt::ecc::ecc_keypair::KeyPair;
+    use capycrypt::ecc::encryptable::KeyEncryptable;
+    use capycrypt::ecc::keypair::KeyPair;
     use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-    use capycrypt::sha3::sponge_encryptable::SpongeEncryptable;
+    use capycrypt::sha3::encryptable::SpongeEncryptable;
     use capycrypt::Message;
     use capycrypt::SecParam::D512;
 

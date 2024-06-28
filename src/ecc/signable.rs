@@ -8,7 +8,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
 
-use super::ecc_keypair::KeyPair;
+use super::keypair::KeyPair;
 
 pub trait Signable {
     fn sign(&mut self, key: &KeyPair, d: &SecParam) -> Result<(), OperationError>;
