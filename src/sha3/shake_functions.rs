@@ -109,137 +109,6 @@ pub fn kmac_xof(
 
 /// TESTS
 #[cfg(test)]
-mod cshake_tests {
-    use crate::{sha3::shake_functions::cshake, SecParam, NIST_DATA_SPONGE_INIT};
-
-    #[test]
-    fn test_cshake_256() {
-        let data = NIST_DATA_SPONGE_INIT;
-
-        let n = "";
-        let s = "Email Signature";
-        let res = cshake(&data, 256, n, s, &SecParam::D256).unwrap();
-        let expected: [u8; 32] = [
-            0xc5, 0x22, 0x1d, 0x50, 0xe4, 0xf8, 0x22, 0xd9, 0x6a, 0x2e, 0x88, 0x81, 0xa9, 0x61,
-            0x42, 0x0f, 0x29, 0x4b, 0x7b, 0x24, 0xfe, 0x3d, 0x20, 0x94, 0xba, 0xed, 0x2c, 0x65,
-            0x24, 0xcc, 0x16, 0x6b,
-        ];
-        assert_eq!(expected.to_vec(), res)
-    }
-
-    #[test]
-    fn test_cshake_512() {
-        let data = NIST_DATA_SPONGE_INIT;
-        let n = "";
-        let s = "Email Signature";
-        let res = cshake(&data, 512, n, s, &SecParam::D512).unwrap();
-        let expected: [u8; 64] = [
-            0x07, 0xdc, 0x27, 0xb1, 0x1e, 0x51, 0xfb, 0xac, 0x75, 0xbc, 0x7b, 0x3c, 0x1d, 0x98,
-            0x3e, 0x8b, 0x4b, 0x85, 0xfb, 0x1d, 0xef, 0xaf, 0x21, 0x89, 0x12, 0xac, 0x86, 0x43,
-            0x02, 0x73, 0x09, 0x17, 0x27, 0xf4, 0x2b, 0x17, 0xed, 0x1d, 0xf6, 0x3e, 0x8e, 0xc1,
-            0x18, 0xf0, 0x4b, 0x23, 0x63, 0x3c, 0x1d, 0xfb, 0x15, 0x74, 0xc8, 0xfb, 0x55, 0xcb,
-            0x45, 0xda, 0x8e, 0x25, 0xaf, 0xb0, 0x92, 0xbb,
-        ];
-        assert_eq!(expected.to_vec(), res)
-    }
-}
-
-#[cfg(test)]
-mod kmac_tests {
-    use crate::{kmac_xof, SecParam, NIST_DATA_SPONGE_INIT};
-    #[test]
-    fn test_kmac_256() {
-        let key_str: [u8; 32] = [
-            0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d,
-            0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b,
-            0x5c, 0x5d, 0x5e, 0x5f,
-        ];
-
-        let s_str = "My Tagged Application";
-        let key_bytes = key_str;
-        let data = hex::decode("00010203").unwrap();
-        let res = kmac_xof(key_bytes.as_ref(), &data, 64, s_str, &SecParam::D512).unwrap();
-        let expected = "1755133f1534752a";
-        assert_eq!(hex::encode(res), expected)
-    }
-
-    #[test]
-    fn test_kmac_512() {
-        let key_str: [u8; 32] = [
-            0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d,
-            0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b,
-            0x5c, 0x5d, 0x5e, 0x5f,
-        ];
-        let s_str = "My Tagged Application";
-
-        let key_bytes = key_str;
-        let data = NIST_DATA_SPONGE_INIT;
-        let res = kmac_xof(key_bytes.as_ref(), &data, 512, s_str, &SecParam::D512).unwrap();
-        let expected: [u8; 64] = [
-            0xd5, 0xbe, 0x73, 0x1c, 0x95, 0x4e, 0xd7, 0x73, 0x28, 0x46, 0xbb, 0x59, 0xdb, 0xe3,
-            0xa8, 0xe3, 0x0f, 0x83, 0xe7, 0x7a, 0x4b, 0xff, 0x44, 0x59, 0xf2, 0xf1, 0xc2, 0xb4,
-            0xec, 0xeb, 0xb8, 0xce, 0x67, 0xba, 0x01, 0xc6, 0x2e, 0x8a, 0xb8, 0x57, 0x8d, 0x2d,
-            0x49, 0x9b, 0xd1, 0xbb, 0x27, 0x67, 0x68, 0x78, 0x11, 0x90, 0x02, 0x0a, 0x30, 0x6a,
-            0x97, 0xde, 0x28, 0x1d, 0xcc, 0x30, 0x30, 0x5d,
-        ];
-        assert_eq!(res, expected)
-    }
-}
-
-#[cfg(test)]
-mod decryption_test {
-    // Ensure to test if there are if & else cases: write two tests for each if and else case
-    use crate::{
-        sha3::aux_functions::byte_utils::get_random_bytes, KeyEncryptable, KeyPair, Message,
-        SecParam::D512, SpongeEncryptable,
-    };
-    #[test]
-    /// Testing a security parameters whether the failed decryption preserves
-    /// the original encrypted text. If an encrypted text is decrypted with a wrong password,
-    /// then the original encrypted message should remain the same.
-    ///
-    /// Note: Message were cloned for the test purposes, but in a production setting,
-    /// clone() will not be used, as the operation is done in memory.
-    /// Although a single security parameter is tested,
-    /// it should work on the remaining security parameters.
-    fn test_sha3_decrypt_handling_bad_input() {
-        let pw1 = get_random_bytes(64);
-        let pw2 = get_random_bytes(64);
-
-        // D512
-        let mut new_msg = Message::new(get_random_bytes(523));
-        let _ = new_msg.sha3_encrypt(&pw1, &D512);
-        let msg2 = new_msg.msg.clone();
-        let _ = new_msg.sha3_decrypt(&pw2);
-
-        assert_eq!(msg2, new_msg.msg);
-    }
-
-    #[test]
-    /// Testing a security parameters whether the failed decryption preserves
-    /// the original encrypted text. If an encrypted text is decrypted with a wrong password,
-    /// then the original encrypted message should remain the same.
-    ///
-    /// Note: Message were cloned for the test purposes, but in a production setting,
-    /// clone() will not be used, as the operation is done in memory.
-    /// Although a single security parameter is tested,
-    /// it should work on the remaining security parameters.
-    fn test_key_decrypt_handling_bad_input() {
-        let mut new_msg = Message::new(get_random_bytes(125));
-
-        // D512
-        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512).unwrap();
-        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), &D512).unwrap();
-
-        let _ = new_msg.key_encrypt(&key_pair1.pub_key, &D512);
-        let new_msg2 = new_msg.msg.clone();
-        let _ = new_msg.key_decrypt(&key_pair2.priv_key);
-
-        assert_eq!(*new_msg.msg, *new_msg2, "Message after reverting a failed decryption does not match the original encrypted message");
-    }
-}
-
-#[cfg(test)]
 mod shake_tests {
     use crate::{Hashable, Message, SecParam};
 
@@ -385,5 +254,83 @@ mod shake_tests {
             .as_ref()
             .map(|digest| *digest == expected.to_vec())
             .unwrap_or(false));
+    }
+}
+
+#[cfg(test)]
+mod cshake_tests {
+    use crate::{sha3::shake_functions::cshake, SecParam, NIST_DATA_SPONGE_INIT};
+
+    #[test]
+    fn test_cshake_256() {
+        let data = NIST_DATA_SPONGE_INIT;
+
+        let n = "";
+        let s = "Email Signature";
+        let res = cshake(&data, 256, n, s, &SecParam::D256).unwrap();
+        let expected: [u8; 32] = [
+            0xc5, 0x22, 0x1d, 0x50, 0xe4, 0xf8, 0x22, 0xd9, 0x6a, 0x2e, 0x88, 0x81, 0xa9, 0x61,
+            0x42, 0x0f, 0x29, 0x4b, 0x7b, 0x24, 0xfe, 0x3d, 0x20, 0x94, 0xba, 0xed, 0x2c, 0x65,
+            0x24, 0xcc, 0x16, 0x6b,
+        ];
+        assert_eq!(expected.to_vec(), res)
+    }
+
+    #[test]
+    fn test_cshake_512() {
+        let data = NIST_DATA_SPONGE_INIT;
+        let n = "";
+        let s = "Email Signature";
+        let res = cshake(&data, 512, n, s, &SecParam::D512).unwrap();
+        let expected: [u8; 64] = [
+            0x07, 0xdc, 0x27, 0xb1, 0x1e, 0x51, 0xfb, 0xac, 0x75, 0xbc, 0x7b, 0x3c, 0x1d, 0x98,
+            0x3e, 0x8b, 0x4b, 0x85, 0xfb, 0x1d, 0xef, 0xaf, 0x21, 0x89, 0x12, 0xac, 0x86, 0x43,
+            0x02, 0x73, 0x09, 0x17, 0x27, 0xf4, 0x2b, 0x17, 0xed, 0x1d, 0xf6, 0x3e, 0x8e, 0xc1,
+            0x18, 0xf0, 0x4b, 0x23, 0x63, 0x3c, 0x1d, 0xfb, 0x15, 0x74, 0xc8, 0xfb, 0x55, 0xcb,
+            0x45, 0xda, 0x8e, 0x25, 0xaf, 0xb0, 0x92, 0xbb,
+        ];
+        assert_eq!(expected.to_vec(), res)
+    }
+}
+
+#[cfg(test)]
+mod kmac_tests {
+    use crate::{kmac_xof, SecParam, NIST_DATA_SPONGE_INIT};
+    #[test]
+    fn test_kmac_256() {
+        let key_str: [u8; 32] = [
+            0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d,
+            0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b,
+            0x5c, 0x5d, 0x5e, 0x5f,
+        ];
+
+        let s_str = "My Tagged Application";
+        let key_bytes = key_str;
+        let data = hex::decode("00010203").unwrap();
+        let res = kmac_xof(key_bytes.as_ref(), &data, 64, s_str, &SecParam::D512).unwrap();
+        let expected = "1755133f1534752a";
+        assert_eq!(hex::encode(res), expected)
+    }
+
+    #[test]
+    fn test_kmac_512() {
+        let key_str: [u8; 32] = [
+            0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d,
+            0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b,
+            0x5c, 0x5d, 0x5e, 0x5f,
+        ];
+        let s_str = "My Tagged Application";
+
+        let key_bytes = key_str;
+        let data = NIST_DATA_SPONGE_INIT;
+        let res = kmac_xof(key_bytes.as_ref(), &data, 512, s_str, &SecParam::D512).unwrap();
+        let expected: [u8; 64] = [
+            0xd5, 0xbe, 0x73, 0x1c, 0x95, 0x4e, 0xd7, 0x73, 0x28, 0x46, 0xbb, 0x59, 0xdb, 0xe3,
+            0xa8, 0xe3, 0x0f, 0x83, 0xe7, 0x7a, 0x4b, 0xff, 0x44, 0x59, 0xf2, 0xf1, 0xc2, 0xb4,
+            0xec, 0xeb, 0xb8, 0xce, 0x67, 0xba, 0x01, 0xc6, 0x2e, 0x8a, 0xb8, 0x57, 0x8d, 0x2d,
+            0x49, 0x9b, 0xd1, 0xbb, 0x27, 0x67, 0x68, 0x78, 0x11, 0x90, 0x02, 0x0a, 0x30, 0x6a,
+            0x97, 0xde, 0x28, 0x1d, 0xcc, 0x30, 0x30, 0x5d,
+        ];
+        assert_eq!(res, expected)
     }
 }

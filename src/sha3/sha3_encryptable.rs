@@ -1,9 +1,8 @@
+use super::shake_functions::kmac_xof;
 use crate::{
     sha3::aux_functions::byte_utils::{get_random_bytes, xor_bytes},
     Message, OperationError, SecParam, SpongeEncryptable,
 };
-
-use super::shake_functions::kmac_xof;
 
 impl SpongeEncryptable for Message {
     /// # Symmetric Encryption
