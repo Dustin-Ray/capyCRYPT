@@ -3,9 +3,26 @@ use crate::{
         aux_functions::byte_utils::{bytes_to_scalar, scalar_to_bytes},
         shake_functions::kmac_xof,
     },
-    KeyPair, Message, OperationError, SecParam, Signable, Signature,
+    Message, OperationError, SecParam,
 };
+use serde::{Deserialize, Serialize};
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
+
+use super::keypair::KeyPair;
+
+pub trait Signable {
+    fn sign(&mut self, key: &KeyPair, d: &SecParam) -> Result<(), OperationError>;
+    fn verify(&mut self, pub_key: &ExtendedPoint) -> Result<(), OperationError>;
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+/// An object containing the necessary fields for Schnorr signatures.
+pub struct Signature {
+    /// keyed hash of signed message
+    pub h: Vec<u8>,
+    /// public nonce
+    pub z: Scalar,
+}
 
 impl Signable for Message {
     /// # Schnorr Signatures

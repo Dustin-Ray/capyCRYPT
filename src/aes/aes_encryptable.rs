@@ -1,9 +1,16 @@
 use crate::{
     aes::aes_functions::{apply_pcks7_padding, remove_pcks7_padding, xor_blocks, AES},
     sha3::{aux_functions::byte_utils::get_random_bytes, shake_functions::kmac_xof},
-    AesEncryptable, Message, OperationError, SecParam,
+    Message, OperationError, SecParam,
 };
 use rayon::prelude::*;
+
+pub trait AesEncryptable {
+    fn aes_encrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError>;
+    fn aes_decrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError>;
+    fn aes_encrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError>;
+    fn aes_decrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError>;
+}
 
 impl AesEncryptable for Message {
     /// # Symmetric Encryption using AES in CBC Mode

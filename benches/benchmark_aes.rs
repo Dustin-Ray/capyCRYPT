@@ -1,6 +1,7 @@
+use capycrypt::aes::aes_encryptable::AesEncryptable;
 use capycrypt::aes::aes_functions::{apply_pcks7_padding, remove_pcks7_padding};
 use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-use capycrypt::{AesEncryptable, Message};
+use capycrypt::Message;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use rand::{distributions::Alphanumeric, Rng};
 

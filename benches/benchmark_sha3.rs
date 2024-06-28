@@ -1,4 +1,5 @@
-use capycrypt::{Hashable, Message, SecParam};
+use capycrypt::sha3::sha3_hashable::Hashable;
+use capycrypt::{Message, SecParam};
 
 use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
 use capycrypt::SecParam::D256;

@@ -1,4 +1,4 @@
-use capycrypt::{Hashable, KeyPair, Message, SecParam};
+use capycrypt::{ecc::keypair::KeyPair, sha3::sha3_hashable::Hashable, Message, SecParam};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]

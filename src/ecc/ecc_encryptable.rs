@@ -3,9 +3,14 @@ use crate::{
         aux_functions::byte_utils::{bytes_to_scalar, get_random_bytes, xor_bytes},
         shake_functions::kmac_xof,
     },
-    KeyEncryptable, Message, OperationError, SecParam,
+    Message, OperationError, SecParam,
 };
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
+
+pub trait KeyEncryptable {
+    fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: &SecParam) -> Result<(), OperationError>;
+    fn key_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError>;
+}
 
 impl KeyEncryptable for Message {
     /// # Asymmetric Encryption

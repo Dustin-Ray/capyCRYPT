@@ -4,8 +4,12 @@ pub mod ops_tests {
     use tempfile::tempdir;
 
     use capycrypt::{
-        sha3::aux_functions::byte_utils::get_random_bytes, KEMEncryptable, KEMKey, KeyEncryptable,
-        KeyPair, Message, SecParam, Signable, SpongeEncryptable,
+        ecc::{ecc_encryptable::KeyEncryptable, ecc_signable::Signable, keypair::KeyPair},
+        mlkem::kem_encryptable::{KEMEncryptable, KEMKey},
+        sha3::{
+            aux_functions::byte_utils::get_random_bytes, sponge_encryptable::SpongeEncryptable,
+        },
+        Message, SecParam,
     };
 
     #[test]
@@ -192,9 +196,12 @@ pub mod ops_tests {
 
 #[cfg(test)]
 mod decryption_test {
+    use capycrypt::ecc::ecc_encryptable::KeyEncryptable;
+    use capycrypt::ecc::keypair::KeyPair;
     use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
+    use capycrypt::sha3::sponge_encryptable::SpongeEncryptable;
+    use capycrypt::Message;
     use capycrypt::SecParam::D512;
-    use capycrypt::{KeyEncryptable, KeyPair, Message, SpongeEncryptable};
 
     /// Testing a security parameters whether the failed decryption preserves
     /// the original encrypted text. If an encrypted text is decrypted with a wrong password,

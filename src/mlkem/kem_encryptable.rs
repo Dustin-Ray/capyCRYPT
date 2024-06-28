@@ -3,13 +3,39 @@ use crate::{
         aux_functions::byte_utils::{get_random_bytes, xor_bytes},
         shake_functions::kmac_xof,
     },
-    KEMEncryptable, KEMKey, Message, OperationError, SecParam,
+    Message, OperationError, SecParam,
 };
 use capy_kem::{
     constants::parameter_sets::KEM_768,
-    fips203::{decrypt::k_pke_decrypt, encrypt::k_pke_encrypt},
+    fips203::{decrypt::k_pke_decrypt, encrypt::k_pke_encrypt, keygen::k_pke_keygen},
 };
 use rand::{thread_rng, RngCore};
+use serde::{Deserialize, Serialize};
+
+pub trait KEMEncryptable {
+    fn kem_encrypt(&mut self, key: &KEMKey, d: &SecParam) -> Result<(), OperationError>;
+    fn kem_decrypt(&mut self, key: &KEMKey) -> Result<(), OperationError>;
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct KEMKey {
+    pub ek: Vec<u8>,
+    pub dk: Vec<u8>,
+    pub rand_bytes: [u8; 32],
+}
+
+impl KEMKey {
+    pub fn kem_keygen() -> KEMKey {
+        let mut rng = thread_rng();
+        let mut rand_bytes = [0u8; 32];
+
+        // generate randomness for the KEM
+        rng.fill_bytes(&mut rand_bytes);
+        let (ek, dk) = k_pke_keygen::<KEM_768>(&rand_bytes);
+
+        KEMKey { ek, dk, rand_bytes }
+    }
+}
 
 impl KEMEncryptable for Message {
     fn kem_encrypt(&mut self, key: &KEMKey, d: &SecParam) -> Result<(), OperationError> {

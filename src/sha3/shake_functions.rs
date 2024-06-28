@@ -110,7 +110,7 @@ pub fn kmac_xof(
 /// TESTS
 #[cfg(test)]
 mod shake_tests {
-    use crate::{Hashable, Message, SecParam};
+    use crate::{sha3::sha3_hashable::Hashable, Message, SecParam};
 
     #[test]
     fn test_shake_224() {
@@ -295,7 +295,8 @@ mod cshake_tests {
 
 #[cfg(test)]
 mod kmac_tests {
-    use crate::{kmac_xof, SecParam, NIST_DATA_SPONGE_INIT};
+    use crate::sha3::shake_functions::kmac_xof;
+    use crate::{SecParam, NIST_DATA_SPONGE_INIT};
     #[test]
     fn test_kmac_256() {
         let key_str: [u8; 32] = [

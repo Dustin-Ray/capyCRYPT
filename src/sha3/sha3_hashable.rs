@@ -1,6 +1,11 @@
-use crate::{BitLength, Hashable, Message, OperationError, SecParam};
+use crate::{BitLength, Message, OperationError, SecParam};
 
 use super::shake_functions::{kmac_xof, shake};
+
+pub trait Hashable {
+    fn compute_hash_sha3(&mut self, d: &SecParam) -> Result<(), OperationError>;
+    fn compute_tagged_hash(&mut self, pw: &[u8], s: &str, d: &SecParam);
+}
 
 impl Hashable for Message {
     /// # Message Digest
