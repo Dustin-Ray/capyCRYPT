@@ -41,7 +41,7 @@ impl KeyPair {
     /// and the nonce 𝑈: hash (𝑚, 𝑈, 𝑉) .
     #[allow(non_snake_case)]
     pub fn new(pw: &[u8], owner: String, d: &SecParam) -> Result<KeyPair, OperationError> {
-        let data = kmac_xof(pw, &[], 448, "SK", d)?;
+        let data = kmac_xof(pw, &[], 448, "SK", d);
         let s: Scalar = bytes_to_scalar(data).mul_mod(&Scalar::from(4_u64));
         let V = ExtendedPoint::generator() * s;
         Ok(KeyPair {

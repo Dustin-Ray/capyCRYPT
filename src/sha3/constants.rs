@@ -1,4 +1,4 @@
-use crate::{OperationError, SecParam};
+use crate::SecParam;
 
 pub const RATE_IN_BYTES: usize = 136; // SHA3-256 r = 1088 / 8 = 136
 
@@ -35,7 +35,7 @@ pub(crate) enum Capacity {
 
 impl Capacity {
     /// This function effectively maps a given bit length to the appropriate capacity value enum variant,
-    pub(crate) fn from_bit_length(bit_length: u64) -> Self {
+    pub(crate) fn from_bit_length(bit_length: usize) -> Self {
         match bit_length * 2 {
             x if x <= 448 => Capacity::C448,
             x if x <= 512 => Capacity::C512,
@@ -45,31 +45,16 @@ impl Capacity {
     }
 }
 
-/// OutputLength struct for storing the output length.
-pub struct OutputLength {
-    value: u64,
-}
-
-impl OutputLength {
-    const MAX_VALUE: u64 = u64::MAX;
-
-    pub fn try_from(value: u64) -> Result<Self, OperationError> {
-        if value < Self::MAX_VALUE {
-            Ok(OutputLength { value })
-        } else {
-            Err(OperationError::UnsupportedSecurityParameter)
-        }
-    }
-
-    pub fn value(&self) -> u64 {
-        self.value
+impl BitLength for Capacity {
+    fn bit_length(&self) -> usize {
+        *self as usize
     }
 }
 
 /// Rate struct for storing the rate value.
 /// Rate is the number of input bits processed per invocation of the underlying function in sponge construction.
 pub struct Rate {
-    value: u64,
+    value: usize,
 }
 
 impl Rate {
@@ -80,35 +65,23 @@ impl Rate {
         }
     }
 
-    pub fn value(&self) -> u64 {
+    pub fn value(&self) -> usize {
         self.value
     }
 }
 
 pub trait BitLength {
-    fn bit_length(&self) -> u64;
-}
-
-impl BitLength for Capacity {
-    fn bit_length(&self) -> u64 {
-        *self as u64
-    }
+    fn bit_length(&self) -> usize;
 }
 
 impl BitLength for SecParam {
-    fn bit_length(&self) -> u64 {
-        *self as u64
+    fn bit_length(&self) -> usize {
+        *self as usize
     }
 }
 
 impl BitLength for Rate {
-    fn bit_length(&self) -> u64 {
+    fn bit_length(&self) -> usize {
         self.value
-    }
-}
-
-impl BitLength for OutputLength {
-    fn bit_length(&self) -> u64 {
-        self.value()
     }
 }

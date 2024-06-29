@@ -37,16 +37,13 @@ impl KeyEncryptable for Message {
         let w = (*pub_key * k).to_affine();
         let Z = (ExtendedPoint::generator() * k).to_affine();
 
-        let ke_ka = kmac_xof(&w.x.to_bytes(), &[], 448 * 2, "PK", d)?;
+        let ke_ka = kmac_xof(&w.x.to_bytes(), &[], 448 * 2, "PK", d);
         let (ke, ka) = ke_ka.split_at(ke_ka.len() / 2);
 
         let t = kmac_xof(ka, &self.msg, 448, "PKA", d);
 
         let msg_len = self.msg.len();
-        xor_bytes(
-            &mut self.msg,
-            &kmac_xof(ke, &[], (msg_len * 8) as u64, "PKE", d)?,
-        );
+        xor_bytes(&mut self.msg, &kmac_xof(ke, &[], msg_len * 8, "PKE", d));
 
         self.digest = t;
         self.asym_nonce = Some(Z.to_extended());
@@ -85,19 +82,19 @@ impl KeyEncryptable for Message {
             .as_ref()
             .ok_or(OperationError::SecurityParameterNotSet)?;
 
-        let s_bytes = kmac_xof(pw, &[], 448, "SK", d)?;
+        let s_bytes = kmac_xof(pw, &[], 448, "SK", d);
         let s = bytes_to_scalar(s_bytes).mul_mod(&Scalar::from(4_u64));
         let Z = (Z * s).to_affine();
 
-        let ke_ka = kmac_xof(&Z.x.to_bytes(), &[], 448 * 2, "PK", d)?;
+        let ke_ka = kmac_xof(&Z.x.to_bytes(), &[], 448 * 2, "PK", d);
         let (ke, ka) = ke_ka.split_at(ke_ka.len() / 2);
 
-        let xor_result = kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "PKE", d)?;
+        let xor_result = kmac_xof(ke, &[], self.msg.len() * 8, "PKE", d);
         xor_bytes(&mut self.msg, &xor_result);
 
-        let t_p = kmac_xof(ka, &self.msg, 448, "PKA", d)?;
+        let t_p = kmac_xof(ka, &self.msg, 448, "PKA", d);
 
-        self.op_result = if self.digest.as_ref() == Ok(&t_p) {
+        self.op_result = if self.digest == t_p {
             Ok(())
         } else {
             // revert back to the encrypted message

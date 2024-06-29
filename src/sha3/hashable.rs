@@ -5,12 +5,12 @@ use super::{
     shake_functions::{kmac_xof, shake},
 };
 
-pub trait Hashable {
+pub trait SpongeHashable {
     fn compute_sha3_hash(&mut self, d: &SecParam) -> Result<(), OperationError>;
     fn compute_tagged_hash(&mut self, pw: &[u8], s: &str, d: &SecParam);
 }
 
-impl Hashable for Message {
+impl SpongeHashable for Message {
     /// # Message Digest
     /// Computes SHA3-d hash of input. Does not consume input.
     /// Replaces `Message.digest` with result of operation.

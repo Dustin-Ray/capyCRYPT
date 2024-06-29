@@ -35,12 +35,12 @@ impl KEMEncryptable for Message {
         let mut ke_ka = z.clone();
         ke_ka.extend_from_slice(&secret);
 
-        let ke_ka = kmac_xof(&ke_ka, &[], 1024, "S", d)?;
+        let ke_ka = kmac_xof(&ke_ka, &[], 1024, "S", d);
         let (ke, ka) = ke_ka.split_at(64);
 
         self.digest = kmac_xof(ka, &self.msg, 512, "KEMKA", d);
 
-        let m = kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "KEMKE", d)?;
+        let m = kmac_xof(ke, &[], self.msg.len() * 8, "KEMKE", d);
         xor_bytes(&mut self.msg, &m);
 
         self.sym_nonce = Some(z);
@@ -67,19 +67,15 @@ impl KEMEncryptable for Message {
             .clone();
         z_pw.extend_from_slice(&dec);
 
-        let ke_ka = kmac_xof(&z_pw, &[], 1024, "S", d)?;
+        let ke_ka = kmac_xof(&z_pw, &[], 1024, "S", d);
         let (ke, ka) = ke_ka.split_at(64);
 
-        let m = kmac_xof(ke, &[], (self.msg.len() * 8) as u64, "KEMKE", d)?;
+        let m = kmac_xof(ke, &[], self.msg.len() * 8, "KEMKE", d);
         xor_bytes(&mut self.msg, &m);
 
-        let new_t = kmac_xof(ka, &self.msg, 512, "KEMKA", d)?;
+        let new_t = kmac_xof(ka, &self.msg, 512, "KEMKA", d);
 
-        self.op_result = if self
-            .digest
-            .as_ref()
-            .map_or(false, |digest| digest == &new_t)
-        {
+        self.op_result = if self.digest == new_t {
             Ok(())
         } else {
             xor_bytes(&mut self.msg, &m);

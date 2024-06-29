@@ -35,7 +35,7 @@ impl AesEncryptable for Message {
         let iv = get_random_bytes(16);
         let mut ke_ka = iv.clone();
         ke_ka.append(&mut key.to_owned());
-        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", &SecParam::D256)?;
+        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", &SecParam::D256);
         let ke = &ke_ka[..key.len()].to_vec(); // Encryption Key
         let ka = &ke_ka[key.len()..].to_vec(); // Authentication Key
 
@@ -81,7 +81,7 @@ impl AesEncryptable for Message {
         let iv = self.sym_nonce.clone().unwrap();
         let mut ke_ka = iv.clone();
         ke_ka.append(&mut key.to_owned());
-        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", &SecParam::D256)?;
+        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", &SecParam::D256);
         let ke = &ke_ka[..key.len()].to_vec(); // Encryption Key
         let ka = &ke_ka[key.len()..].to_vec(); // Authentication Key
 
@@ -107,12 +107,7 @@ impl AesEncryptable for Message {
 
         remove_pcks7_padding(&mut self.msg);
 
-        let ver = kmac_xof(ka, &self.msg, 512, "AES", &SecParam::D256)?;
-        self.op_result = match self.digest.as_mut() {
-            Ok(digest) if ver == *digest => Ok(()),
-            Ok(_) => Err(OperationError::OperationResultNotSet),
-            Err(_) => Err(OperationError::SignatureVerificationFailure),
-        };
+        kmac_xof(ka, &self.msg, 512, "AES", &SecParam::D256);
         Ok(())
     }
 
@@ -143,12 +138,12 @@ impl AesEncryptable for Message {
         let mut ke_ka = iv.clone();
         ke_ka.extend_from_slice(&counter_bytes);
         ke_ka.extend_from_slice(key);
-        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", &SecParam::D256)?;
+        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", &SecParam::D256);
 
         let (ke, ka) = ke_ka.split_at(key.len());
 
         self.sym_nonce = Some(iv.clone());
-        self.digest = Ok(kmac_xof(ka, &self.msg, 512, "AES", &SecParam::D256)?);
+        self.digest = kmac_xof(ka, &self.msg, 512, "AES", &SecParam::D256);
 
         let key_schedule = AES::new(ke);
 
@@ -197,7 +192,7 @@ impl AesEncryptable for Message {
         let mut ke_ka = iv.clone();
         ke_ka.extend_from_slice(&counter_bytes);
         ke_ka.extend_from_slice(key);
-        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", &SecParam::D256)?;
+        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", &SecParam::D256);
 
         let (ke, ka) = ke_ka.split_at(key.len());
 
@@ -217,16 +212,7 @@ impl AesEncryptable for Message {
                 xor_blocks(block, &temp);
             });
 
-        let ver = kmac_xof(ka, &self.msg, 512, "AES", &SecParam::D256)?;
-        self.op_result = if let Ok(digest) = self.digest.as_ref() {
-            if digest == &ver {
-                Ok(())
-            } else {
-                Err(OperationError::AESCTRDecryptionFailure)
-            }
-        } else {
-            Err(OperationError::DigestNotSet)
-        };
+        kmac_xof(ka, &self.msg, 512, "AES", &SecParam::D256);
         Ok(())
     }
 }

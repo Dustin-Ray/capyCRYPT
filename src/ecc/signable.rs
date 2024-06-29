@@ -42,17 +42,17 @@ impl Signable for Message {
     /// * Some(key.priv_key)
     #[allow(non_snake_case)]
     fn sign(&mut self, key: &KeyPair, d: &SecParam) -> Result<(), OperationError> {
-        let s_bytes = kmac_xof(&key.priv_key, &[], 448, "SK", d)?;
+        let s_bytes = kmac_xof(&key.priv_key, &[], 448, "SK", d);
         let s = bytes_to_scalar(s_bytes).mul_mod(&Scalar::from(4_u64));
         let s_bytes = scalar_to_bytes(&s);
 
-        let k_bytes = kmac_xof(&s_bytes, &self.msg, 448, "N", d)?;
+        let k_bytes = kmac_xof(&s_bytes, &self.msg, 448, "N", d);
         let k = bytes_to_scalar(k_bytes) * Scalar::from(4_u64);
 
         let U = ExtendedPoint::generator() * k;
         let ux_bytes = U.to_affine().x.to_bytes();
 
-        let h = kmac_xof(&ux_bytes, &self.msg, 448, "T", d)?;
+        let h = kmac_xof(&ux_bytes, &self.msg, 448, "T", d);
         let h_big = bytes_to_scalar(h.clone());
 
         let z = k - h_big.mul_mod(&s);
@@ -84,7 +84,7 @@ impl Signable for Message {
         let h_scalar = bytes_to_scalar(sig.h.clone());
         let U = ExtendedPoint::generator() * sig.z + (*pub_key * h_scalar);
 
-        let h_p = kmac_xof(&U.to_affine().x.to_bytes(), &self.msg, 448, "T", d)?;
+        let h_p = kmac_xof(&U.to_affine().x.to_bytes(), &self.msg, 448, "T", d);
 
         self.op_result = if h_p == sig.h {
             Ok(())

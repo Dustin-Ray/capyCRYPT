@@ -1,4 +1,4 @@
-use capycrypt::{ecc::keypair::KeyPair, sha3::hashable::Hashable, Message, SecParam};
+use capycrypt::{ecc::keypair::KeyPair, sha3::hashable::SpongeHashable, Message, SecParam};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -50,10 +50,7 @@ fn main() {
             data.compute_sha3_hash(&sec_param)
                 .expect("An error occurred during hash computation.");
 
-            match data.digest {
-                Ok(digest) => println!("Hash: {}", hex::encode(digest)),
-                Err(_) => eprintln!("Error: Hash computation failed"),
-            }
+            println!("Hash: {}", hex::encode(data.digest))
         }
 
         Command::NewKeypair {
