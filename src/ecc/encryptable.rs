@@ -8,7 +8,7 @@ use crate::{
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
 
 pub trait KeyEncryptable {
-    fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: SecParam) -> Result<(), OperationError>;
+    fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: SecParam);
     fn key_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError>;
 }
 
@@ -31,7 +31,7 @@ impl KeyEncryptable for Message {
     /// * pub_key: [`ExtendedPoint`] : X coordinate of public key 𝑉
     /// * d: u64: Requested security strength in bits. Can only be 224, 256, 384, or 512.
     #[allow(non_snake_case)]
-    fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: SecParam) -> Result<(), OperationError> {
+    fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: SecParam) {
         self.d = Some(d);
         let k = bytes_to_scalar(&get_random_bytes(56)).mul_mod(&Scalar::from(4_u64));
         let w = (*pub_key * k).to_affine();
@@ -47,7 +47,6 @@ impl KeyEncryptable for Message {
 
         self.digest = t;
         self.asym_nonce = Some(Z.to_extended());
-        Ok(())
     }
 
     /// # Asymmetric Decryption

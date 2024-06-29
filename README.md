@@ -58,7 +58,7 @@ let mut msg = Message::new(get_random_bytes(5242880));
 // Create a new ML-KEM public/private keypair
 let (kem_pub_key, kem_priv_key) = kem_keygen();
 // Encrypt the message
-assert!(msg.kem_encrypt(&kem_pub_key, SecParam::D256).is_ok());
+msg.kem_encrypt(&kem_pub_key, SecParam::D256);
 // Decrypt and verify
 assert!(msg.kem_decrypt(&kem_priv_key).is_ok());
 ```
@@ -81,7 +81,7 @@ let key_pair = KeyPair::new(
     SecParam::D256,         // bit-security for key
 );
 // Encrypt the message
-assert!(msg.key_encrypt(&key_pair.pub_key, SecParam::D256).is_ok());
+msg.key_encrypt(&key_pair.pub_key, SecParam::D256);
 // Decrypt and verify
 assert!(msg.key_decrypt(&key_pair.priv_key).is_ok());
 ```
@@ -99,11 +99,11 @@ let pw = get_random_bytes(16);
 // Get 5mb random data
 let mut msg = Message::new(get_random_bytes(5242880));
 // Encrypt the data
-assert!(msg.aes_encrypt_ctr(&pw).is_ok());
+msg.aes_encrypt_ctr(&pw);
 // Decrypt the data
 assert!(msg.aes_decrypt_ctr(&pw).is_ok());
 // Encrypt the data
-assert!(msg.sha3_encrypt(&pw, SecParam::D512).is_ok());
+msg.sha3_encrypt(&pw, SecParam::D512);
 // Decrypt and verify
 assert!(msg.sha3_decrypt(&pw).is_ok());
 ```
@@ -124,7 +124,7 @@ let key_pair = KeyPair::new(
     SecParam::D256,        // bit-security for key
 );
 // Sign with 128 bits of security
-assert!(msg.sign(&key_pair, SecParam::D256).is_ok());
+msg.sign(&key_pair, SecParam::D256);
 // Verify signature
 assert!(msg.verify(&key_pair.pub_key).is_ok());
 ```
@@ -151,8 +151,11 @@ conducts benchmarks over parameter sets in order from lowest security to highest
 Symmetric operations compare well to openSSL. On an Intel® Core™ i7-10710U × 12, our adaption of in-place keccak from the [XKCP](https://github.com/XKCP/XKCP) achieves a runtime of approximately 20 ms to digest 5mb of random data, vs approximately 17 ms in openSSL.
 
 ## (Plausible) Post-Quantum Security
-This library pairs ML-KEM under the 768-parameter set to a SHA3-sponge construction for a quantum-safe public-key cryptosystem. It offers theoretic quantum-security through the use of the KEM and sponge primitives, which are both based on problems conjectured to be hard to solve for a quantum adversary. Our construction is non-standard, has not been evaluated by experts, and is unaudited. Our MLKEM library itself is a work in progress and only supports the NIST-II security parameter of 768. Furthermore, the current FIPS 203 IPD is, (as the name indicates), a draft, and final details about secure implementation may be subject to change. Our design currently exists in this library purely as an academic curiosity. Use it at your own risk, we provide no guarantee of safety, reliability, or efficiency.
+This library pairs ML-KEM-768 to a SHA3-sponge construction for a quantum-safe public-key cryptosystem. It offers theoretic quantum-security through the use of the KEM and sponge primitives, which are both based on problems conjectured to be hard to solve for a quantum adversary. This design seeds the SHA-3 sponge with the secret shared through the KEM + a session nonce, which then faciliates high-performance symmetric encryption/decryption of arbitrary-length messages.
+
+Our construction is non-standard, has not been subject to peer review, and lacks any formal audit. Our [ML-KEM library](https://github.com/drcapybara/capyKEM) itself is a work in progress and only supports the recommended NIST-II security parameter-set of 768. Furthermore, the current FIPS 203 IPD is, (as the name indicates), a draft, and final details about secure implementation may be subject to change. Our design currently exists in this library purely as an academic curiosity. Use it at your own risk, we provide no guarantee of security, reliability, or efficiency.
 
 ## Acknowledgements
+The authors wish to sincerely thank Dr. Paulo Barreto for the initial design of this library as well as the theoretical backbone of the Edward's curve functionality. We also wish to extend gratitude to the curve-dalek authors [here](https://github.com/crate-crypto/Ed448-Goldilocks) and [here](https://docs.rs/curve25519-dalek/4.1.1/curve25519_dalek/) for the excellent reference implementations and exemplary instances of rock-solid cryptography. 
 
-The authors wish to sincerely thank Dr. Paulo Barreto for the general design of this library as well as the curve functionality. We also wish to extend gratitude to the curve-dalek authors [here](https://github.com/crate-crypto/Ed448-Goldilocks) and [here](https://docs.rs/curve25519-dalek/4.1.1/curve25519_dalek/) for the excellent reference implementations and exemplary instances of rock-solid cryptography.
+Our [KEM](https://github.com/drcapybara/capyKEM) is inspired by the excellent ML-KEM articles and [go implementation](https://pkg.go.dev/filippo.io/mlkem768) by Filippo Valsorda and the always wonderful rust-crypto implementation by the great Tony Arcieri [here](https://crates.io/crates/ml-kem).

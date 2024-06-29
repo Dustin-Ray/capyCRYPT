@@ -80,14 +80,14 @@ fn sym_enc_rust_aes(key: &[u8], data: &[u8]) -> Vec<u8> {
 /// Symmetric encrypt and decrypt roundtrip
 fn sym_cbc_enc(key: &[u8], data: &[u8]) {
     let mut msg = Message::new(data.to_owned());
-    let _ = msg.aes_encrypt_cbc(key);
+    msg.aes_encrypt_cbc(key);
     let _ = msg.aes_decrypt_cbc(key);
 }
 
 /// Symmetric encrypt and decrypt roundtrip for AES in CTR mode
 fn sym_ctr_enc(key: &[u8], data: &[u8]) {
     let mut msg = Message::new(data.to_owned());
-    let _ = msg.aes_encrypt_ctr(key);
+    msg.aes_encrypt_ctr(key);
     let _ = msg.aes_decrypt_ctr(key);
 }
 

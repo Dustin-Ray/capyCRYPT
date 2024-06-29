@@ -14,12 +14,31 @@ use rand::{thread_rng, RngCore};
 use super::keypair::{KEMPrivateKey, KEMPublicKey};
 
 pub trait KEMEncryptable {
-    fn kem_encrypt(&mut self, key: &KEMPublicKey, d: SecParam) -> Result<(), OperationError>;
+    fn kem_encrypt(&mut self, key: &KEMPublicKey, d: SecParam);
     fn kem_decrypt(&mut self, key: &KEMPrivateKey) -> Result<(), OperationError>;
 }
 
 impl KEMEncryptable for Message {
-    fn kem_encrypt(&mut self, key: &KEMPublicKey, d: SecParam) -> Result<(), OperationError> {
+    /// # Key Encapsulation Mechanism (KEM) Encryption
+    /// Encrypts a [`Message`] symmetrically under a KEM public key 𝑉. The KEM keys
+    /// are used to derive a shared secret which seeds the sponge, and is then
+    /// subsequently used for symmetric encryptions.
+    /// ## Replaces:
+    /// * `Message.kem_ciphertext` with the result of encryption using KEM public key 𝑉.
+    /// * `Message.digest` with the keyed hash of the message using components derived from the encryption process.
+    /// * `Message.sym_nonce` with random bytes 𝑧.
+    /// ## Algorithm:
+    /// * Generate a random secret.
+    /// * Encrypt the secret using the KEM public key 𝑉 to generate
+    /// shared secret.
+    /// * Generate a random nonce 𝑧
+    /// * (ke || ka) ← kmac_xof(𝑧 || secret, "", 1024, "S")
+    /// * 𝑐 ← kmac_xof(ke, "", |m|, "SKE") ⊕ m
+    /// * t ← kmac_xof(ka, m, 512, "SKA")
+    /// ## Arguments:
+    /// * `key: &KEMPublicKey`: The public key 𝑉 used for encryption.
+    /// * `d: SecParam`: Security parameters defining the strength of cryptographic operations.
+    fn kem_encrypt(&mut self, key: &KEMPublicKey, d: SecParam) {
         self.d = Some(d);
 
         let mut rng = thread_rng();
@@ -44,15 +63,25 @@ impl KEMEncryptable for Message {
         xor_bytes(&mut self.msg, &m);
 
         self.sym_nonce = Some(z);
-        Ok(())
     }
 
+    /// # Key Encapsulation Mechanism (KEM) Decryption
+    /// Decrypts a [`Message`] using a KEM private key.
+    /// ## Replaces:
+    /// * `Message.msg` with the result of decryption.
+    /// * `Message.op_result` with the result of the comparison of the stored and computed message digests.
+    /// ## Algorithm:
+    /// * Retrieve the KEM ciphertext and decrypt it using the KEM private key to obtain the decrypted secret.
+    /// * Use the stored nonce 𝑧 and decrypted secret to derive two keys (ke and ka) using `kmac_xof`.
+    /// * m ← kmac_xof(ke, "", |c|, "SKE") ⊕ c
+    /// * t′ ← kmac_xof(ka, m, 512, "SKA")
+    /// ## Arguments:
+    /// * `key: &KEMPrivateKey`: The private key used for decryption.
     fn kem_decrypt(&mut self, key: &KEMPrivateKey) -> Result<(), OperationError> {
         let ciphertext = self
             .kem_ciphertext
             .as_ref()
             .ok_or(OperationError::EmptyDecryptionError)?;
-
         let dec = k_pke_decrypt::<KEM_768>(&key.dk, ciphertext);
 
         let d = self.d.ok_or(OperationError::SecurityParameterNotSet)?;
