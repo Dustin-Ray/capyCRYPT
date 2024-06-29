@@ -47,8 +47,7 @@ fn main() {
             let sec_param = SecParam::try_from(bits)
                 .expect("Unsupported security parameter. Use 224, 256, 384, or 512");
 
-            data.compute_sha3_hash(&sec_param)
-                .expect("An error occurred during hash computation.");
+            data.compute_sha3_hash(sec_param);
 
             println!("Hash: {}", hex::encode(data.digest))
         }
@@ -61,7 +60,7 @@ fn main() {
             output,
         } => {
             let sec_param = SecParam::try_from(bits).expect("Unsupported security parameter.");
-            let kp = KeyPair::new(pw.as_bytes(), owner, &sec_param)
+            let kp = KeyPair::new(pw.as_bytes(), owner, sec_param)
                 .expect("Unable to generate the requested key pair");
 
             let _ = kp.write_to_file(&output);

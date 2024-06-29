@@ -102,9 +102,9 @@ pub mod byte_utils {
         local.format("%Y-%m-%d %H:%M:%S").to_string()
     }
 
-    pub(crate) fn bytes_to_scalar(in_bytes: Vec<u8>) -> Scalar {
+    pub(crate) fn bytes_to_scalar(in_bytes: &[u8]) -> Scalar {
         Scalar {
-            val: (U448::from_be_slice(&in_bytes)),
+            val: (U448::from_be_slice(in_bytes)),
         }
     }
 

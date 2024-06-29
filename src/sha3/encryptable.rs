@@ -5,7 +5,7 @@ use crate::{
 };
 
 pub trait SpongeEncryptable {
-    fn sha3_encrypt(&mut self, pw: &[u8], d: &SecParam) -> Result<(), OperationError>;
+    fn sha3_encrypt(&mut self, pw: &[u8], d: SecParam) -> Result<(), OperationError>;
     fn sha3_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError>;
 }
 
@@ -26,8 +26,8 @@ impl SpongeEncryptable for Message {
     /// * `pw: &[u8]`: symmetric encryption key, can be blank but shouldnt be
     /// * `d: u64`: requested security strength in bits. Supported
     /// bitstrengths are 224, 256, 384, or 512.
-    fn sha3_encrypt(&mut self, pw: &[u8], d: &SecParam) -> Result<(), OperationError> {
-        self.d = Some(*d);
+    fn sha3_encrypt(&mut self, pw: &[u8], d: SecParam) -> Result<(), OperationError> {
+        self.d = Some(d);
         let z = get_random_bytes(512);
 
         let mut ke_ka = z.clone();
@@ -47,10 +47,7 @@ impl SpongeEncryptable for Message {
 
     /// # Symmetric Decryption
     /// Decrypts a [`Message`] (z, c, t) under passphrase pw.
-    /// ## Assumes:
-    /// * well-formed encryption
-    /// * Some(Message.t)
-    /// * Some(Message.z)
+
     /// ## Replaces:
     /// * `Message.data` with result of decryption.
     /// * `Message.op_result` with result of comparision of `Message.t` == keyed hash of decryption.
@@ -61,10 +58,7 @@ impl SpongeEncryptable for Message {
     /// ## Arguments:
     /// * `pw: &[u8]`: decryption password, can be blank
     fn sha3_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError> {
-        let d = self
-            .d
-            .as_ref()
-            .ok_or(OperationError::SecurityParameterNotSet)?;
+        let d = self.d.ok_or(OperationError::SecurityParameterNotSet)?;
 
         let mut z_pw = self
             .sym_nonce
@@ -82,13 +76,11 @@ impl SpongeEncryptable for Message {
 
         let new_t = kmac_xof(ka, &self.msg, 512, "SKA", d);
 
-        self.op_result = if self.digest == new_t {
+        if self.digest == new_t {
             Ok(())
         } else {
             xor_bytes(&mut self.msg, &m);
             Err(OperationError::SHA3DecryptionFailure)
-        };
-
-        Ok(())
+        }
     }
 }

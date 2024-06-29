@@ -73,8 +73,6 @@ pub struct Message {
     pub asym_nonce: Option<ExtendedPoint>,
     /// Hash value (also known as message digest)
     pub digest: Vec<u8>,
-    /// Result of the cryptographic trait
-    pub op_result: Result<(), OperationError>,
     /// Schnorr signatures on the input message
     pub sig: Option<Signature>,
     /// ML-KEM encrypted secret as a byte array
@@ -90,7 +88,6 @@ impl Message {
             sym_nonce: None,
             asym_nonce: None,
             digest: vec![],
-            op_result: Ok(()),
             sig: None,
             kem_ciphertext: Some(vec![]),
         }

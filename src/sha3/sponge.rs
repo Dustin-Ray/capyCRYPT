@@ -8,7 +8,7 @@ use super::constants::{BitLength, Rate};
 // * m: message to be absorbed
 // * capacity: security parameter which determines rate = bit_width - capacity
 // * return: a state consisting of 25 words of 64 bits each.
-pub(crate) fn sponge_absorb(m: &mut Vec<u8>, capacity: &impl BitLength) -> [u64; 25] {
+pub(crate) fn sponge_absorb(m: &mut Vec<u8>, capacity: impl BitLength) -> [u64; 25] {
     let c = capacity.bit_length();
     let r = (1600 - c) / 8;
     if (m.len() % r) != 0 {

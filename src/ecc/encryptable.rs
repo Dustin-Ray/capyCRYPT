@@ -8,7 +8,7 @@ use crate::{
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
 
 pub trait KeyEncryptable {
-    fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: &SecParam) -> Result<(), OperationError>;
+    fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: SecParam) -> Result<(), OperationError>;
     fn key_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError>;
 }
 
@@ -28,12 +28,12 @@ impl KeyEncryptable for Message {
     /// * c ← kmac_xof(ke, “”, |m|, “PKE”) ⊕ m
     /// * t ← kmac_xof(ka, m, 448, “PKA”)
     /// ## Arguments:
-    /// * pub_key: [`EdCurvePoint`] : X coordinate of public key 𝑉
+    /// * pub_key: [`ExtendedPoint`] : X coordinate of public key 𝑉
     /// * d: u64: Requested security strength in bits. Can only be 224, 256, 384, or 512.
     #[allow(non_snake_case)]
-    fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: &SecParam) -> Result<(), OperationError> {
-        self.d = Some(*d);
-        let k = bytes_to_scalar(get_random_bytes(56)).mul_mod(&Scalar::from(4_u64));
+    fn key_encrypt(&mut self, pub_key: &ExtendedPoint, d: SecParam) -> Result<(), OperationError> {
+        self.d = Some(d);
+        let k = bytes_to_scalar(&get_random_bytes(56)).mul_mod(&Scalar::from(4_u64));
         let w = (*pub_key * k).to_affine();
         let Z = (ExtendedPoint::generator() * k).to_affine();
 
@@ -55,11 +55,6 @@ impl KeyEncryptable for Message {
     /// Operates under Schnorr/ECDHIES principle in that shared symmetric key is
     /// derived from 𝑍.
     ///
-    /// ## Assumes:
-    /// * well-formed encryption
-    /// * Some(Message.t)
-    /// * Some(Message.z)
-    ///
     /// ## Replaces:
     /// * `Message.data` with result of decryption.
     /// * `Message.op_result` with result of comparision of `Message.t` == keyed hash of decryption.
@@ -77,13 +72,10 @@ impl KeyEncryptable for Message {
     #[allow(non_snake_case)]
     fn key_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError> {
         let Z = self.asym_nonce.ok_or(OperationError::SymNonceNotSet)?;
-        let d = self
-            .d
-            .as_ref()
-            .ok_or(OperationError::SecurityParameterNotSet)?;
+        let d = self.d.ok_or(OperationError::SecurityParameterNotSet)?;
 
         let s_bytes = kmac_xof(pw, &[], 448, "SK", d);
-        let s = bytes_to_scalar(s_bytes).mul_mod(&Scalar::from(4_u64));
+        let s = bytes_to_scalar(&s_bytes).mul_mod(&Scalar::from(4_u64));
         let Z = (Z * s).to_affine();
 
         let ke_ka = kmac_xof(&Z.x.to_bytes(), &[], 448 * 2, "PK", d);
@@ -94,15 +86,11 @@ impl KeyEncryptable for Message {
 
         let t_p = kmac_xof(ka, &self.msg, 448, "PKA", d);
 
-        self.op_result = if self.digest == t_p {
+        if self.digest == t_p {
             Ok(())
         } else {
-            // revert back to the encrypted message
             xor_bytes(&mut self.msg, &xor_result);
-
             Err(OperationError::KeyDecryptionError)
-        };
-
-        Ok(())
+        }
     }
 }

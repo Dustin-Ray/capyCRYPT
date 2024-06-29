@@ -59,10 +59,8 @@ let mut msg = Message::new(get_random_bytes(5242880));
 let (kem_pub_key, kem_priv_key) = kem_keygen();
 // Encrypt the message
 assert!(msg.kem_encrypt(&kem_pub_key, &SecParam::D256).is_ok());
-// Decrypt the message
+// Decrypt and verify
 assert!(msg.kem_decrypt(&kem_priv_key).is_ok());
-// Verify
-assert!(msg.op_result.is_ok());
 ```
 
 ### Elliptic-Curve Encrypt/Decrypt:
@@ -85,10 +83,8 @@ let key_pair = KeyPair::new(
 .unwrap();
 // Encrypt the message
 assert!(msg.key_encrypt(&key_pair.pub_key, &SecParam::D256).is_ok());
-// Decrypt the message
+// Decrypt and verify
 assert!(msg.key_decrypt(&key_pair.priv_key).is_ok());
-// Verify
-assert!(msg.op_result.is_ok());
 ```
 
 ### Symmetric Encrypt/Decrypt:
@@ -99,20 +95,18 @@ use capycrypt::{
     encryptable::SpongeEncryptable},
     Message, SecParam,
 };
-// Get a random 128-bit password
+// Get a random password
 let pw = get_random_bytes(16);
 // Get 5mb random data
 let mut msg = Message::new(get_random_bytes(5242880));
 // Encrypt the data
-assert!(msg.aes_encrypt_cbc(&pw).is_ok());
+assert!(msg.aes_encrypt_ctr(&pw).is_ok());
 // Decrypt the data
-assert!(msg.aes_decrypt_cbc(&pw).is_ok());
+assert!(msg.aes_decrypt_ctr(&pw).is_ok());
 // Encrypt the data
 assert!(msg.sha3_encrypt(&pw, &SecParam::D512).is_ok());
-// Decrypt the data
+// Decrypt and verify
 assert!(msg.sha3_decrypt(&pw).is_ok());
-// Verify operation success
-assert!(msg.op_result.is_ok());
 ```
 
 ### Schnorr Signatures:
@@ -131,7 +125,7 @@ let key_pair = KeyPair::new(
     &SecParam::D256,        // bit-security for key
 )
 .unwrap();
-// Sign with 256 bits of security
+// Sign with 128 bits of security
 assert!(msg.sign(&key_pair, &SecParam::D256).is_ok());
 // Verify signature
 assert!(msg.verify(&key_pair.pub_key).is_ok());
@@ -140,14 +134,13 @@ assert!(msg.verify(&key_pair.pub_key).is_ok());
 ### Compute Digest:
 ```rust
 use capycrypt::{sha3::hashable::SpongeHashable, Message, SecParam};
-
 // Hash the empty string
 let mut data = Message::new(vec![]);
 // Obtained from echo -n "" | openssl dgst -sha3-256
 let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
 // Compute a SHA3 digest with 128 bits of security
-data.compute_sha3_hash(&SecParam::D256).unwrap();
-assert!(hex::encode(data.digest.unwrap()) == expected);
+data.compute_sha3_hash(&SecParam::D256);
+assert!(hex::encode(data.digest) == expected);
 ```
 
 ## Performance

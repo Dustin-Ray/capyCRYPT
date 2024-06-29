@@ -35,11 +35,11 @@ impl AesEncryptable for Message {
         let iv = get_random_bytes(16);
         let mut ke_ka = iv.clone();
         ke_ka.append(&mut key.to_owned());
-        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", &SecParam::D256);
+        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", SecParam::D256);
         let ke = &ke_ka[..key.len()].to_vec(); // Encryption Key
         let ka = &ke_ka[key.len()..].to_vec(); // Authentication Key
 
-        self.digest = kmac_xof(ka, &self.msg, 512, "AES", &SecParam::D256);
+        self.digest = kmac_xof(ka, &self.msg, 512, "AES", SecParam::D256);
         self.sym_nonce = Some(iv.clone());
 
         let key_schedule = AES::new(ke);
@@ -81,7 +81,7 @@ impl AesEncryptable for Message {
         let iv = self.sym_nonce.clone().unwrap();
         let mut ke_ka = iv.clone();
         ke_ka.append(&mut key.to_owned());
-        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", &SecParam::D256);
+        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", SecParam::D256);
         let ke = &ke_ka[..key.len()].to_vec(); // Encryption Key
         let ka = &ke_ka[key.len()..].to_vec(); // Authentication Key
 
@@ -107,7 +107,7 @@ impl AesEncryptable for Message {
 
         remove_pcks7_padding(&mut self.msg);
 
-        kmac_xof(ka, &self.msg, 512, "AES", &SecParam::D256);
+        kmac_xof(ka, &self.msg, 512, "AES", SecParam::D256);
         Ok(())
     }
 
@@ -138,12 +138,12 @@ impl AesEncryptable for Message {
         let mut ke_ka = iv.clone();
         ke_ka.extend_from_slice(&counter_bytes);
         ke_ka.extend_from_slice(key);
-        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", &SecParam::D256);
+        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", SecParam::D256);
 
         let (ke, ka) = ke_ka.split_at(key.len());
 
         self.sym_nonce = Some(iv.clone());
-        self.digest = kmac_xof(ka, &self.msg, 512, "AES", &SecParam::D256);
+        self.digest = kmac_xof(ka, &self.msg, 512, "AES", SecParam::D256);
 
         let key_schedule = AES::new(ke);
 
@@ -192,7 +192,7 @@ impl AesEncryptable for Message {
         let mut ke_ka = iv.clone();
         ke_ka.extend_from_slice(&counter_bytes);
         ke_ka.extend_from_slice(key);
-        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", &SecParam::D256);
+        let ke_ka = kmac_xof(&ke_ka, &[], 512, "AES", SecParam::D256);
 
         let (ke, ka) = ke_ka.split_at(key.len());
 
@@ -212,7 +212,7 @@ impl AesEncryptable for Message {
                 xor_blocks(block, &temp);
             });
 
-        kmac_xof(ka, &self.msg, 512, "AES", &SecParam::D256);
+        kmac_xof(ka, &self.msg, 512, "AES", SecParam::D256);
         Ok(())
     }
 }

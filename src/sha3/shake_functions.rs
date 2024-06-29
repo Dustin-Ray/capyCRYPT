@@ -22,14 +22,14 @@ use super::constants::{BitLength, Capacity, Rate, RATE_IN_BYTES};
 /// * `d: usize`: requested output length and security strength
 /// ## Returns:
 /// * `return  -> Vec<u8>`: SHA3-d message digest
-pub(crate) fn shake(n: &mut Vec<u8>, d: &impl BitLength) -> Vec<u8> {
+pub(crate) fn shake(n: &mut Vec<u8>, d: impl BitLength) -> Vec<u8> {
     let bytes_to_pad = RATE_IN_BYTES - n.len() % RATE_IN_BYTES;
     match bytes_to_pad {
         1 => n.extend_from_slice(&[0x86]), // delim suffix
         _ => n.extend_from_slice(&[0x06]), // delim suffix
     }
     let c = Capacity::from_bit_length(d.bit_length());
-    sponge_squeeze(&mut sponge_absorb(n, &c), d.bit_length(), Rate::from(d))
+    sponge_squeeze(&mut sponge_absorb(n, c), d.bit_length(), Rate::from(&d))
 }
 
 /// # Customizable SHAKE
@@ -58,10 +58,10 @@ pub(crate) fn cshake(x: &[u8], l: usize, n: &str, s: &str, d: SecParam) -> Vec<u
     out.push(0x04);
 
     if n.is_empty() && s.is_empty() {
-        shake(&mut out, &d);
+        shake(&mut out, d);
     }
 
-    sponge_squeeze(&mut sponge_absorb(&mut out, &d), l, Rate::from(&d))
+    sponge_squeeze(&mut sponge_absorb(&mut out, d), l, Rate::from(&d))
 }
 
 /// # Keyed Message Authtentication
@@ -77,7 +77,7 @@ pub(crate) fn cshake(x: &[u8], l: usize, n: &str, s: &str, d: SecParam) -> Vec<u
 ///
 /// ## Returns:
 /// * `return  -> Vec<u8>`: kmac_xof of `x` under `k`
-pub fn kmac_xof(k: &[u8], x: &[u8], l: usize, s: &str, d: &SecParam) -> Vec<u8> {
+pub fn kmac_xof(k: &[u8], x: &[u8], l: usize, s: &str, d: SecParam) -> Vec<u8> {
     let mut encode_k = encode_string(k);
     let bytepad_w = d.bytepad_value();
     let mut bp = byte_pad(&mut encode_k, bytepad_w);
@@ -86,7 +86,7 @@ pub fn kmac_xof(k: &[u8], x: &[u8], l: usize, s: &str, d: &SecParam) -> Vec<u8> 
     bp.extend_from_slice(x);
     bp.extend_from_slice(&right_encode(0)); // SP 800-185 4.3.1 KMAC with Arbitrary-Length Output
 
-    cshake(&bp, l, "KMAC", s, *d)
+    cshake(&bp, l, "KMAC", s, d)
 }
 
 /// TESTS
@@ -102,7 +102,7 @@ mod shake_tests {
             0xb1, 0xab, 0xd4, 0x59, 0x7f, 0x9a, 0x1b, 0x07, 0x8e, 0x3f, 0x5b, 0x5a, 0x6b, 0xc7,
         ];
 
-        assert!(data.compute_sha3_hash(&SecParam::D224).is_ok());
+        data.compute_sha3_hash(SecParam::D224);
         assert!(data.digest == expected.to_vec());
 
         let mut data = Message::new("test".as_bytes().to_vec());
@@ -110,7 +110,7 @@ mod shake_tests {
             0x37, 0x97, 0xbf, 0x0a, 0xfb, 0xbf, 0xca, 0x4a, 0x7b, 0xbb, 0xa7, 0x60, 0x2a, 0x2b,
             0x55, 0x27, 0x46, 0x87, 0x65, 0x17, 0xa7, 0xf9, 0xb7, 0xce, 0x2d, 0xb0, 0xae, 0x7b,
         ];
-        assert!(data.compute_sha3_hash(&SecParam::D224).is_ok());
+        data.compute_sha3_hash(SecParam::D224);
         assert!(data.digest == expected.to_vec());
     }
 
@@ -122,7 +122,7 @@ mod shake_tests {
             0xd6, 0x62, 0xf5, 0x80, 0xff, 0x4d, 0xe4, 0x3b, 0x49, 0xfa, 0x82, 0xd8, 0x0a, 0x4b,
             0x80, 0xf8, 0x43, 0x4a,
         ];
-        assert!(data.compute_sha3_hash(&SecParam::D256).is_ok());
+        data.compute_sha3_hash(SecParam::D256);
         assert!(data.digest == expected.to_vec());
 
         let mut data = Message::new("test".as_bytes().to_vec());
@@ -131,7 +131,7 @@ mod shake_tests {
             0x00, 0xe3, 0x46, 0xe2, 0x76, 0xae, 0x66, 0x4e, 0x45, 0xee, 0x80, 0x74, 0x55, 0x74,
             0xe2, 0xf5, 0xab, 0x80,
         ];
-        assert!(data.compute_sha3_hash(&SecParam::D256).is_ok());
+        data.compute_sha3_hash(SecParam::D256);
         assert!(data.digest == expected.to_vec());
     }
 
@@ -144,7 +144,7 @@ mod shake_tests {
             0xee, 0x98, 0x3a, 0x2a, 0xc3, 0x71, 0x38, 0x31, 0x26, 0x4a, 0xdb, 0x47, 0xfb, 0x6b,
             0xd1, 0xe0, 0x58, 0xd5, 0xf0, 0x04,
         ];
-        assert!(data.compute_sha3_hash(&SecParam::D384).is_ok());
+        data.compute_sha3_hash(SecParam::D384);
         assert!(data.digest == expected.to_vec());
 
         let mut data = Message::new("test".as_bytes().to_vec());
@@ -154,7 +154,7 @@ mod shake_tests {
             0xf0, 0xf1, 0xb4, 0x1e, 0xec, 0xb9, 0xdb, 0x3f, 0xf2, 0x19, 0x00, 0x7c, 0x4e, 0x09,
             0x72, 0x60, 0xd5, 0x86, 0x21, 0xbd,
         ];
-        assert!(data.compute_sha3_hash(&SecParam::D384).is_ok());
+        data.compute_sha3_hash(SecParam::D384);
         assert!(data.digest == expected.to_vec());
     }
 
@@ -168,7 +168,7 @@ mod shake_tests {
             0xf2, 0xe9, 0xb3, 0xca, 0x9f, 0x48, 0x4f, 0x52, 0x1d, 0x0c, 0xe4, 0x64, 0x34, 0x5c,
             0xc1, 0xae, 0xc9, 0x67, 0x79, 0x14, 0x9c, 0x14,
         ];
-        assert!(data.compute_sha3_hash(&SecParam::D512).is_ok());
+        data.compute_sha3_hash(SecParam::D512);
         assert!(data.digest == expected.to_vec());
     }
 
@@ -182,7 +182,7 @@ mod shake_tests {
             0xa4, 0xa3, 0x81, 0x72, 0xbf, 0x11, 0x42, 0xa6, 0xa9, 0xc1, 0x93, 0x0e, 0x50, 0xdf,
             0x03, 0x90, 0x43, 0x12,
         ];
-        data.compute_tagged_hash(&pw, &s, &SecParam::D256);
+        data.compute_tagged_hash(&pw, &s, SecParam::D256);
 
         assert!(data.digest == expected.to_vec());
     }
@@ -198,7 +198,7 @@ mod shake_tests {
             0x63, 0xf4, 0xca, 0x0b, 0x65, 0x83, 0x6f, 0x52, 0x61, 0xee, 0x64, 0x64, 0x4c, 0xe5,
             0xa8, 0x84, 0x56, 0xd3, 0xd3, 0x0e, 0xfb, 0xed,
         ];
-        data.compute_tagged_hash(&pw, "", &SecParam::D512);
+        data.compute_tagged_hash(&pw, "", SecParam::D512);
 
         assert!(data.digest == expected.to_vec());
     }
@@ -259,7 +259,7 @@ mod kmac_tests {
         let s_str = "My Tagged Application";
         let key_bytes = key_str;
         let data = hex::decode("00010203").unwrap();
-        let res = kmac_xof(key_bytes.as_ref(), &data, 64, s_str, &SecParam::D512);
+        let res = kmac_xof(key_bytes.as_ref(), &data, 64, s_str, SecParam::D512);
         let expected = "1755133f1534752a";
         assert_eq!(hex::encode(res), expected)
     }
@@ -275,7 +275,7 @@ mod kmac_tests {
 
         let key_bytes = key_str;
         let data = NIST_DATA_SPONGE_INIT;
-        let res = kmac_xof(key_bytes.as_ref(), &data, 512, s_str, &SecParam::D512);
+        let res = kmac_xof(key_bytes.as_ref(), &data, 512, s_str, SecParam::D512);
         let expected: [u8; 64] = [
             0xd5, 0xbe, 0x73, 0x1c, 0x95, 0x4e, 0xd7, 0x73, 0x28, 0x46, 0xbb, 0x59, 0xdb, 0xe3,
             0xa8, 0xe3, 0x0f, 0x83, 0xe7, 0x7a, 0x4b, 0xff, 0x44, 0x59, 0xf2, 0xf1, 0xc2, 0xb4,
