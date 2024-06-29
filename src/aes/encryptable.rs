@@ -6,9 +6,9 @@ use crate::{
 use rayon::prelude::*;
 
 pub trait AesEncryptable {
-    fn aes_encrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError>;
+    fn aes_encrypt_cbc(&mut self, key: &[u8]);
     fn aes_decrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError>;
-    fn aes_encrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError>;
+    fn aes_encrypt_ctr(&mut self, key: &[u8]);
     fn aes_decrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError>;
 }
 
@@ -31,7 +31,7 @@ impl AesEncryptable for Message {
     /// - C: Represents ciphertext blocks.
     /// ## Arguments:
     /// * `key: &Vec<u8>`: symmetric encryption key.
-    fn aes_encrypt_cbc(&mut self, key: &[u8]) -> Result<(), OperationError> {
+    fn aes_encrypt_cbc(&mut self, key: &[u8]) {
         let iv = get_random_bytes(16);
         let mut ke_ka = iv.clone();
         ke_ka.append(&mut key.to_owned());
@@ -56,7 +56,6 @@ impl AesEncryptable for Message {
         }
 
         self.sym_nonce = Some(iv);
-        Ok(())
     }
 
     /// # Symmetric Decryption using AES in CBC Mode
@@ -130,7 +129,7 @@ impl AesEncryptable for Message {
     /// - C: Represents ciphertext blocks.
     /// ## Arguments:
     /// * `key: &[u8]`: symmetric encryption key.
-    fn aes_encrypt_ctr(&mut self, key: &[u8]) -> Result<(), OperationError> {
+    fn aes_encrypt_ctr(&mut self, key: &[u8]) {
         let iv = get_random_bytes(12);
         let counter = 0u32;
         let counter_bytes = counter.to_be_bytes();
@@ -160,8 +159,6 @@ impl AesEncryptable for Message {
 
                 xor_blocks(block, &temp);
             });
-
-        Ok(())
     }
     /// # Symmetric Decryption using AES in CTR Mode
     /// Decrypts a [`Message`] using the AES algorithm in CTR (Counter) mode.

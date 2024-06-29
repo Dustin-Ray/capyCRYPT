@@ -11,7 +11,7 @@ mod aes_modes_tests {
         // Get 5mb random data
         let mut input = Message::new(get_random_bytes(5242880));
 
-        let _ = input.aes_encrypt_cbc(&key); // Encrypt the input
+        input.aes_encrypt_cbc(&key); // Encrypt the input
         assert!(input.aes_decrypt_cbc(&key).is_ok()); // Verify operation success
     }
 
@@ -22,7 +22,7 @@ mod aes_modes_tests {
         // Get 5mb random data
         let mut input = Message::new(get_random_bytes(5242880));
 
-        let _ = input.aes_encrypt_cbc(&key); // Encrypt the input
+        input.aes_encrypt_cbc(&key); // Encrypt the input
         assert!(input.aes_decrypt_cbc(&key).is_ok()); // Verify operation success
     }
 
@@ -33,7 +33,7 @@ mod aes_modes_tests {
         // Get 5mb random data
         let mut input = Message::new(get_random_bytes(5242880));
 
-        let _ = input.aes_encrypt_cbc(&key); // Encrypt the input
+        input.aes_encrypt_cbc(&key); // Encrypt the input
         assert!(input.aes_decrypt_cbc(&key).is_ok()); // Verify operation success
     }
 
@@ -44,7 +44,7 @@ mod aes_modes_tests {
         // Get 5mb random data
         let mut input = Message::new(get_random_bytes(5242880));
 
-        let _ = input.aes_encrypt_ctr(&key); // Encrypt the input
+        input.aes_encrypt_ctr(&key); // Encrypt the input
         assert!(input.aes_decrypt_ctr(&key).is_ok()); // Verify operation success
     }
 
@@ -55,7 +55,7 @@ mod aes_modes_tests {
         // Get 5mb random data
         let mut input = Message::new(get_random_bytes(5242880));
 
-        let _ = input.aes_encrypt_ctr(&key); // Encrypt the input
+        input.aes_encrypt_ctr(&key); // Encrypt the input
         assert!(input.aes_decrypt_ctr(&key).is_ok()); // Verify operation success
     }
 
@@ -66,7 +66,7 @@ mod aes_modes_tests {
         // Get 5mb random data
         let mut input = Message::new(get_random_bytes(5242880));
 
-        let _ = input.aes_encrypt_ctr(&key); // Encrypt the input
+        input.aes_encrypt_ctr(&key); // Encrypt the input
         assert!(input.aes_decrypt_ctr(&key).is_ok()); // Verify operation success
     }
 }

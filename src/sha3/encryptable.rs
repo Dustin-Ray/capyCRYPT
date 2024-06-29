@@ -5,7 +5,7 @@ use crate::{
 };
 
 pub trait SpongeEncryptable {
-    fn sha3_encrypt(&mut self, pw: &[u8], d: SecParam) -> Result<(), OperationError>;
+    fn sha3_encrypt(&mut self, pw: &[u8], d: SecParam);
     fn sha3_decrypt(&mut self, pw: &[u8]) -> Result<(), OperationError>;
 }
 
@@ -26,7 +26,7 @@ impl SpongeEncryptable for Message {
     /// * `pw: &[u8]`: symmetric encryption key, can be blank but shouldnt be
     /// * `d: u64`: requested security strength in bits. Supported
     /// bitstrengths are 224, 256, 384, or 512.
-    fn sha3_encrypt(&mut self, pw: &[u8], d: SecParam) -> Result<(), OperationError> {
+    fn sha3_encrypt(&mut self, pw: &[u8], d: SecParam) {
         self.d = Some(d);
         let z = get_random_bytes(512);
 
@@ -42,7 +42,6 @@ impl SpongeEncryptable for Message {
         xor_bytes(&mut self.msg, &m);
 
         self.sym_nonce = Some(z);
-        Ok(())
     }
 
     /// # Symmetric Decryption

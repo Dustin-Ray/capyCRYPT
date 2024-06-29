@@ -12,7 +12,7 @@ pub fn test_kem_enc_512() {
     // Create a new ML-KEM public/private keypair
     let (kem_pub_key, kem_priv_key) = kem_keygen();
     // Encrypt the message
-    assert!(msg.kem_encrypt(&kem_pub_key, SecParam::D256).is_ok());
+    msg.kem_encrypt(&kem_pub_key, SecParam::D256);
     // Decrypt and verify
     assert!(msg.kem_decrypt(&kem_priv_key).is_ok());
 }
@@ -35,7 +35,7 @@ fn test_key_gen_enc_dec_256() {
         SecParam::D256,         // bit-security for key
     );
     // Encrypt the message
-    assert!(msg.key_encrypt(&key_pair.pub_key, SecParam::D256).is_ok());
+    msg.key_encrypt(&key_pair.pub_key, SecParam::D256);
     // Decrypt and verify
     assert!(msg.key_decrypt(&key_pair.priv_key).is_ok());
 }
@@ -55,7 +55,7 @@ fn test_key_gen_enc_dec_512() {
         SecParam::D512,
     );
 
-    assert!(msg.key_encrypt(&key_pair.pub_key, SecParam::D512).is_ok());
+    msg.key_encrypt(&key_pair.pub_key, SecParam::D512);
     assert!(msg.key_decrypt(&key_pair.priv_key).is_ok());
 }
 
@@ -74,8 +74,8 @@ pub fn test_signature_256() {
         "test key".to_string(), // label
         SecParam::D256,         // bit-security for key
     );
-    // Sign with 256 bits of security
-    assert!(msg.sign(&key_pair, SecParam::D256).is_ok());
+    // Sign with 128 bits of security
+    msg.sign(&key_pair, SecParam::D256);
     // Verify signature
     assert!(msg.verify(&key_pair.pub_key).is_ok());
 }
@@ -104,11 +104,11 @@ fn test_symmetric_encryptable() {
     // Get 5mb random data
     let mut msg = Message::new(get_random_bytes(5242880));
     // Encrypt the data
-    assert!(msg.aes_encrypt_ctr(&pw).is_ok());
+    msg.aes_encrypt_ctr(&pw);
     // Decrypt the data
     assert!(msg.aes_decrypt_ctr(&pw).is_ok());
     // Encrypt the data
-    assert!(msg.sha3_encrypt(&pw, SecParam::D512).is_ok());
+    msg.sha3_encrypt(&pw, SecParam::D512);
     // Decrypt and verify
     assert!(msg.sha3_decrypt(&pw).is_ok());
 }
@@ -125,7 +125,7 @@ pub fn test_signature_512() {
     let pw = get_random_bytes(64);
     let key_pair = KeyPair::new(&pw, "test key".to_string(), SecParam::D512);
 
-    assert!(msg.sign(&key_pair, SecParam::D512).is_ok());
+    msg.sign(&key_pair, SecParam::D512);
     assert!(msg.verify(&key_pair.pub_key).is_ok());
 }
 
@@ -149,9 +149,9 @@ fn test_sig_timing_side_channel() {
         let key_pair = KeyPair::new(&pw, "test key".to_string(), SecParam::D512);
 
         let now = Instant::now();
-        let _ = msg.sign(&key_pair, SecParam::D512);
+        msg.sign(&key_pair, SecParam::D512);
         println!("{} needed {} microseconds", i, now.elapsed().as_micros());
-        let _ = msg.verify(&key_pair.pub_key);
+        msg.verify(&key_pair.pub_key).unwrap();
     }
 }
 
@@ -201,7 +201,7 @@ pub fn test_signature_512_read_keypair_from_file() {
     let read_key_pair = KeyPair::read_from_file(temp_file_path.to_str().unwrap())
         .expect("Failed to read key pair from file");
 
-    assert!(msg.sign(&read_key_pair, SecParam::D512).is_ok());
+    msg.sign(&read_key_pair, SecParam::D512);
     assert!(msg.verify(&read_key_pair.pub_key).is_ok());
 }
 
@@ -226,7 +226,7 @@ pub fn test_signature_512_read_message_from_file() {
     let pw = get_random_bytes(64);
     let key_pair = KeyPair::new(&pw, "test key".to_string(), SecParam::D512);
 
-    assert!(initial_msg.sign(&key_pair, SecParam::D512).is_ok());
+    initial_msg.sign(&key_pair, SecParam::D512);
 
     initial_msg
         .write_to_file(temp_file_path.to_str().unwrap())
@@ -256,7 +256,7 @@ mod decryption_test {
 
         // D512
         let mut new_msg = Message::new(get_random_bytes(523));
-        let _ = new_msg.sha3_encrypt(&pw1, D512);
+        new_msg.sha3_encrypt(&pw1, D512);
         let msg2 = new_msg.msg.clone();
         let res = new_msg.sha3_decrypt(&pw2);
 
@@ -275,7 +275,7 @@ mod decryption_test {
         let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), D512);
         let key_pair2 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), D512);
 
-        let _ = new_msg.key_encrypt(&key_pair1.pub_key, D512);
+        new_msg.key_encrypt(&key_pair1.pub_key, D512);
         let new_msg2 = new_msg.msg.clone();
         let res = new_msg.key_decrypt(&key_pair2.priv_key);
 

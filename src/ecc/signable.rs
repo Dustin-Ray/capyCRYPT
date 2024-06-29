@@ -11,7 +11,7 @@ use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scala
 use super::keypair::KeyPair;
 
 pub trait Signable {
-    fn sign(&mut self, key: &KeyPair, d: SecParam) -> Result<(), OperationError>;
+    fn sign(&mut self, key: &KeyPair, d: SecParam);
     fn verify(&mut self, pub_key: &ExtendedPoint) -> Result<(), OperationError>;
 }
 
@@ -38,7 +38,7 @@ impl Signable for Message {
     /// * key: &[`KeyPair`], : reference to KeyPair.
     /// * d: u64: encryption security strength in bits. Can only be 224, 256, 384, or 512.
     #[allow(non_snake_case)]
-    fn sign(&mut self, key: &KeyPair, d: SecParam) -> Result<(), OperationError> {
+    fn sign(&mut self, key: &KeyPair, d: SecParam) {
         let s_bytes = kmac_xof(&key.priv_key, &[], 448, "SK", d);
         let s = bytes_to_scalar(&s_bytes).mul_mod(&Scalar::from(4_u64));
         let s_bytes = scalar_to_bytes(&s);
@@ -55,7 +55,6 @@ impl Signable for Message {
         let z = k - h_big.mul_mod(&s);
         self.sig = Some(Signature { h, z });
         self.d = Some(d);
-        Ok(())
     }
 
     /// # Signature Verification
