@@ -1,4 +1,4 @@
-use capycrypt::sha3::hashable::Hashable;
+use capycrypt::sha3::hashable::SpongeHashable;
 use capycrypt::{Message, SecParam};
 
 use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
@@ -9,7 +9,7 @@ const BIT_SECURITY: SecParam = D256;
 
 /// hash 5mb of random data with 128 bits of security
 fn sha3_digest(mut msg: Message) {
-    let _ = msg.compute_sha3_hash(&BIT_SECURITY);
+    msg.compute_sha3_hash(BIT_SECURITY);
 }
 
 fn bench_sha3_digest(c: &mut Criterion) {

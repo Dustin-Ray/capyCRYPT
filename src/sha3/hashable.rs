@@ -1,25 +1,24 @@
-use crate::{Message, OperationError, SecParam};
+use crate::{Message, SecParam};
 
 use super::{
     constants::BitLength,
     shake_functions::{kmac_xof, shake},
 };
 
-pub trait Hashable {
-    fn compute_sha3_hash(&mut self, d: &SecParam) -> Result<(), OperationError>;
-    fn compute_tagged_hash(&mut self, pw: &[u8], s: &str, d: &SecParam);
+pub trait SpongeHashable {
+    fn compute_sha3_hash(&mut self, d: SecParam);
+    fn compute_tagged_hash(&mut self, pw: &[u8], s: &str, d: SecParam);
 }
 
-impl Hashable for Message {
+impl SpongeHashable for Message {
     /// # Message Digest
     /// Computes SHA3-d hash of input. Does not consume input.
     /// Replaces `Message.digest` with result of operation.
     /// ## Arguments:
     /// * `d: u64`: requested security strength in bits. Supported
     /// bitstrengths are 224, 256, 384, or 512.
-    fn compute_sha3_hash(&mut self, d: &SecParam) -> Result<(), OperationError> {
-        self.digest = shake(&mut self.msg, d);
-        Ok(())
+    fn compute_sha3_hash(&mut self, d: SecParam) {
+        self.digest = shake(&mut self.msg, d)
     }
 
     /// # Tagged Hash
@@ -32,7 +31,7 @@ impl Hashable for Message {
     /// * `s: &mut str`: domain seperation string
     /// * `d: u64`: requested security strength in bits. Supported
     /// bitstrengths are 224, 256, 384, or 512.
-    fn compute_tagged_hash(&mut self, pw: &[u8], s: &str, d: &SecParam) {
+    fn compute_tagged_hash(&mut self, pw: &[u8], s: &str, d: SecParam) {
         self.digest = kmac_xof(pw, &self.msg, d.bit_length(), s, d);
     }
 }

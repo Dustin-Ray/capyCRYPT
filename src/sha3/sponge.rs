@@ -8,13 +8,13 @@ use super::constants::{BitLength, Rate};
 // * m: message to be absorbed
 // * capacity: security parameter which determines rate = bit_width - capacity
 // * return: a state consisting of 25 words of 64 bits each.
-pub(crate) fn sponge_absorb<S: BitLength + ?Sized>(m: &mut Vec<u8>, capacity: &S) -> [u64; 25] {
+pub(crate) fn sponge_absorb<C: BitLength>(m: &mut Vec<u8>, capacity: C) -> [u64; 25] {
     let c = capacity.bit_length();
-    let r: u64 = (1600 - c) / 8;
-    if (m.len() % r as usize) != 0 {
-        pad_ten_one(m, r as usize);
+    let r = (1600 - c) / 8;
+    if (m.len() % r) != 0 {
+        pad_ten_one(m, r);
     }
-    bytes_to_state(m, r as usize)
+    bytes_to_state(m, r)
 }
 
 // Finalizes a state.
@@ -23,18 +23,14 @@ pub(crate) fn sponge_absorb<S: BitLength + ?Sized>(m: &mut Vec<u8>, capacity: &S
 // * bit_length: requested output length in bits
 // * rate: security parameter
 // * return: digest of permuted states of length `bit_length`.
-pub(crate) fn sponge_squeeze<S: BitLength + ?Sized>(
-    s: &mut [u64; 25],
-    bit_length: &S,
-    rate: Rate,
-) -> Vec<u8> {
+pub(crate) fn sponge_squeeze(s: &mut [u64; 25], bit_length: usize, rate: Rate) -> Vec<u8> {
     let mut out: Vec<u8> = Vec::new(); //FIPS 202 Algorithm 8 Step 8
-    let block_size: usize = (rate.value() / 64) as usize;
-    while out.len() * 8 < bit_length.bit_length() as usize {
+    let block_size: usize = rate.value() / 64;
+    while out.len() * 8 < bit_length {
         out.append(&mut state_to_byte_array(&s[0..block_size]));
         keccakf_1600(s); //FIPS 202 Algorithm 8 Step 10
     }
-    out.truncate((bit_length.bit_length() / 8) as usize);
+    out.truncate(bit_length / 8);
     out
 }
 

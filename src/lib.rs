@@ -72,9 +72,7 @@ pub struct Message {
     /// Nonce used in asymmetric encryption
     pub asym_nonce: Option<ExtendedPoint>,
     /// Hash value (also known as message digest)
-    pub digest: Result<Vec<u8>, OperationError>,
-    /// Result of the cryptographic trait
-    pub op_result: Result<(), OperationError>,
+    pub digest: Vec<u8>,
     /// Schnorr signatures on the input message
     pub sig: Option<Signature>,
     /// ML-KEM encrypted secret as a byte array
@@ -89,8 +87,7 @@ impl Message {
             d: None,
             sym_nonce: None,
             asym_nonce: None,
-            digest: Ok(vec![]),
-            op_result: Ok(()),
+            digest: vec![],
             sig: None,
             kem_ciphertext: Some(vec![]),
         }
@@ -145,10 +142,14 @@ impl SecParam {
             SecParam::D512 => 136,
         }
     }
+}
 
-    pub fn validate(&self) -> Result<(), OperationError> {
-        match self {
-            SecParam::D224 | SecParam::D256 | SecParam::D384 | SecParam::D512 => Ok(()),
-        }
+pub trait BitLength {
+    fn bit_length(&self) -> u64;
+}
+
+impl BitLength for SecParam {
+    fn bit_length(&self) -> u64 {
+        *self as u64
     }
 }

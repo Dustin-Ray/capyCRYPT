@@ -8,26 +8,34 @@
 [![Crates.io](https://img.shields.io/crates/v/capycrypt?style=flat-square)](https://crates.io/crates/capycrypt)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/drcapybara/capyCRYPT/blob/master/LICENSE.txt) 
 
-A complete Rust cryptosystem implementing [NIST FIPS 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf) & [NIST FIPS 197](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf) paired to the ed448 Golidlocks curve.
+A complete Rust cryptosystem implementing: 
+
+- AES: [NIST FIPS 197](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf)
+- SHA3: [NIST FIPS 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf) 
+- ML-KEM: [NIST FIPS 203](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.ipd.pdf)
+- E448: [Ed448-Goldilocks Curve](https://eprint.iacr.org/2015/625.pdf)
+
+These primitives form the basis of a platform supporting a wide variety of cryptographic operations, which are detailed below.
 
 ## Security
-This library is built with love as an academic excercise in cryptographic algorithm design. Despite how awesome and cool it is, it probably shouldn't be used for anything serious. If you find ways to make it even better, open an issue or PR and we'll gladly engage.
-
+This library is built with love as an academic excercise in cryptographic algorithm design. Despite how awesome and cool it is, it probably shouldn't be used for anything serious right now. If you find ways to make it even better, open an issue or PR and we'll gladly engage.
 
 ## Features
-- **AES:** NIST-Compliant Advanced Encryption Standard (AES) implementation for encrypting and decrypting data.
+- **AES:** NIST-Compliant **Advanced Encryption Standard** (AES) implementation for encrypting and decrypting data.
 
-- **Edwards Elliptic Curve:** High-performance, side-channel resistant instance of the [Ed448-Goldilocks](https://crates.io/crates/tiny_ed448_goldilocks) curve for asymmetric operations.
+- **Edwards Elliptic Curve:** High-performance, side-channel resistant instance of the **Ed448-Goldilocks** curve for asymmetric operations.
 
-- **SHA-3:** NIST-Compliant Secure Hash Algorithm 3 (SHA-3) implementation for generating cryptographic hash values, symmetric keystreams, and PRNGs.
+- **SHA-3:** NIST-Compliant **Secure Hash Algorithm 3** (SHA-3) implementation for generating cryptographic hash values, symmetric keystreams, and PRNGs.
 
+- **ML-KEM 768:** NIST Initial Public Draft (IPD)-Compliant **Module Ring-Learning With Errors Key Encapsulation Mechanism** (ML-KEM) for quantum-safe asymmetric key and message exchange.
 
 ## Supported Operations
 - **Message Digest:** Computes hash of a given message, with adjustable digest lengths.
 - **MACs:** Computes message authentication code of a given message, with adjustable bit security.
 - **Shared Secret Key:** Symmetric message encryption and decryption.
 - **Public Key Cryptography:** Asymmetric message encryption under public key, decryption with secret key.
-- **Zero-Knowledge:** Prove knowledge of secret information with Schnorr/ECDHIES signatures.
+- **Signatures** Prove and verify knowledge of secret information with Schnorr/ECDHIES signatures.
+- **Quantum-Safe Message Exchange:** ML-KEM + SHA3 sponge for quantum-safe symmetric messaging and key exchange.
 
 ## Installation
 Add the following line to your `Cargo.toml` file:
@@ -36,85 +44,101 @@ cargo add capycrypt
 ```
 
 ## Quick Start
-### Compute Digest:
+### Quantum-Secure Encrypt/Decrypt:
 ```rust
-use capycrypt::{Hashable, Message};
-// Hash the empty string
-let mut data = Message::new(vec![]);
-// Obtained from echo -n "" | openssl dgst -sha3-256
-let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
-// Compute a SHA3 digest with 128 bits of security
-data.compute_sha3_hash(256);
-assert!(hex::encode(data.digest.unwrap().to_vec()) == expected);
+use capycrypt::{
+    kem::{encryptable::KEMEncryptable, keypair::kem_keygen},
+    sha3::aux_functions::byte_utils::get_random_bytes,
+    Message, SecParam,
+};
+
+// Get 5mb random data
+let mut msg = Message::new(get_random_bytes(5242880));
+
+// Create a new ML-KEM public/private keypair
+let (kem_pub_key, kem_priv_key) = kem_keygen();
+// Encrypt the message
+assert!(msg.kem_encrypt(&kem_pub_key, SecParam::D256).is_ok());
+// Decrypt and verify
+assert!(msg.kem_decrypt(&kem_priv_key).is_ok());
+```
+
+### Elliptic-Curve Encrypt/Decrypt:
+```rust
+use capycrypt::{
+    ecc::{encryptable::KeyEncryptable, keypair::KeyPair},
+    sha3::aux_functions::byte_utils::get_random_bytes,
+    Message, SecParam,
+};
+
+// Get 5mb random data
+let mut msg = Message::new(get_random_bytes(5242880));
+
+// Create a new elliptic-curve public/private keypair
+let key_pair = KeyPair::new(
+    &get_random_bytes(64),   // random password for key
+    "test key".to_string(),  // label
+    SecParam::D256,         // bit-security for key
+);
+// Encrypt the message
+assert!(msg.key_encrypt(&key_pair.pub_key, SecParam::D256).is_ok());
+// Decrypt and verify
+assert!(msg.key_decrypt(&key_pair.priv_key).is_ok());
 ```
 
 ### Symmetric Encrypt/Decrypt:
 ```rust
 use capycrypt::{
-    Message,
-    AESEncryptable,
-    SpongeEncryptable,
-    sha3::{aux_functions::byte_utils::get_random_bytes}
+    aes::encryptable::AesEncryptable,
+    sha3::{aux_functions::byte_utils::get_random_bytes, 
+    encryptable::SpongeEncryptable},
+    Message, SecParam,
 };
-// Get a random 128-bit password
-let key = get_random_bytes(16);
+// Get a random password
+let pw = get_random_bytes(16);
 // Get 5mb random data
 let mut msg = Message::new(get_random_bytes(5242880));
 // Encrypt the data
-msg.aes_encrypt_cbc(&key);
+assert!(msg.aes_encrypt_ctr(&pw).is_ok());
 // Decrypt the data
-msg.aes_decrypt_cbc(&key);
+assert!(msg.aes_decrypt_ctr(&pw).is_ok());
 // Encrypt the data
-msg.sha3_encrypt(&pw, 512);
-// Decrypt the data
-msg.sha3_decrypt(&pw);
-
-// Verify operation success
-assert!(msg.op_result.unwrap());
-```
-
-### Asymmetric Encrypt/Decrypt:
-```rust
-use capycrypt::{
-    KeyEncryptable,
-    KeyPair,
-    Message,
-    sha3::aux_functions::byte_utils::get_random_bytes
-};
-
-// Get 5mb random data
-let mut msg = Message::new(get_random_bytes(5242880));
-// Create a new private/public keypair
-let key_pair = KeyPair::new(&get_random_bytes(32), "test key".to_string(), 512);
-
-// Encrypt the message
-msg.key_encrypt(&key_pair.pub_key, 512);
-// Decrypt the message
-msg.key_decrypt(&key_pair.priv_key);
-// Verify
-assert!(msg.op_result.unwrap());
+assert!(msg.sha3_encrypt(&pw, SecParam::D512).is_ok());
+// Decrypt and verify
+assert!(msg.sha3_decrypt(&pw).is_ok());
 ```
 
 ### Schnorr Signatures:
 ```rust
 use capycrypt::{
-    Signable,
-    KeyPair,
-    Message,
+    ecc::{keypair::KeyPair, signable::Signable},
     sha3::aux_functions::byte_utils::get_random_bytes,
+    Message, SecParam,
 };
 // Get random 5mb
 let mut msg = Message::new(get_random_bytes(5242880));
-// Get a random password
-let pw = get_random_bytes(64);
-// Generate a signing keypair
-let key_pair = KeyPair::new(&pw, "test key".to_string(), 512);
-// Sign with 256 bits of security
-msg.sign(&key_pair, 512);
+// Create a new elliptic-curve public/private keypair
+let key_pair = KeyPair::new(
+    &get_random_bytes(64),  // random password for key
+    "test key".to_string(), // label
+    SecParam::D256,        // bit-security for key
+);
+// Sign with 128 bits of security
+assert!(msg.sign(&key_pair, SecParam::D256).is_ok());
 // Verify signature
-msg.verify(&key_pair.pub_key);
-// Assert correctness
-assert!(msg.op_result.unwrap());
+assert!(msg.verify(&key_pair.pub_key).is_ok());
+```
+
+### Compute Digest:
+```rust
+use capycrypt::{sha3::hashable::SpongeHashable, Message, SecParam};
+// Hash the empty string
+let mut data = Message::new(vec![]);
+// Obtained from echo -n "" | openssl dgst -sha3-256
+let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
+// Compute a SHA3 digest with 128 bits of security
+data.compute_sha3_hash(SecParam::D256);
+assert!(hex::encode(data.digest) == expected);
 ```
 
 ## Performance
@@ -122,9 +146,12 @@ This library uses the criterion crate for benches. Running:
 ```bash
 cargo bench
 ```
-conducts benchmarks in order from lowest security to highest. For example, the lowest security configuration available in this library is the pairing of E222 with cSHAKE256, while the highest security offered is E521 paired with cSHAKE512.
+conducts benchmarks over parameter sets in order from lowest security to highest.
 
 Symmetric operations compare well to openSSL. On an Intel® Core™ i7-10710U × 12, our adaption of in-place keccak from the [XKCP](https://github.com/XKCP/XKCP) achieves a runtime of approximately 20 ms to digest 5mb of random data, vs approximately 17 ms in openSSL.
+
+## (Plausible) Post-Quantum Security
+This library pairs ML-KEM under the 768-parameter set to a SHA3-sponge construction for a quantum-safe public-key cryptosystem. It offers theoretic quantum-security through the use of the KEM and sponge primitives, which are both based on problems conjectured to be hard to solve for a quantum adversary. Our construction is non-standard, has not been evaluated by experts, and is unaudited. Our MLKEM library itself is a work in progress and only supports the NIST-II security parameter of 768. Furthermore, the current FIPS 203 IPD is, (as the name indicates), a draft, and final details about secure implementation may be subject to change. Our design currently exists in this library purely as an academic curiosity. Use it at your own risk, we provide no guarantee of safety, reliability, or efficiency.
 
 ## Acknowledgements
 

@@ -10,10 +10,10 @@ use crate::{
         aux_functions::nist_800_185::{byte_pad, encode_string, right_encode},
         sponge::{sponge_absorb, sponge_squeeze},
     },
-    OperationError, SecParam,
+    SecParam,
 };
 
-use super::constants::{BitLength, Capacity, OutputLength, Rate, RATE_IN_BYTES};
+use super::constants::{BitLength, Capacity, Rate, RATE_IN_BYTES};
 
 /// # SHA3-Keccak
 /// ref NIST FIPS 202.
@@ -22,14 +22,14 @@ use super::constants::{BitLength, Capacity, OutputLength, Rate, RATE_IN_BYTES};
 /// * `d: usize`: requested output length and security strength
 /// ## Returns:
 /// * `return  -> Vec<u8>`: SHA3-d message digest
-pub(crate) fn shake(n: &mut Vec<u8>, d: &dyn BitLength) -> Result<Vec<u8>, OperationError> {
+pub(crate) fn shake(n: &mut Vec<u8>, d: impl BitLength) -> Vec<u8> {
     let bytes_to_pad = RATE_IN_BYTES - n.len() % RATE_IN_BYTES;
     match bytes_to_pad {
         1 => n.extend_from_slice(&[0x86]), // delim suffix
         _ => n.extend_from_slice(&[0x06]), // delim suffix
     }
     let c = Capacity::from_bit_length(d.bit_length());
-    Ok(sponge_squeeze(&mut sponge_absorb(n, &c), d, Rate::from(&c)))
+    sponge_squeeze(&mut sponge_absorb(n, c), d.bit_length(), Rate::from(&d))
 }
 
 /// # Customizable SHAKE
@@ -47,15 +47,7 @@ pub(crate) fn shake(n: &mut Vec<u8>, d: &dyn BitLength) -> Result<Vec<u8>, Opera
 /// length output and there is no possible way to know this value in advance.
 /// The only constraint on `l` from NIST is that it is a value less than
 /// the absurdly large 2^{2040}.
-pub(crate) fn cshake(
-    x: &[u8],
-    l: u64,
-    n: &str,
-    s: &str,
-    d: &SecParam,
-) -> Result<Vec<u8>, OperationError> {
-    d.validate()?;
-
+pub(crate) fn cshake(x: &[u8], l: usize, n: &str, s: &str, d: SecParam) -> Vec<u8> {
     let mut encoded_n = encode_string(n.as_bytes());
     encoded_n.extend_from_slice(&encode_string(s.as_bytes()));
 
@@ -65,17 +57,11 @@ pub(crate) fn cshake(
     out.extend_from_slice(x);
     out.push(0x04);
 
-    let length = OutputLength::try_from(l)?;
-
     if n.is_empty() && s.is_empty() {
-        shake(&mut out, &length)?;
+        shake(&mut out, d);
     }
 
-    Ok(sponge_squeeze(
-        &mut sponge_absorb(&mut out, d),
-        &length,
-        Rate::from(d),
-    ))
+    sponge_squeeze(&mut sponge_absorb(&mut out, d), l, Rate::from(&d))
 }
 
 /// # Keyed Message Authtentication
@@ -91,13 +77,7 @@ pub(crate) fn cshake(
 ///
 /// ## Returns:
 /// * `return  -> Vec<u8>`: kmac_xof of `x` under `k`
-pub fn kmac_xof(
-    k: &[u8],
-    x: &[u8],
-    l: u64,
-    s: &str,
-    d: &SecParam,
-) -> Result<Vec<u8>, OperationError> {
+pub fn kmac_xof(k: &[u8], x: &[u8], l: usize, s: &str, d: SecParam) -> Vec<u8> {
     let mut encode_k = encode_string(k);
     let bytepad_w = d.bytepad_value();
     let mut bp = byte_pad(&mut encode_k, bytepad_w);
@@ -112,7 +92,7 @@ pub fn kmac_xof(
 /// TESTS
 #[cfg(test)]
 mod shake_tests {
-    use crate::{sha3::hashable::Hashable, Message, SecParam};
+    use crate::{sha3::hashable::SpongeHashable, Message, SecParam};
 
     #[test]
     fn test_shake_224() {
@@ -121,24 +101,17 @@ mod shake_tests {
             0x6b, 0x4e, 0x03, 0x42, 0x36, 0x67, 0xdb, 0xb7, 0x3b, 0x6e, 0x15, 0x45, 0x4f, 0x0e,
             0xb1, 0xab, 0xd4, 0x59, 0x7f, 0x9a, 0x1b, 0x07, 0x8e, 0x3f, 0x5b, 0x5a, 0x6b, 0xc7,
         ];
-        assert!(data.compute_sha3_hash(&SecParam::D224).is_ok());
-        assert!(data
-            .digest
-            .as_ref()
-            .map(|digest| *digest == expected.to_vec())
-            .unwrap_or(false));
+
+        data.compute_sha3_hash(SecParam::D224);
+        assert!(data.digest == expected.to_vec());
 
         let mut data = Message::new("test".as_bytes().to_vec());
         let expected: [u8; 28] = [
             0x37, 0x97, 0xbf, 0x0a, 0xfb, 0xbf, 0xca, 0x4a, 0x7b, 0xbb, 0xa7, 0x60, 0x2a, 0x2b,
             0x55, 0x27, 0x46, 0x87, 0x65, 0x17, 0xa7, 0xf9, 0xb7, 0xce, 0x2d, 0xb0, 0xae, 0x7b,
         ];
-        assert!(data.compute_sha3_hash(&SecParam::D224).is_ok());
-        assert!(data
-            .digest
-            .as_ref()
-            .map(|digest| *digest == expected.to_vec())
-            .unwrap_or(false));
+        data.compute_sha3_hash(SecParam::D224);
+        assert!(data.digest == expected.to_vec());
     }
 
     #[test]
@@ -149,12 +122,8 @@ mod shake_tests {
             0xd6, 0x62, 0xf5, 0x80, 0xff, 0x4d, 0xe4, 0x3b, 0x49, 0xfa, 0x82, 0xd8, 0x0a, 0x4b,
             0x80, 0xf8, 0x43, 0x4a,
         ];
-        assert!(data.compute_sha3_hash(&SecParam::D256).is_ok());
-        assert!(data
-            .digest
-            .as_ref()
-            .map(|digest| *digest == expected.to_vec())
-            .unwrap_or(false));
+        data.compute_sha3_hash(SecParam::D256);
+        assert!(data.digest == expected.to_vec());
 
         let mut data = Message::new("test".as_bytes().to_vec());
         let expected: [u8; 32] = [
@@ -162,12 +131,8 @@ mod shake_tests {
             0x00, 0xe3, 0x46, 0xe2, 0x76, 0xae, 0x66, 0x4e, 0x45, 0xee, 0x80, 0x74, 0x55, 0x74,
             0xe2, 0xf5, 0xab, 0x80,
         ];
-        assert!(data.compute_sha3_hash(&SecParam::D256).is_ok());
-        assert!(data
-            .digest
-            .as_ref()
-            .map(|digest| *digest == expected.to_vec())
-            .unwrap_or(false));
+        data.compute_sha3_hash(SecParam::D256);
+        assert!(data.digest == expected.to_vec());
     }
 
     #[test]
@@ -179,12 +144,8 @@ mod shake_tests {
             0xee, 0x98, 0x3a, 0x2a, 0xc3, 0x71, 0x38, 0x31, 0x26, 0x4a, 0xdb, 0x47, 0xfb, 0x6b,
             0xd1, 0xe0, 0x58, 0xd5, 0xf0, 0x04,
         ];
-        assert!(data.compute_sha3_hash(&SecParam::D384).is_ok());
-        assert!(data
-            .digest
-            .as_ref()
-            .map(|digest| *digest == expected.to_vec())
-            .unwrap_or(false));
+        data.compute_sha3_hash(SecParam::D384);
+        assert!(data.digest == expected.to_vec());
 
         let mut data = Message::new("test".as_bytes().to_vec());
         let expected: [u8; 48] = [
@@ -193,12 +154,8 @@ mod shake_tests {
             0xf0, 0xf1, 0xb4, 0x1e, 0xec, 0xb9, 0xdb, 0x3f, 0xf2, 0x19, 0x00, 0x7c, 0x4e, 0x09,
             0x72, 0x60, 0xd5, 0x86, 0x21, 0xbd,
         ];
-        assert!(data.compute_sha3_hash(&SecParam::D384).is_ok());
-        assert!(data
-            .digest
-            .as_ref()
-            .map(|digest| *digest == expected.to_vec())
-            .unwrap_or(false));
+        data.compute_sha3_hash(SecParam::D384);
+        assert!(data.digest == expected.to_vec());
     }
 
     #[test]
@@ -211,12 +168,8 @@ mod shake_tests {
             0xf2, 0xe9, 0xb3, 0xca, 0x9f, 0x48, 0x4f, 0x52, 0x1d, 0x0c, 0xe4, 0x64, 0x34, 0x5c,
             0xc1, 0xae, 0xc9, 0x67, 0x79, 0x14, 0x9c, 0x14,
         ];
-        assert!(data.compute_sha3_hash(&SecParam::D512).is_ok());
-        assert!(data
-            .digest
-            .as_ref()
-            .map(|digest| *digest == expected.to_vec())
-            .unwrap_or(false));
+        data.compute_sha3_hash(SecParam::D512);
+        assert!(data.digest == expected.to_vec());
     }
 
     #[test]
@@ -229,13 +182,9 @@ mod shake_tests {
             0xa4, 0xa3, 0x81, 0x72, 0xbf, 0x11, 0x42, 0xa6, 0xa9, 0xc1, 0x93, 0x0e, 0x50, 0xdf,
             0x03, 0x90, 0x43, 0x12,
         ];
-        data.compute_tagged_hash(&pw, &s, &SecParam::D256);
+        data.compute_tagged_hash(&pw, &s, SecParam::D256);
 
-        assert!(data
-            .digest
-            .as_ref()
-            .map(|digest| *digest == expected.to_vec())
-            .unwrap_or(false));
+        assert!(data.digest == expected.to_vec());
     }
 
     #[test]
@@ -249,13 +198,9 @@ mod shake_tests {
             0x63, 0xf4, 0xca, 0x0b, 0x65, 0x83, 0x6f, 0x52, 0x61, 0xee, 0x64, 0x64, 0x4c, 0xe5,
             0xa8, 0x84, 0x56, 0xd3, 0xd3, 0x0e, 0xfb, 0xed,
         ];
-        data.compute_tagged_hash(&pw, "", &SecParam::D512);
+        data.compute_tagged_hash(&pw, "", SecParam::D512);
 
-        assert!(data
-            .digest
-            .as_ref()
-            .map(|digest| *digest == expected.to_vec())
-            .unwrap_or(false));
+        assert!(data.digest == expected.to_vec());
     }
 }
 
@@ -272,7 +217,7 @@ mod cshake_tests {
 
         let n = "";
         let s = "Email Signature";
-        let res = cshake(&data, 256, n, s, &SecParam::D256).unwrap();
+        let res = cshake(&data, 256, n, s, SecParam::D256);
         let expected: [u8; 32] = [
             0xc5, 0x22, 0x1d, 0x50, 0xe4, 0xf8, 0x22, 0xd9, 0x6a, 0x2e, 0x88, 0x81, 0xa9, 0x61,
             0x42, 0x0f, 0x29, 0x4b, 0x7b, 0x24, 0xfe, 0x3d, 0x20, 0x94, 0xba, 0xed, 0x2c, 0x65,
@@ -286,7 +231,7 @@ mod cshake_tests {
         let data = NIST_DATA_SPONGE_INIT;
         let n = "";
         let s = "Email Signature";
-        let res = cshake(&data, 512, n, s, &SecParam::D512).unwrap();
+        let res = cshake(&data, 512, n, s, SecParam::D512);
         let expected: [u8; 64] = [
             0x07, 0xdc, 0x27, 0xb1, 0x1e, 0x51, 0xfb, 0xac, 0x75, 0xbc, 0x7b, 0x3c, 0x1d, 0x98,
             0x3e, 0x8b, 0x4b, 0x85, 0xfb, 0x1d, 0xef, 0xaf, 0x21, 0x89, 0x12, 0xac, 0x86, 0x43,
@@ -314,7 +259,7 @@ mod kmac_tests {
         let s_str = "My Tagged Application";
         let key_bytes = key_str;
         let data = hex::decode("00010203").unwrap();
-        let res = kmac_xof(key_bytes.as_ref(), &data, 64, s_str, &SecParam::D512).unwrap();
+        let res = kmac_xof(key_bytes.as_ref(), &data, 64, s_str, SecParam::D512);
         let expected = "1755133f1534752a";
         assert_eq!(hex::encode(res), expected)
     }
@@ -330,7 +275,7 @@ mod kmac_tests {
 
         let key_bytes = key_str;
         let data = NIST_DATA_SPONGE_INIT;
-        let res = kmac_xof(key_bytes.as_ref(), &data, 512, s_str, &SecParam::D512).unwrap();
+        let res = kmac_xof(key_bytes.as_ref(), &data, 512, s_str, SecParam::D512);
         let expected: [u8; 64] = [
             0xd5, 0xbe, 0x73, 0x1c, 0x95, 0x4e, 0xd7, 0x73, 0x28, 0x46, 0xbb, 0x59, 0xdb, 0xe3,
             0xa8, 0xe3, 0x0f, 0x83, 0xe7, 0x7a, 0x4b, 0xff, 0x44, 0x59, 0xf2, 0xf1, 0xc2, 0xb4,
