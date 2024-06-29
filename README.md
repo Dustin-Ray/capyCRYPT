@@ -158,4 +158,4 @@ Our construction is non-standard, has not been subject to peer review, and lacks
 ## Acknowledgements
 The authors wish to sincerely thank Dr. Paulo Barreto for the initial design of this library as well as the theoretical backbone of the Edward's curve functionality. We also wish to extend gratitude to the curve-dalek authors [here](https://github.com/crate-crypto/Ed448-Goldilocks) and [here](https://docs.rs/curve25519-dalek/4.1.1/curve25519_dalek/) for the excellent reference implementations and exemplary instances of rock-solid cryptography. 
 
-Our KEM implementation is inspired by the excellent [go implementation](https://pkg.go.dev/filippo.io/mlkem768) by Filippo Valsorda and the initial rust-crypto implementation by the great Tony Arcieri [here](https://crates.io/crates/ml-kem).
+Our [KEM](https://github.com/drcapybara/capyKEM) is inspired by the excellent [go implementation](https://pkg.go.dev/filippo.io/mlkem768) by Filippo Valsorda and the initial rust-crypto implementation by the great Tony Arcieri [here](https://crates.io/crates/ml-kem).
