@@ -47,7 +47,6 @@ impl SpongeEncryptable for Message {
 
     /// # Symmetric Decryption
     /// Decrypts a [`Message`] (z, c, t) under passphrase pw.
-
     /// ## Replaces:
     /// * `Message.data` with result of decryption.
     /// * `Message.op_result` with result of comparision of `Message.t` == keyed hash of decryption.
