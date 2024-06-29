@@ -17,7 +17,7 @@ fn sym_enc(pw: &[u8], mut msg: Message) {
 
 /// Asymmetric encrypt and decrypt roundtrip + keygen
 fn key_gen_enc_dec(pw: &[u8], mut msg: Message) {
-    let key_pair = KeyPair::new(pw, "test key".to_string(), BIT_SECURITY).unwrap();
+    let key_pair = KeyPair::new(pw, "test key".to_string(), BIT_SECURITY);
     let _ = msg.key_encrypt(&key_pair.pub_key, BIT_SECURITY);
     let _ = msg.key_decrypt(&key_pair.priv_key);
 }
@@ -32,7 +32,7 @@ fn bench_sign_verify(c: &mut Criterion) {
     c.bench_function("e448 + SHA3-224 Sign + Verify Roundtrip", |b| {
         b.iter(|| {
             sign_verify(
-                KeyPair::new(&get_random_bytes(16), "test key".to_string(), BIT_SECURITY).unwrap(),
+                KeyPair::new(&get_random_bytes(16), "test key".to_string(), BIT_SECURITY),
                 Message::new(get_random_bytes(5242880)),
             )
         });
@@ -54,9 +54,7 @@ fn bench_key_gen_enc_dec(c: &mut Criterion) {
     c.bench_function("e448 + SHA3-224 Asymmetric enc + dec", |b| {
         b.iter(|| {
             key_gen_enc_dec(
-                &KeyPair::new(&get_random_bytes(32), "test key".to_string(), BIT_SECURITY)
-                    .unwrap()
-                    .priv_key,
+                &KeyPair::new(&get_random_bytes(32), "test key".to_string(), BIT_SECURITY).priv_key,
                 Message::new(get_random_bytes(5242880)),
             )
         });

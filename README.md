@@ -58,7 +58,7 @@ let mut msg = Message::new(get_random_bytes(5242880));
 // Create a new ML-KEM public/private keypair
 let (kem_pub_key, kem_priv_key) = kem_keygen();
 // Encrypt the message
-assert!(msg.kem_encrypt(&kem_pub_key, &SecParam::D256).is_ok());
+assert!(msg.kem_encrypt(&kem_pub_key, SecParam::D256).is_ok());
 // Decrypt and verify
 assert!(msg.kem_decrypt(&kem_priv_key).is_ok());
 ```
@@ -78,11 +78,10 @@ let mut msg = Message::new(get_random_bytes(5242880));
 let key_pair = KeyPair::new(
     &get_random_bytes(64),   // random password for key
     "test key".to_string(),  // label
-    &SecParam::D256,         // bit-security for key
-)
-.unwrap();
+    SecParam::D256,         // bit-security for key
+);
 // Encrypt the message
-assert!(msg.key_encrypt(&key_pair.pub_key, &SecParam::D256).is_ok());
+assert!(msg.key_encrypt(&key_pair.pub_key, SecParam::D256).is_ok());
 // Decrypt and verify
 assert!(msg.key_decrypt(&key_pair.priv_key).is_ok());
 ```
@@ -104,7 +103,7 @@ assert!(msg.aes_encrypt_ctr(&pw).is_ok());
 // Decrypt the data
 assert!(msg.aes_decrypt_ctr(&pw).is_ok());
 // Encrypt the data
-assert!(msg.sha3_encrypt(&pw, &SecParam::D512).is_ok());
+assert!(msg.sha3_encrypt(&pw, SecParam::D512).is_ok());
 // Decrypt and verify
 assert!(msg.sha3_decrypt(&pw).is_ok());
 ```
@@ -122,11 +121,10 @@ let mut msg = Message::new(get_random_bytes(5242880));
 let key_pair = KeyPair::new(
     &get_random_bytes(64),  // random password for key
     "test key".to_string(), // label
-    &SecParam::D256,        // bit-security for key
-)
-.unwrap();
+    SecParam::D256,        // bit-security for key
+);
 // Sign with 128 bits of security
-assert!(msg.sign(&key_pair, &SecParam::D256).is_ok());
+assert!(msg.sign(&key_pair, SecParam::D256).is_ok());
 // Verify signature
 assert!(msg.verify(&key_pair.pub_key).is_ok());
 ```
@@ -139,7 +137,7 @@ let mut data = Message::new(vec![]);
 // Obtained from echo -n "" | openssl dgst -sha3-256
 let expected = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a";
 // Compute a SHA3 digest with 128 bits of security
-data.compute_sha3_hash(&SecParam::D256);
+data.compute_sha3_hash(SecParam::D256);
 assert!(hex::encode(data.digest) == expected);
 ```
 

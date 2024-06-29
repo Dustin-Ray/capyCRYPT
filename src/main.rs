@@ -60,8 +60,7 @@ fn main() {
             output,
         } => {
             let sec_param = SecParam::try_from(bits).expect("Unsupported security parameter.");
-            let kp = KeyPair::new(pw.as_bytes(), owner, sec_param)
-                .expect("Unable to generate the requested key pair");
+            let kp = KeyPair::new(pw.as_bytes(), owner, sec_param);
 
             let _ = kp.write_to_file(&output);
         }

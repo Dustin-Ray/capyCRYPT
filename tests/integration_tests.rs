@@ -33,8 +33,7 @@ fn test_key_gen_enc_dec_256() {
         &get_random_bytes(64),  // random password for key
         "test key".to_string(), // label
         SecParam::D256,         // bit-security for key
-    )
-    .unwrap();
+    );
     // Encrypt the message
     assert!(msg.key_encrypt(&key_pair.pub_key, SecParam::D256).is_ok());
     // Decrypt and verify
@@ -54,8 +53,7 @@ fn test_key_gen_enc_dec_512() {
         &get_random_bytes(32),
         "test key".to_string(),
         SecParam::D512,
-    )
-    .unwrap();
+    );
 
     assert!(msg.key_encrypt(&key_pair.pub_key, SecParam::D512).is_ok());
     assert!(msg.key_decrypt(&key_pair.priv_key).is_ok());
@@ -75,8 +73,7 @@ pub fn test_signature_256() {
         &get_random_bytes(64),  // random password for key
         "test key".to_string(), // label
         SecParam::D256,         // bit-security for key
-    )
-    .unwrap();
+    );
     // Sign with 256 bits of security
     assert!(msg.sign(&key_pair, SecParam::D256).is_ok());
     // Verify signature
@@ -126,7 +123,7 @@ pub fn test_signature_512() {
 
     let mut msg = Message::new(get_random_bytes(5242880));
     let pw = get_random_bytes(64);
-    let key_pair = KeyPair::new(&pw, "test key".to_string(), SecParam::D512).unwrap();
+    let key_pair = KeyPair::new(&pw, "test key".to_string(), SecParam::D512);
 
     assert!(msg.sign(&key_pair, SecParam::D512).is_ok());
     assert!(msg.verify(&key_pair.pub_key).is_ok());
@@ -149,7 +146,7 @@ fn test_sig_timing_side_channel() {
     for i in 0..10 {
         let mut msg = Message::new(get_random_bytes(5242880));
         let pw = get_random_bytes(1 << i);
-        let key_pair = KeyPair::new(&pw, "test key".to_string(), SecParam::D512).unwrap();
+        let key_pair = KeyPair::new(&pw, "test key".to_string(), SecParam::D512);
 
         let now = Instant::now();
         let _ = msg.sign(&key_pair, SecParam::D512);
@@ -170,8 +167,7 @@ fn test_reading_writing_keypair() {
         &get_random_bytes(32),
         "test key".to_string(),
         SecParam::D512,
-    )
-    .expect("Failed to create key pair");
+    );
 
     let temp_dir = tempdir().expect("Failed to create temporary directory");
     let temp_file_path = temp_dir.path().join("read_write_keypair.json");
@@ -196,8 +192,7 @@ pub fn test_signature_512_read_keypair_from_file() {
     let mut msg = Message::new(get_random_bytes(5242880));
     let pw = get_random_bytes(64);
 
-    let key_pair = KeyPair::new(&pw, "test key".to_string(), SecParam::D512)
-        .expect("Failed to create key pair");
+    let key_pair = KeyPair::new(&pw, "test key".to_string(), SecParam::D512);
 
     let temp_dir = tempdir().expect("Failed to create temporary directory");
     let temp_file_path: std::path::PathBuf = temp_dir.path().join("read_write_keypair.json");
@@ -229,7 +224,7 @@ pub fn test_signature_512_read_message_from_file() {
     let mut initial_msg = Message::read_from_file(temp_file_path.to_str().unwrap()).unwrap();
 
     let pw = get_random_bytes(64);
-    let key_pair = KeyPair::new(&pw, "test key".to_string(), SecParam::D512).unwrap();
+    let key_pair = KeyPair::new(&pw, "test key".to_string(), SecParam::D512);
 
     assert!(initial_msg.sign(&key_pair, SecParam::D512).is_ok());
 
@@ -277,8 +272,8 @@ mod decryption_test {
         let mut new_msg = Message::new(get_random_bytes(125));
 
         // D512
-        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), D512).unwrap();
-        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), D512).unwrap();
+        let key_pair1 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), D512);
+        let key_pair2 = KeyPair::new(&get_random_bytes(32), "test key".to_string(), D512);
 
         let _ = new_msg.key_encrypt(&key_pair1.pub_key, D512);
         let new_msg2 = new_msg.msg.clone();

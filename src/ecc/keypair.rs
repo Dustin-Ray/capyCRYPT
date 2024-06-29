@@ -8,7 +8,7 @@ use std::fs::File;
 use std::io::Read;
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
 
-use crate::{sha3, OperationError, SecParam};
+use crate::{sha3, SecParam};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 /// An object containing the fields necessary to represent an asymmetric keypair.
@@ -40,16 +40,16 @@ impl KeyPair {
     /// verification key 𝑉 is hashed together with the message 𝑚
     /// and the nonce 𝑈: hash (𝑚, 𝑈, 𝑉) .
     #[allow(non_snake_case)]
-    pub fn new(pw: &[u8], owner: String, d: SecParam) -> Result<KeyPair, OperationError> {
+    pub fn new(pw: &[u8], owner: String, d: SecParam) -> KeyPair {
         let data = kmac_xof(pw, &[], 448, "SK", d);
         let s: Scalar = bytes_to_scalar(&data).mul_mod(&Scalar::from(4_u64));
         let V = ExtendedPoint::generator() * s;
-        Ok(KeyPair {
+        KeyPair {
             owner,
             pub_key: V,
             priv_key: pw.to_vec(),
             date_created: get_date_and_time_as_string(),
-        })
+        }
     }
 
     /// # KeyPair Saving
