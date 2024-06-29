@@ -35,7 +35,7 @@ This library is built with love as an academic excercise in cryptographic algori
 - **Shared Secret Key:** Symmetric message encryption and decryption.
 - **Public Key Cryptography:** Asymmetric message encryption under public key, decryption with secret key.
 - **Signatures** Prove and verify knowledge of secret information with Schnorr/ECDHIES signatures.
-- **Quantum-Safe Message Exchange:** ML-KEM + SHA3 sponge for quantum-safe symmetric messaging and key exchange.
+- **Quantum-Safe Message Exchange:** Send and receive arbitrary-length quantum-secure encryptions with ML-KEM + SHA3.
 
 ## Installation
 Add the following line to your `Cargo.toml` file:
