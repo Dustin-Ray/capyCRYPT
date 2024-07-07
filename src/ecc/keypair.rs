@@ -1,14 +1,12 @@
 #![warn(clippy::just_underscores_and_digits)]
+use crate::{sha3, SecParam};
 use serde::{Deserialize, Serialize};
 use sha3::{
     aux_functions::byte_utils::{bytes_to_scalar, get_date_and_time_as_string},
     shake_functions::kmac_xof,
 };
-use std::fs::File;
-use std::io::Read;
+use std::{fs::File, io::Read};
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
-
-use crate::{sha3, SecParam};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 /// An object containing the fields necessary to represent an asymmetric keypair.

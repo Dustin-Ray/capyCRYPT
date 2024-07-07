@@ -1,12 +1,17 @@
-use capycrypt::aes::aes_functions::{apply_pcks7_padding, remove_pcks7_padding};
-use capycrypt::aes::encryptable::AesEncryptable;
-use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-use capycrypt::Message;
+use aes::{
+    cipher::{generic_array::GenericArray, BlockDecrypt, BlockEncrypt, KeyInit},
+    Aes256,
+};
+use capycrypt::{
+    aes::{
+        aes_functions::{apply_pcks7_padding, remove_pcks7_padding},
+        encryptable::AesEncryptable,
+    },
+    sha3::aux_functions::byte_utils::get_random_bytes,
+    Message,
+};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use rand::{distributions::Alphanumeric, Rng};
-
-use aes::cipher::{generic_array::GenericArray, BlockDecrypt, BlockEncrypt, KeyInit};
-use aes::Aes256;
 
 fn generate_random_data(size: usize) -> Vec<u8> {
     rand::thread_rng()

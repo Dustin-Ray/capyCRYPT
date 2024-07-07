@@ -5,6 +5,7 @@
 //! possible.
 //! The Message type contains a data field. All operations are
 //! performed IN PLACE.
+use super::constants::{BitLength, Capacity, Rate, RATE_IN_BYTES};
 use crate::{
     sha3::{
         aux_functions::nist_800_185::{byte_pad, encode_string, right_encode},
@@ -12,8 +13,6 @@ use crate::{
     },
     SecParam,
 };
-
-use super::constants::{BitLength, Capacity, Rate, RATE_IN_BYTES};
 
 /// # SHA3-Keccak
 /// ref NIST FIPS 202.
@@ -245,9 +244,10 @@ mod cshake_tests {
 
 #[cfg(test)]
 mod kmac_tests {
-    use crate::sha3::constants::NIST_DATA_SPONGE_INIT;
-    use crate::sha3::shake_functions::kmac_xof;
-    use crate::SecParam;
+    use crate::{
+        sha3::{constants::NIST_DATA_SPONGE_INIT, shake_functions::kmac_xof},
+        SecParam,
+    };
     #[test]
     fn test_kmac_256() {
         let key_str: [u8; 32] = [

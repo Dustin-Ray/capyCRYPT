@@ -160,7 +160,6 @@ fn test_reading_writing_keypair() {
     use capycrypt::{
         ecc::keypair::KeyPair, sha3::aux_functions::byte_utils::get_random_bytes, SecParam,
     };
-
     use tempfile::tempdir;
 
     let key_pair = KeyPair::new(
@@ -186,7 +185,6 @@ pub fn test_signature_512_read_keypair_from_file() {
         sha3::aux_functions::byte_utils::get_random_bytes,
         Message, SecParam,
     };
-
     use tempfile::tempdir;
 
     let mut msg = Message::new(get_random_bytes(5242880));
@@ -212,7 +210,6 @@ pub fn test_signature_512_read_message_from_file() {
         sha3::aux_functions::byte_utils::get_random_bytes,
         Message, SecParam,
     };
-
     use tempfile::tempdir;
 
     let temp_dir = tempdir().expect("Failed to create temporary directory");

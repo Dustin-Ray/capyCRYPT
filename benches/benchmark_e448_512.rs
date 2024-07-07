@@ -1,10 +1,9 @@
-use capycrypt::ecc::encryptable::KeyEncryptable;
-use capycrypt::ecc::keypair::KeyPair;
-use capycrypt::ecc::signable::Signable;
-use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-use capycrypt::sha3::encryptable::SpongeEncryptable;
-use capycrypt::SecParam::D512;
-use capycrypt::{Message, SecParam};
+use capycrypt::{
+    ecc::{encryptable::KeyEncryptable, keypair::KeyPair, signable::Signable},
+    sha3::{aux_functions::byte_utils::get_random_bytes, encryptable::SpongeEncryptable},
+    Message, SecParam,
+    SecParam::D512,
+};
 use criterion::{criterion_group, criterion_main, Criterion};
 
 const BIT_SECURITY: SecParam = D512;

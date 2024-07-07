@@ -1,8 +1,7 @@
 #![warn(clippy::just_underscores_and_digits)]
 use ecc::signable::Signature;
 use serde::{Deserialize, Serialize};
-use std::fs::File;
-use std::io::Read;
+use std::{fs::File, io::Read};
 use tiny_ed448_goldilocks::curve::extended_edwards::ExtendedPoint;
 
 /// A simple error type

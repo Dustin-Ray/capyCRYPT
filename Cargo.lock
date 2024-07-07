@@ -110,19 +110,20 @@ checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
 name = "capy_kem"
-version = "0.1.7"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73cafd83a0d00b4b97e9952cedd1661ea4e696ae6767a934bdf3530eed45bfdf"
+checksum = "5e0f938daeeef95b75512c5da786e24e1c610f1d21b6806502fcb314aa23a2fe"
 dependencies = [
  "hybrid-array",
  "rand",
+ "serde",
  "sha3",
  "typenum",
 ]
 
 [[package]]
 name = "capycrypt"
-version = "0.7.1"
+version = "0.7.5"
 dependencies = [
  "aes",
  "byteorder",

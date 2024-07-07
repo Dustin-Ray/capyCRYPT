@@ -1,8 +1,8 @@
-use capycrypt::sha3::hashable::SpongeHashable;
-use capycrypt::{Message, SecParam};
-
-use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-use capycrypt::SecParam::D256;
+use capycrypt::{
+    sha3::{aux_functions::byte_utils::get_random_bytes, hashable::SpongeHashable},
+    Message, SecParam,
+    SecParam::D256,
+};
 use criterion::{criterion_group, criterion_main, Criterion};
 
 const BIT_SECURITY: SecParam = D256;

@@ -1,6 +1,5 @@
-use crate::sha3::keccakf::keccakf_1600;
-
 use super::constants::{BitLength, Rate};
+use crate::sha3::keccakf::keccakf_1600;
 
 // Absorbs rate amount of data into state and permutes. Continue absorbing and permuting until
 // no more data left in m. Pads to multiple of rate using multi-rate padding.

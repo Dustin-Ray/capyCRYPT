@@ -1,9 +1,8 @@
-use crate::{Message, SecParam};
-
 use super::{
     constants::BitLength,
     shake_functions::{kmac_xof, shake},
 };
+use crate::{Message, SecParam};
 
 pub trait SpongeHashable {
     fn compute_sha3_hash(&mut self, d: SecParam);

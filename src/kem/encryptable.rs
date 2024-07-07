@@ -7,11 +7,12 @@ use crate::{
 };
 use capy_kem::{
     constants::parameter_sets::KEM_768,
-    fips203::{decrypt::k_pke_decrypt, encrypt::k_pke_encrypt},
+    fips203::{
+        decrypt::mlkem_decaps,
+        encrypt::mlkem_encaps,
+        keygen::{KEMPrivateKey, KEMPublicKey},
+    },
 };
-use rand::{thread_rng, RngCore};
-
-use super::keypair::{KEMPrivateKey, KEMPublicKey};
 
 pub trait KEMEncryptable {
     fn kem_encrypt(&mut self, key: &KEMPublicKey, d: SecParam);
@@ -41,18 +42,12 @@ impl KEMEncryptable for Message {
     fn kem_encrypt(&mut self, key: &KEMPublicKey, d: SecParam) {
         self.d = Some(d);
 
-        let mut rng = thread_rng();
-        let secret = &mut [0_u8; 32];
-
-        // generate a random secret to be used as the shared seed
-        rng.fill_bytes(secret);
-
-        let c = k_pke_encrypt::<KEM_768>(secret, &key.ek, &key.rand_bytes);
+        let (k, c) = mlkem_encaps::<KEM_768>(&key.ek).unwrap();
         self.kem_ciphertext = Some(c);
 
         let z = get_random_bytes(512);
         let mut ke_ka = z.clone();
-        ke_ka.extend_from_slice(secret);
+        ke_ka.extend_from_slice(&k);
 
         let ke_ka = kmac_xof(&ke_ka, &[], 1024, "S", d);
         let (ke, ka) = ke_ka.split_at(64);
@@ -78,13 +73,13 @@ impl KEMEncryptable for Message {
     /// ## Arguments:
     /// * `key: &KEMPrivateKey`: The private key used for decryption.
     fn kem_decrypt(&mut self, key: &KEMPrivateKey) -> Result<(), OperationError> {
+        let d = self.d.ok_or(OperationError::SecurityParameterNotSet)?;
+
         let ciphertext = self
             .kem_ciphertext
             .as_ref()
             .ok_or(OperationError::EmptyDecryptionError)?;
-        let dec = k_pke_decrypt::<KEM_768>(&key.dk, ciphertext);
-
-        let d = self.d.ok_or(OperationError::SecurityParameterNotSet)?;
+        let dec = mlkem_decaps::<KEM_768>(ciphertext, &key.dk).unwrap();
 
         let mut z_pw = self
             .sym_nonce

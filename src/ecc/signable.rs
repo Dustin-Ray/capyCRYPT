@@ -1,3 +1,4 @@
+use super::keypair::KeyPair;
 use crate::{
     sha3::{
         aux_functions::byte_utils::{bytes_to_scalar, scalar_to_bytes},
@@ -7,8 +8,6 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
-
-use super::keypair::KeyPair;
 
 pub trait Signable {
     fn sign(&mut self, key: &KeyPair, d: SecParam);

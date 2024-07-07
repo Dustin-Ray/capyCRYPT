@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod aes_modes_tests {
-    use capycrypt::aes::encryptable::AesEncryptable;
-    use capycrypt::sha3::aux_functions::byte_utils::get_random_bytes;
-    use capycrypt::Message;
+    use capycrypt::{
+        aes::encryptable::AesEncryptable, sha3::aux_functions::byte_utils::get_random_bytes,
+        Message,
+    };
 
     #[test]
     fn aes_128_cbc() {
@@ -73,8 +74,10 @@ mod aes_modes_tests {
 
 #[cfg(test)]
 mod aes_functions_tests {
-    use capycrypt::aes::aes_functions::{apply_pcks7_padding, remove_pcks7_padding, xor_blocks};
-    use capycrypt::Message;
+    use capycrypt::{
+        aes::aes_functions::{apply_pcks7_padding, remove_pcks7_padding, xor_blocks},
+        Message,
+    };
 
     #[test]
     fn test_applying_padding() {

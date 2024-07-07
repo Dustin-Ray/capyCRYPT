@@ -69,13 +69,10 @@ pub(crate) mod nist_800_185 {
 }
 
 pub mod byte_utils {
-    use crypto_bigint::Encoding;
-    use crypto_bigint::U448;
-
+    use crypto_bigint::{Encoding, U448};
     /// Aux methods for byte operations.
     use rand::prelude::*;
     use rand::thread_rng;
-
     use tiny_ed448_goldilocks::curve::field::scalar::Scalar;
     /// Gets size number of random bytes.
     /// * `size`: number of bytes requested
