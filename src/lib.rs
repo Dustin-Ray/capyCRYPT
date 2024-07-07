@@ -26,6 +26,7 @@ pub enum OperationError {
     SecretNotSet,
     InvalidSecretLength,
     DecapsulationFailure,
+    KEMError,
 }
 
 /// Module for SHA-3 primitives

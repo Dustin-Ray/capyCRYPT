@@ -12,7 +12,7 @@ pub fn test_kem_enc_512() {
     // Create a new ML-KEM public/private keypair
     let (kem_pub_key, kem_priv_key) = kem_keygen();
     // Encrypt the message
-    msg.kem_encrypt(&kem_pub_key, SecParam::D256);
+    msg.kem_encrypt(&kem_pub_key, SecParam::D256).unwrap();
     // Decrypt and verify
     assert!(msg.kem_decrypt(&kem_priv_key).is_ok());
 }

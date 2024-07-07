@@ -15,7 +15,7 @@ use capy_kem::{
 };
 
 pub trait KEMEncryptable {
-    fn kem_encrypt(&mut self, key: &KEMPublicKey, d: SecParam);
+    fn kem_encrypt(&mut self, key: &KEMPublicKey, d: SecParam) -> Result<(), OperationError>;
     fn kem_decrypt(&mut self, key: &KEMPrivateKey) -> Result<(), OperationError>;
 }
 
@@ -29,8 +29,7 @@ impl KEMEncryptable for Message {
     /// * `Message.digest` with the keyed hash of the message using components derived from the encryption process.
     /// * `Message.sym_nonce` with random bytes 𝑧.
     /// ## Algorithm:
-    /// * Generate a random secret.
-    /// * Encrypt the secret using the KEM public key 𝑉 to generate
+    /// * Encrypt a secret using the KEM public key 𝑉 to generate
     /// shared secret.
     /// * Generate a random nonce 𝑧
     /// * (ke || ka) ← kmac_xof(𝑧 || secret, "", 1024, "S")
@@ -39,10 +38,10 @@ impl KEMEncryptable for Message {
     /// ## Arguments:
     /// * `key: &KEMPublicKey`: The public key 𝑉 used for encryption.
     /// * `d: SecParam`: Security parameters defining the strength of cryptographic operations.
-    fn kem_encrypt(&mut self, key: &KEMPublicKey, d: SecParam) {
+    fn kem_encrypt(&mut self, key: &KEMPublicKey, d: SecParam) -> Result<(), OperationError> {
         self.d = Some(d);
 
-        let (k, c) = mlkem_encaps::<KEM_768>(&key.ek).unwrap();
+        let (k, c) = mlkem_encaps::<KEM_768>(&key.ek)?;
         self.kem_ciphertext = Some(c);
 
         let z = get_random_bytes(512);
@@ -58,6 +57,7 @@ impl KEMEncryptable for Message {
         xor_bytes(&mut self.msg, &m);
 
         self.sym_nonce = Some(z);
+        Ok(())
     }
 
     /// # Key Encapsulation Mechanism (KEM) Decryption
@@ -79,7 +79,7 @@ impl KEMEncryptable for Message {
             .kem_ciphertext
             .as_ref()
             .ok_or(OperationError::EmptyDecryptionError)?;
-        let dec = mlkem_decaps::<KEM_768>(ciphertext, &key.dk).unwrap();
+        let dec = mlkem_decaps::<KEM_768>(ciphertext, &key.dk)?;
 
         let mut z_pw = self
             .sym_nonce
@@ -102,5 +102,13 @@ impl KEMEncryptable for Message {
             xor_bytes(&mut self.msg, &m);
             Err(OperationError::SHA3DecryptionFailure)
         }
+    }
+}
+
+// This really only exists because errors from KEM
+// module are strings
+impl From<String> for OperationError {
+    fn from(_value: String) -> Self {
+        Self::KEMError
     }
 }
