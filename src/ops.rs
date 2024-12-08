@@ -19,7 +19,7 @@ use crate::{
     },
     AesEncryptable, BitLength, Capacity, Hashable, KeyEncryptable, KeyPair, Message,
     OperationError, OutputLength, Rate, SecParam, Signable, Signature, SpongeEncryptable,
-    RATE_IN_BYTES,
+    UpdateFinalize, RATE_IN_BYTES,
 };
 use rayon::prelude::*;
 use tiny_ed448_goldilocks::curve::{extended_edwards::ExtendedPoint, field::scalar::Scalar};
@@ -883,6 +883,30 @@ impl AesEncryptable for Message {
     }
 }
 
+impl UpdateFinalize for Message {
+    fn update(&mut self, data: &[u8]) {
+        self.msg.append(&mut data.to_vec());
+    }
+    /// # Finalizes the message by computing the keyed hash of the message.
+    /// ## Replaces:
+    /// ## Usage:
+    /// ```
+    /// use capycrypt::{Message, SecParam,UpdateFinalize};
+    /// let mut m = Message::new(vec![]);
+    /// m.d = &D256;
+    /// m.update("foo");
+    /// m.update("bar");
+    /// m.update("baz");
+    /// assert_eq!(m.finalize(), vec!["foobarbaz"].compute_hash_sha3(&SecParam::D256));
+    /// ```
+    fn finalize(&mut self) -> Result<(), OperationError> {
+
+        match self.d {
+            Some(d) => self.compute_hash_sha3(&d),
+            None => Err(OperationError::UnsupportedSecurityParameter)
+        } 
+    }
+}
 ///
 /// TESTS
 ///
@@ -1163,5 +1187,24 @@ mod shake_tests {
             .as_ref()
             .map(|digest| *digest == expected.to_vec())
             .unwrap_or(false));
+    }
+}
+
+#[cfg(test)]
+mod updateFinalize_tests {
+    use crate::{ops::UpdateFinalize, Hashable, Message, SecParam::D256};
+    #[test]
+    fn test_updated_message_256() {
+        let mut m = Message::new(vec![]);
+        m.d = Some(D256);
+        m.update(b"foo");
+        m.update(b"bar");
+        m.update(b"baz");
+
+        let mut expected = Message::new(b"foobarbaz".to_vec());
+        expected.compute_hash_sha3(&D256);
+
+        m.finalize();
+        assert_eq!(m.finalize(), expected);
     }
 }
