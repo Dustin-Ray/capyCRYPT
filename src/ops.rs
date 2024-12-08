@@ -903,8 +903,9 @@ impl UpdateFinalize for Message {
 
         match self.d {
             Some(d) => self.compute_hash_sha3(&d),
-            None => Err(OperationError::UnsupportedSecurityParameter)
+            None => Err(OperationError::UnsupportedSecurityParameter)        
         } 
+        
     }
 }
 ///
@@ -1191,7 +1192,7 @@ mod shake_tests {
 }
 
 #[cfg(test)]
-mod updateFinalize_tests {
+mod update_finalize_tests {
     use crate::{ops::UpdateFinalize, Hashable, Message, SecParam::D256};
     #[test]
     fn test_updated_message_256() {
@@ -1202,9 +1203,7 @@ mod updateFinalize_tests {
         m.update(b"baz");
 
         let mut expected = Message::new(b"foobarbaz".to_vec());
-        expected.compute_hash_sha3(&D256);
 
-        m.finalize();
-        assert_eq!(m.finalize(), expected);
+        assert_eq!(m.finalize(), expected.compute_hash_sha3(&D256));
     }
 }
