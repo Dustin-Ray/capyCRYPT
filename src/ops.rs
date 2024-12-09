@@ -897,15 +897,20 @@ impl UpdateFinalize for Message {
     /// m.update("foo");
     /// m.update("bar");
     /// m.update("baz");
-    /// assert_eq!(m.finalize(), vec!["foobarbaz"].compute_hash_sha3(&SecParam::D256));
+    /// assert_eq!(m.finalize(m.len()), vec!["foobarbaz"].compute_hash_sha3(&SecParam::D256));
     /// ```
-    fn finalize(&mut self) -> Result<(), OperationError> {
-
+    fn finalize(&mut self, output_length: u64) -> Result<(), OperationError> {
         match self.d {
-            Some(d) => self.compute_hash_sha3(&d),
-            None => Err(OperationError::UnsupportedSecurityParameter)        
-        } 
-        
+            Some(d) => {
+                // Compute the SHA3 hash of accumulated message
+                self.compute_hash_sha3(&d)?;
+    
+                self.digest = cshake(&self.msg , output_length, "", "", &d);
+                Ok(())
+            },
+            None => Err(OperationError::UnsupportedSecurityParameter)
+        }
+
     }
 }
 ///
@@ -1203,7 +1208,7 @@ mod update_finalize_tests {
         m.update(b"baz");
 
         let mut expected = Message::new(b"foobarbaz".to_vec());
-
-        assert_eq!(m.finalize(), expected.compute_hash_sha3(&D256));
+        let output_length = m.msg.len() as u64 * 8;
+        assert_eq!(m.finalize(output_length), expected.compute_hash_sha3(&D256));
     }
 }

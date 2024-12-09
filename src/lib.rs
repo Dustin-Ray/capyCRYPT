@@ -228,7 +228,7 @@ pub trait Signable {
 
 pub trait UpdateFinalize {
     fn update(&mut self, data: &[u8]);
-    fn finalize(&mut self) -> Result<(), OperationError>;
+    fn finalize(&mut self, output_length: u64) -> Result<(), OperationError>;
 }
 const RATE_IN_BYTES: usize = 136; // SHA3-256 r = 1088 / 8 = 136
 
