@@ -72,6 +72,18 @@ name = "benchmark_e448_512"
 harness = false
 
 [[bench]]
+name = "benchmark_e512_224"
+harness = false
+
+[[bench]]
+name = "benchmark_e512_256"
+harness = false
+
+[[bench]]
+name = "benchmark_e512_384"
+harness = false
+
+[[bench]]
 name = "benchmark_aes"
 harness = false
 
