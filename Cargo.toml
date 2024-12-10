@@ -32,6 +32,10 @@ name = "benchmark_sha3"
 harness = false
 
 [[bench]]
+name = "benchmark_e222_256"
+harness = false
+
+[[bench]]
 name = "benchmark_e448_224"
 harness = false
 
