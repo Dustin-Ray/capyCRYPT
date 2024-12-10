@@ -34,6 +34,7 @@ fn bench_sign_verify(c: &mut Criterion) {
         });
     });
 }
+
 fn bench_sym_enc(c: &mut Criterion) {
     c.bench_function("SHA3-256 Symmetric enc + dec", |b|{
         b.iter(|| {
